@@ -1,0 +1,31 @@
+name: App and CLI
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Select the newest full Xcode
+        run: |
+          unset DEVELOPER_DIR
+          source scripts/toolchain.sh
+          echo "DEVELOPER_DIR=$DEVELOPER_DIR" >> "$GITHUB_ENV"
+          xcodebuild -version
+          xcrun --sdk macosx --show-sdk-version
+      - run: ./scripts/test.sh
+      - run: ./scripts/build-app.sh
+      - run: ./scripts/build-cli.sh
+      - name: Package developer preview
+        run: ditto -c -k --sequesterRsrc --keepParent build/Morrow.app build/Morrow.app.zip
+      - uses: actions/upload-artifact@v7
+        with:
+          name: morrow-macos-${{ runner.arch }}
+          path: |
+            build/Morrow.app.zip
+            build/cli/morrow

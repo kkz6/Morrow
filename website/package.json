@@ -1,0 +1,16 @@
+{
+  "name": "morrow-documentation",
+  "private": true,
+  "type": "module",
+  "engines": { "node": ">=24.15.0" },
+  "scripts": {
+    "content": "node scripts/content.mjs",
+    "dev": "npm run content && nuxt dev --host 127.0.0.1",
+    "build": "npm run content && nuxt build",
+    "generate": "npm run content && nuxt generate",
+    "check": "node scripts/check.mjs",
+    "postinstall": "nuxt prepare"
+  },
+  "dependencies": { "nuxt": "4.6.0", "marked": "18.1.0" },
+  "overrides": { "simple-git": "4.0.2", "@simple-git/argv-parser": "2.0.1" }
+}
