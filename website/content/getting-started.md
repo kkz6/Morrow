@@ -4,7 +4,7 @@ description: Build Morrow and create your first local database in one step.
 group: Start here
 order: 1
 ---
-Morrow is a native macOS menu bar app and CLI. Both use the same databases, settings, and data folders. This developer preview supports macOS 14 and later.
+Morrow is a native macOS menu bar app and CLI. Both use the same databases, development runtimes, settings, and data folders. This developer preview supports macOS 14 and later.
 
 ## Build the app and CLI
 
@@ -34,7 +34,7 @@ The equivalent terminal command is:
 
 ## Install the morrow command
 
-Open **Settings → Command Line → Install CLI**, or run:
+Open **Settings → General → Command Line → Install CLI**, or run:
 
 ```sh
 ./scripts/install-cli.sh
@@ -57,3 +57,11 @@ morrow db connection my-app
 Copy the returned address into your application’s database settings. For PostgreSQL, a typical address is `postgresql://postgres@127.0.0.1:5432/postgres`. The selected port may differ if the default was already occupied.
 
 > This preview is for local development. Instances bind to 127.0.0.1 and use passwordless local accounts. Remote hosting and authenticated instance configuration are planned separately.
+
+## Manage development runtimes
+
+Open **Settings → Applications** to select PHP, Go, Flutter, Node.js, Python, or Ruby. Existing versions are reused; missing channels use Homebrew. See [Applications and runtimes](/docs/applications) for Terminal setup and companion commands.
+
+## Set up another Mac
+
+Open **Settings → General → iCloud Sync** and choose a folder inside iCloud Drive on both Macs. Enable automatic setup on the Mac that should install missing services. Read [iCloud workspace sync](/docs/icloud-sync) for setup, data boundaries, and retry controls.

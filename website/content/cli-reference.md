@@ -71,3 +71,75 @@ Configure accepts `--name`, `--port`, `--memory`, and `--connections`.
 ```
 
 The standalone CLI shares the same core and default data directory as the app. A GUI process is not required for commands that manage databases. `morrow settings` requires the app to be built or installed.
+
+## Database updates
+
+| Command | Purpose |
+| --- | --- |
+| `morrow db updates [name] [--refresh] [--json]` | Compare pinned releases against available formula metadata; refresh runs `brew update` |
+| `morrow db upgrade <name>` | Stop, back up, apply a compatible maintenance release, and restart if previously running |
+| `morrow db recover <name>` | Recover an interrupted update from its journal and backup |
+
+Read [Database updates](/docs/updates) for compatibility, shared dependency behavior, and recovery limitations.
+
+## Development runtimes
+
+| Command | Purpose |
+| --- | --- |
+| `morrow tool catalog` | List supported runtimes |
+| `morrow tool channels <runtime>` | Show installable Homebrew channels and versions |
+| `morrow tool versions [runtime]` | Discover existing binaries |
+| `morrow tool install <runtime> [version-or-channel]` | Reuse or install a runtime; defaults to automatic reuse |
+| `morrow tool use <runtime> <version>` | Select a default and create Morrow-owned command wrappers |
+| `morrow tool list [--json]` | List tracked runtime records; text output marks defaults |
+| `morrow tool updates [--refresh] [--json]` | Check tracked versions; optionally refresh Homebrew metadata |
+| `morrow tool upgrade <runtime> [version]` | Update a tracked version; omitted version means the default |
+| `morrow tool remove <runtime> <version>` | Forget a registration and clear its default; preserve installed files |
+| `morrow tool exec <runtime> [--command <name>] -- <args>` | Run the selected runtime or an available companion command with Terminal input/output |
+| `morrow tool shell` | Print the PATH setup for Morrow's runtime commands |
+
+Supported runtime names: `php`, `go`, `flutter`, `node`, `python`, `ruby`. Aliases: `nodejs`, `python3`.
+
+For `install` and `use`, numeric release series, existing exact versions, and available formula names are accepted. Installable releases depend on Homebrew. `current` and `latest` choose the current channel; they are installation selectors, not aliases for a saved default.
+
+```sh
+morrow tool install go
+morrow tool versions go
+morrow tool use go 1.27
+morrow tool exec go -- version
+morrow tool exec node --command npm -- --version
+morrow tool shell
+```
+
+The version in this example is illustrative. Use `tool versions` and `tool channels` for your machine's available versions. Read [Applications and runtimes](/docs/applications) for Flutter retention and shell behavior.
+
+## iCloud workspace sync
+
+| Command | Purpose |
+| --- | --- |
+| `morrow sync enable [--folder <path>] [--auto-install]` | Enable folder-based workspace sync; optionally set up missing services on this Mac |
+| `morrow sync disable` | Disable sync locally, retaining local services and cloud files |
+| `morrow sync status` | Show local sync preferences, folder, and reconciliation results |
+| `morrow sync now [--retry] [--json]` | Reconcile once; retry failed recipes when requested |
+
+The default folder is `iCloud Drive/Morrow`. Automatic setup is a local opt-in. The CLI needs an explicit `sync now`; the app checks periodically while running. Results describe local reconciliation, with Apple managing delivery. See [iCloud workspace sync](/docs/icloud-sync) for conflict handling, data boundaries, and release availability.
+
+## Local SMTP servers
+
+| Command | Purpose |
+| --- | --- |
+| `morrow mail create <name> [options]` | Reuse/install Mailpit and create an isolated local SMTP testing service |
+| `morrow mail list [--json]` | Show SMTP/inbox endpoints, pinned versions, and actual status |
+| `morrow mail start <name>` | Start and check readiness |
+| `morrow mail stop <name>` | Stop the managed service |
+| `morrow mail restart <name>` | Stop and start the service |
+| `morrow mail inbox <name>` | Open the browser inbox |
+| `morrow mail smtp <name>` | Print its SMTP address |
+| `morrow mail config <name>` | Print development app environment settings |
+| `morrow mail logs <name>` | Read recent output; the app has a live searchable viewer |
+| `morrow mail configure <name> [options]` | Change a stopped service's name, ports, and launch-at-login choice |
+| `morrow mail remove <name> [--delete-messages]` | Remove the service; archive messages unless permanent deletion is explicit |
+
+Creation options: `--smtp-port <port>`, `--http-port <port>`, `--version <detected-version-or-current>`, `--autostart`, `--start`. Defaults use a detected Mailpit binary and free ports starting at 1025 and 8025.
+
+Configuration options: `--smtp-port <port>`, `--http-port <port>`, `--name <name>`, `--autostart on|off`. Read [Local SMTP testing](/docs/mail) for app settings and inbox behavior.

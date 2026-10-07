@@ -64,6 +64,12 @@ public struct Installation: Codable, Identifiable, Equatable, Sendable {
     public let version: String
     public let prefix: String
     public var executable: String { "\(prefix)/bin/\(engine.binary)" }
+    public var packageVersion: String {
+        let directory = URL(fileURLWithPath: prefix).lastPathComponent
+        if prefix.contains("/Cellar/"), let package = SoftwareVersion(directory),
+           package.components == SoftwareVersion(version)?.components { return directory }
+        return version
+    }
     public var initializationTool: String? {
         if engine == .postgresql { return prefix + "/bin/initdb" }
         if engine == .mariadb {
@@ -92,7 +98,7 @@ public struct VersionChannel: Codable, Identifiable, Sendable {
 public struct DatabaseInstance: Codable, Identifiable, Equatable, Sendable {
     public let id: UUID
     public var name: String
-    public let installation: Installation
+    public var installation: Installation
     public var port: Int
     public var autoStart: Bool
     public var memoryMB: Int
@@ -132,14 +138,40 @@ public struct AppPreferences: Codable, Equatable, Sendable {
     public var showRunningCount = true
     public var appearance = "system"
     public var homebrewPath = ""
+    public var iCloudSyncEnabled = false
+    public var autoSetupSyncedServices = false
+    public var syncFolder = ""
     public init() {}
+    enum CodingKeys: String, CodingKey { case showRunningCount, appearance, homebrewPath, iCloudSyncEnabled, autoSetupSyncedServices, syncFolder }
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        showRunningCount = try values.decodeIfPresent(Bool.self, forKey: .showRunningCount) ?? true
+        appearance = try values.decodeIfPresent(String.self, forKey: .appearance) ?? "system"
+        homebrewPath = try values.decodeIfPresent(String.self, forKey: .homebrewPath) ?? ""
+        iCloudSyncEnabled = try values.decodeIfPresent(Bool.self, forKey: .iCloudSyncEnabled) ?? false
+        autoSetupSyncedServices = try values.decodeIfPresent(Bool.self, forKey: .autoSetupSyncedServices) ?? false
+        syncFolder = try values.decodeIfPresent(String.self, forKey: .syncFolder) ?? ""
+    }
 }
 
 public struct MorrowState: Codable, Sendable {
     public var schemaVersion = 1
     public var instances: [DatabaseInstance] = []
     public var preferences = AppPreferences()
+    public var mailServices: [MailService] = []
+    public var tools: [RuntimeInstallation] = []
+    public var toolDefaults: [String: String] = [:]
     public init() {}
+    enum CodingKeys: String, CodingKey { case schemaVersion, instances, preferences, mailServices, tools, toolDefaults }
+    public init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        schemaVersion = try values.decodeIfPresent(Int.self, forKey: .schemaVersion) ?? 1
+        instances = try values.decodeIfPresent([DatabaseInstance].self, forKey: .instances) ?? []
+        preferences = try values.decodeIfPresent(AppPreferences.self, forKey: .preferences) ?? AppPreferences()
+        mailServices = try values.decodeIfPresent([MailService].self, forKey: .mailServices) ?? []
+        tools = try values.decodeIfPresent([RuntimeInstallation].self, forKey: .tools) ?? []
+        toolDefaults = try values.decodeIfPresent([String: String].self, forKey: .toolDefaults) ?? [:]
+    }
 }
 
 public enum MorrowError: LocalizedError {

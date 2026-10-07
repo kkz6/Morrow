@@ -3,12 +3,13 @@ import ServiceManagement
 import MorrowCore
 
 struct CommandLinePane: View {
+    var embedded = false
     @Environment(AppModel.self) private var model
     @State private var installed = false
     private var source: URL { Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/morrow") }
     var body: some View {
-        SettingsPane(section: SettingsSection.commandLine) {
-            SettingsNote(text: "Manage the same databases from Terminal. The app and CLI share your configuration, versions, and data.")
+        SettingsPane(section: SettingsSection.commandLine, embedded: embedded) {
+            SettingsNote(text: "Manage the same databases and runtimes from Terminal. The app and CLI share your configuration, versions, and data.")
             SettingsGroup {
                 SettingsActionRow(title: installed ? "CLI Installed" : "Install Command Line Tool…", symbol: "terminal", detail: "morrow") {
                     do { try CLIInstaller.install(source: source); installed = true }
@@ -33,12 +34,13 @@ struct CommandLinePane: View {
     }
 }
 
-struct GeneralPane: View {
+struct GeneralOptionsPane: View {
+    var embedded = false
     @Environment(AppModel.self) private var model
     @State private var loginEnabled = false
     @State private var brewPath = ""
     var body: some View {
-        SettingsPane(section: SettingsSection.general) {
+        SettingsPane(section: SettingsSection.general, embedded: embedded) {
             SettingsGroup {
                 SettingRow(title: "Launch Morrow at login", subtitle: "Keep your database controls close by") {
                     Toggle("Launch Morrow at login", isOn: Binding(get: { loginEnabled }, set: { value in
@@ -78,9 +80,10 @@ struct GeneralPane: View {
 }
 
 struct MenuBarPane: View {
+    var embedded = false
     @Environment(AppModel.self) private var model
     var body: some View {
-        SettingsPane(section: SettingsSection.menuBar) {
+        SettingsPane(section: SettingsSection.menuBar, embedded: embedded) {
             SettingsGroup {
                 SettingRow(title: "Show running count", subtitle: "Display active instances beside the icon") {
                     Toggle("Show running count", isOn: model.preference(\.showRunningCount)).settingsToggle()
@@ -100,9 +103,10 @@ struct MenuBarPane: View {
 }
 
 struct AppearancePane: View {
+    var embedded = false
     @Environment(AppModel.self) private var model
     var body: some View {
-        SettingsPane(section: SettingsSection.appearance) {
+        SettingsPane(section: SettingsSection.appearance, embedded: embedded) {
             SettingsGroup {
                 SettingRow(title: "Appearance") {
                     SettingsSelect(label: "Appearance", selection: model.preference(\.appearance), options: [
@@ -126,6 +130,13 @@ struct StoragePane: View {
                 SettingsDivider()
                 SettingsActionRow(title: "Open Preserved Data…", symbol: "archivebox") {
                     let path = model.manager.store.root.appendingPathComponent("archives")
+                    do { try FileManager.default.createDirectory(at: path, withIntermediateDirectories: true); NSWorkspace.shared.open(path) }
+                    catch { model.error = error.localizedDescription }
+                }
+            }
+            SettingsGroup {
+                SettingsActionRow(title: "Open Update Backups…", symbol: "clock.arrow.circlepath") {
+                    let path = model.manager.store.root.appendingPathComponent("backups")
                     do { try FileManager.default.createDirectory(at: path, withIntermediateDirectories: true); NSWorkspace.shared.open(path) }
                     catch { model.error = error.localizedDescription }
                 }
@@ -173,6 +184,35 @@ struct AboutPane: View {
                 SettingsActionRow(title: "Report a Problem", symbol: "bubble.left") {
                     NSWorkspace.shared.open(URL(string: "https://github.com/kkz6/Morrow/issues/new")!)
                 }
+            }
+        }
+    }
+}
+
+struct GeneralPane: View {
+    @State private var category = Category.app
+    private enum Category: String, CaseIterable {
+        case app, commandLine, menuBar, appearance, sync
+        var title: String {
+            switch self { case .app: return "App"; case .commandLine: return "Command Line"; case .menuBar: return "Menu Bar"; case .appearance: return "Appearance"; case .sync: return "iCloud Sync" }
+        }
+        var symbol: String {
+            switch self { case .app: return "gearshape.fill"; case .commandLine: return "terminal"; case .menuBar: return "menubar.rectangle"; case .appearance: return "paintbrush.fill"; case .sync: return "icloud.fill" }
+        }
+    }
+    var body: some View {
+        SettingsPane(section: SettingsSection.general) {
+            SettingsGroup {
+                SettingRow(title: "Preferences") {
+                    SettingsSelect(label: "General preferences", selection: $category, options: Category.allCases.map { .init(value: $0, title: $0.title, symbol: $0.symbol) })
+                }
+            }
+            switch category {
+            case .app: GeneralOptionsPane(embedded: true)
+            case .commandLine: CommandLinePane(embedded: true)
+            case .menuBar: MenuBarPane(embedded: true)
+            case .appearance: AppearancePane(embedded: true)
+            case .sync: SyncPane(embedded: true)
             }
         }
     }

@@ -46,3 +46,7 @@ MongoDB uses its official Homebrew tap when installation is needed. Redis and Va
 PostgreSQL, Redis, and reuse of Herd’s MariaDB have been exercised with real native processes. All providers have configuration checks; MySQL, MongoDB, Valkey, and Memcached still need complete live lifecycle coverage.
 
 RabbitMQ, further database providers, backups, and language runtimes are planned capabilities. They are not exposed as completed features in the app.
+
+## Engine icons
+
+Redis and Valkey use their vendor brand marks in instance rows, the menu bar, creation, and log selectors. The marks are bundled as transparent vector assets and remain sharp in light and dark appearances.

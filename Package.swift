@@ -12,7 +12,7 @@ let package = Package(
     targets: [
         .target(name: "MorrowCore"),
         .executableTarget(name: "MorrowCLI", dependencies: ["MorrowCore"]),
-        .executableTarget(name: "MorrowApp", dependencies: ["MorrowCore"]),
+        .executableTarget(name: "MorrowApp", dependencies: ["MorrowCore"], resources: [.copy("Assets")]),
         .testTarget(name: "MorrowCoreTests", dependencies: ["MorrowCore"]),
         .testTarget(name: "MorrowAppTests", dependencies: ["MorrowApp", "MorrowCore"]),
     ],

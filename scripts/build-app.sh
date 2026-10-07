@@ -17,6 +17,7 @@ cp "$binary_directory/MorrowMenuBar" "$app/Contents/MacOS/MorrowMenuBar"
 cp "$binary_directory/morrow-cli" "$app/Contents/MacOS/morrow"
 cp Resources/Info.plist "$app/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Add :DTSDKName string macosx$MORROW_SDK_VERSION" "$app/Contents/Info.plist"
+cp -R "$binary_directory/Morrow_MorrowApp.bundle" "$app/Contents/Resources/"
 cp Resources/ThirdPartyNotices.txt "$app/Contents/Resources/"
 rm -f "$app/Contents/Resources/ZoneBar-LICENSE.txt"
 if [[ ! -f Resources/AppIcon.icns ]]; then

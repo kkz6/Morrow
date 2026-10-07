@@ -20,7 +20,8 @@ public struct DatabaseManager: Sendable {
         return instance
     }
     public func suggestedPort(engine: DatabaseEngine) throws -> Int {
-        let used = Set(try store.load().instances.map(\.port))
+        let state = try store.load()
+        let used = Set(state.instances.map(\.port) + state.mailServices.flatMap { [$0.smtpPort, $0.httpPort] })
         for port in engine.defaultPort..<min(engine.defaultPort + 1000, 65536) {
             if !used.contains(port) && Self.portAvailable(port) { return port }
         }
@@ -46,14 +47,15 @@ public struct DatabaseManager: Sendable {
     }
     public func validatePort(_ port: Int, excluding: UUID? = nil) throws {
         guard (1024...65535).contains(port) else { throw MorrowError.message("Choose a port between 1024 and 65535.") }
-        let others = try store.load().instances.filter { $0.id != excluding }
-        guard !others.contains(where: { $0.port == port }), Self.portAvailable(port) else {
+        let state = try store.load()
+        let others = state.instances.filter { $0.id != excluding }
+        guard !others.contains(where: { $0.port == port }), !state.mailServices.contains(where: { $0.smtpPort == port || $0.httpPort == port }), Self.portAvailable(port) else {
             throw MorrowError.message("Port \(port) is already in use. Choose another port.")
         }
     }
     @discardableResult public func provision(engine: DatabaseEngine, version: String = "automatic", name: String,
         port: Int, autoStart: Bool = false, memoryMB: Int = 128, maxConnections: Int = 100,
-        installation: Installation? = nil) throws -> DatabaseInstance {
+        installation: Installation? = nil, id: UUID = UUID()) throws -> DatabaseInstance {
         try store.operation {
             // Reject conflicting ports and duplicate names before downloading
             // software. Recheck after installation and again when starting.
@@ -68,7 +70,7 @@ public struct DatabaseManager: Sendable {
                 guard let resolved = try installer().install(engine: engine, channel: version).first else { throw MorrowError.message("No compatible server version was found.") }
                 chosen = resolved
             }
-            let instance = DatabaseInstance(name: name, installation: chosen, port: port, autoStart: autoStart, memoryMB: memoryMB, maxConnections: maxConnections)
+            let instance = DatabaseInstance(id: id, name: name, installation: chosen, port: port, autoStart: autoStart, memoryMB: memoryMB, maxConnections: maxConnections)
             return try createUnlocked(instance)
         }
     }
@@ -76,7 +78,7 @@ public struct DatabaseManager: Sendable {
             try Self.validate(instance)
             let state = try store.load()
             guard !state.instances.contains(where: { $0.name.lowercased() == instance.name.lowercased() }) else { throw MorrowError.message("An instance with that name already exists.") }
-            guard !state.instances.contains(where: { $0.port == instance.port }), Self.portAvailable(instance.port) else {
+            guard !state.instances.contains(where: { $0.port == instance.port }), !state.mailServices.contains(where: { $0.smtpPort == instance.port || $0.httpPort == instance.port }), Self.portAvailable(instance.port) else {
                 throw MorrowError.message("Port \(instance.port) is already in use. Choose another port.")
             }
             guard FileManager.default.isExecutableFile(atPath: instance.installation.executable) else {
@@ -91,6 +93,11 @@ public struct DatabaseManager: Sendable {
     }
     public func start(_ id: UUID) throws {
         try store.operation {
+            try requireRecovered(id)
+            try startUnlocked(id)
+        }
+    }
+    func startUnlocked(_ id: UUID, syncLogin: Bool = true) throws {
             let instance = try current(id)
             let status = status(instance)
             if status == .running || status == .starting { return }
@@ -101,7 +108,8 @@ public struct DatabaseManager: Sendable {
             try unload(instance)
             try NativeProvider(store: store, runner: runner).writeConfiguration(instance)
             try writeJob(instance)
-            try syncLoginJob(instance)
+            if syncLogin { try syncLoginJob(instance) }
+            let logOffset = (try? FileManager.default.attributesOfItem(atPath: store.logURL(instance).path)[.size] as? NSNumber)?.uint64Value ?? 0
             try runner.run("/bin/launchctl", ["bootstrap", domain, store.jobURL(instance).path], environment: [:]).checked()
             // A brief readiness check catches immediate configuration failures.
             // Slower servers remain 'Starting' and are refreshed by the app.
@@ -109,16 +117,16 @@ public struct DatabaseManager: Sendable {
                 let current = self.status(instance)
                 if current == .running { return }
                 if current == .failed {
-                    throw MorrowError.message("\(instance.name) could not start.\n\(try logs(instance))")
+                    throw MorrowError.message("\(instance.name) could not start. Open Logs for full output.\n\(try startupLogs(instance, since: logOffset))")
                 }
                 Thread.sleep(forTimeInterval: 0.1)
             }
-        }
     }
     public func stop(_ id: UUID) throws { try store.operation { try unload(current(id)) } }
     public func restart(_ id: UUID) throws { try stop(id); try start(id) }
     public func update(_ proposed: DatabaseInstance) throws {
         try store.operation {
+            try requireRecovered(proposed.id)
             let existing = try current(proposed.id)
             try Self.validate(proposed)
             let status = status(existing)
@@ -126,7 +134,7 @@ public struct DatabaseManager: Sendable {
             guard existing.installation == proposed.installation else { throw MorrowError.message("Create a separate instance to use another database version. Data migration is required between major versions.") }
             let others = try store.load().instances.filter { $0.id != proposed.id }
             guard !others.contains(where: { $0.name.lowercased() == proposed.name.lowercased() }) else { throw MorrowError.message("That name is already in use.") }
-            guard !others.contains(where: { $0.port == proposed.port }), Self.portAvailable(proposed.port) else { throw MorrowError.message("That port is already in use.") }
+            guard !others.contains(where: { $0.port == proposed.port }), !(try store.load().mailServices.contains { $0.smtpPort == proposed.port || $0.httpPort == proposed.port }), Self.portAvailable(proposed.port) else { throw MorrowError.message("That port is already in use.") }
             try NativeProvider(store: store, runner: runner).writeConfiguration(proposed)
             try writeJob(proposed)
             try syncLoginJob(proposed)
@@ -137,6 +145,7 @@ public struct DatabaseManager: Sendable {
     }
     public func setAutoStart(_ id: UUID, enabled: Bool) throws {
         try store.operation {
+            try requireRecovered(id)
             var instance = try current(id)
             instance.autoStart = enabled
             try writeJob(instance)
@@ -149,6 +158,7 @@ public struct DatabaseManager: Sendable {
     /// Removal preserves native data in an archive unless explicitly requested.
     public func remove(_ id: UUID, deleteData: Bool = false) throws {
         try store.operation {
+            try requireRecovered(id)
             let instance = try current(id)
             try unload(instance)
             let fm = FileManager.default
@@ -169,15 +179,20 @@ public struct DatabaseManager: Sendable {
     }
     public func status(_ instance: DatabaseInstance) -> InstanceStatus {
         guard let result = try? runner.run("/bin/launchctl", ["print", "\(domain)/\(instance.label)"], environment: [:]) else { return .unknown }
-        if result.status == 0 && result.output.contains("state = running") {
-            // A process can keep running after an external package cleanup
-            // removes its executable. Keep the Stop control available.
-            return Self.portListening(instance.port) ? .running : .starting
+        let job = LaunchdStatus(result.output)
+        let health = ServiceHealth(runner: runner)
+        if result.status == 0, let pid = job.pid, health.processAlive(pid) {
+            // launchd locates the owned PID; the OS and readiness probes decide
+            // whether it is alive and accepting connections. Log text is never
+            // used as service status, and removed binaries may still be alive.
+            return health.ready(instance) && health.processAlive(pid) ? .running : .starting
         }
+        if result.status == 0 && job.isRunning && job.pid == nil { return .starting }
         guard FileManager.default.isExecutableFile(atPath: instance.installation.executable) else { return .missingBinary }
         guard result.status == 0 else { return .stopped }
-        if result.output.contains("last exit code = 0") { return .stopped }
-        if result.output.contains("last exit code =") || result.output.contains("last terminating signal =") { return .failed }
+        if job.isLaunching { return .starting }
+        if job.failed { return .failed }
+        if job.exitCode == 0 { return .stopped }
         return .starting
     }
     public func logs(_ instance: DatabaseInstance) throws -> String {
@@ -188,6 +203,16 @@ public struct DatabaseManager: Sendable {
         let size = try handle.seekToEnd()
         try handle.seek(toOffset: size > 32768 ? size - 32768 : 0)
         return String(decoding: try handle.readToEnd() ?? Data(), as: UTF8.self)
+    }
+    private func startupLogs(_ instance: DatabaseInstance, since offset: UInt64) throws -> String {
+        guard FileManager.default.fileExists(atPath: store.logURL(instance).path) else { return "" }
+        let handle = try FileHandle(forReadingFrom: store.logURL(instance))
+        defer { try? handle.close() }
+        let end = try handle.seekToEnd()
+        let beginning = end >= offset ? offset : 0
+        try handle.seek(toOffset: max(beginning, end > 2048 ? end - 2048 : 0))
+        let output = String(decoding: try handle.readToEnd() ?? Data(), as: UTF8.self)
+        return output.components(separatedBy: .newlines).suffix(8).joined(separator: "\n")
     }
     public func jobDescription(_ instance: DatabaseInstance) -> [String: Any] {
         [
@@ -203,17 +228,17 @@ public struct DatabaseManager: Sendable {
         ]
     }
     private var domain: String { "gui/\(getuid())" }
-    private func current(_ id: UUID) throws -> DatabaseInstance {
+    func current(_ id: UUID) throws -> DatabaseInstance {
         guard let instance = try store.load().instances.first(where: { $0.id == id }) else { throw MorrowError.message("This instance no longer exists.") }
         return instance
     }
-    private func writeJob(_ instance: DatabaseInstance) throws {
+    func writeJob(_ instance: DatabaseInstance) throws {
         let file = store.jobURL(instance)
         try FileManager.default.createDirectory(at: file.deletingLastPathComponent(), withIntermediateDirectories: true)
         try PropertyListSerialization.data(fromPropertyList: jobDescription(instance), format: .xml, options: 0).write(to: file, options: .atomic)
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: file.path)
     }
-    private func syncLoginJob(_ instance: DatabaseInstance) throws {
+    func syncLoginJob(_ instance: DatabaseInstance) throws {
         let fm = FileManager.default
         let file = store.loginJobURL(instance)
         if instance.autoStart {
@@ -222,23 +247,7 @@ public struct DatabaseManager: Sendable {
             try fm.setAttributes([.posixPermissions: 0o600], ofItemAtPath: file.path)
         } else if fm.fileExists(atPath: file.path) { try fm.removeItem(at: file) }
     }
-    private func unload(_ instance: DatabaseInstance) throws {
-        let target = "\(domain)/\(instance.label)"
-        let result = try runner.run("/bin/launchctl", ["print", target], environment: [:])
-        guard result.status == 0 else { return }
-        // Save the managed process's PID before bootout. Do not archive or
-        // delete its files until launchd has finished shutting it down.
-        let pidLine = result.output.components(separatedBy: .newlines).first { $0.trimmingCharacters(in: .whitespaces).hasPrefix("pid = ") }
-        let pid = pidLine?.components(separatedBy: "=").last.flatMap { Int32($0.trimmingCharacters(in: .whitespaces)) }
-        try runner.run("/bin/launchctl", ["bootout", target], environment: [:]).checked()
-        if let pid, pid > 1 {
-            for _ in 0..<300 {
-                if kill(pid, 0) != 0 { return }
-                Thread.sleep(forTimeInterval: 0.1)
-            }
-            throw MorrowError.message("The server is still shutting down. Its data has been preserved; retry shortly.")
-        }
-    }
+    func unload(_ instance: DatabaseInstance) throws { try LaunchdControl(runner: runner).unload(instance.label) }
     public static func portAvailable(_ port: Int) -> Bool {
         withSocket(port) { fd, address in
             var reuse: Int32 = 1

@@ -51,7 +51,10 @@ public struct NativeInstallationDetector: Sendable {
         guard let version = Self.version(from: output, engine: installation.engine) else {
             throw MorrowError.message("The executable at \(installation.executable) did not identify itself as a compatible \(installation.engine.title) server.")
         }
-        return Installation(engine: installation.engine, formula: installation.formula, version: version, prefix: installation.prefix)
+        let recorded = SoftwareVersion(installation.packageVersion)
+        let actual = SoftwareVersion(version)
+        let packageVersion = recorded?.components == actual?.components ? installation.packageVersion : version
+        return Installation(engine: installation.engine, formula: installation.formula, version: packageVersion, prefix: installation.prefix)
     }
     public static func version(from output: String, engine: DatabaseEngine) -> String? {
         let lower = output.lowercased()

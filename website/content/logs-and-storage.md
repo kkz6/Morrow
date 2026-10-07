@@ -41,3 +41,7 @@ MORROW_HOME=/tmp/morrow-sandbox morrow db remove test-cache --delete-data
 ## Planned backups
 
 Export/import, verified database backups, and S3-compatible backup storage are planned. Preserved instance folders should not be treated as backup verification.
+
+## Mail server output
+
+Mailpit servers appear alongside database instances in the in-app log selector. Captured messages remain in each service’s local `mail/<service-id>/messages.db` file. See [Local SMTP testing](/docs/mail) for inbox and removal controls.

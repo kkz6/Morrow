@@ -2,16 +2,19 @@ import SwiftUI
 import MorrowCore
 
 enum SettingsSection: String, Identifiable, SettingsDestination {
-    case instances, logs, storage, general, commandLine, menuBar, appearance, about
+    case instances, applications, mail, logs, storage, general, commandLine, sync, menuBar, appearance, about
     var id: String { rawValue }
     var title: LocalizedStringKey { LocalizedStringKey(textTitle) }
     var textTitle: String {
         switch self {
         case .instances: return "Databases"
+        case .applications: return "Applications"
+        case .mail: return "Mail"
         case .commandLine: return "Command Line"
         case .logs: return "Logs"
         case .storage: return "Storage"
         case .general: return "General"
+        case .sync: return "iCloud Sync"
         case .menuBar: return "Menu Bar"
         case .appearance: return "Appearance"
         case .about: return "About"
@@ -20,10 +23,13 @@ enum SettingsSection: String, Identifiable, SettingsDestination {
     var symbol: String {
         switch self {
         case .instances: return "externaldrive.fill"
+        case .applications: return "chevron.left.forwardslash.chevron.right"
+        case .mail: return "envelope.fill"
         case .commandLine: return "chevron.left.forwardslash.chevron.right"
         case .logs: return "terminal.fill"
         case .storage: return "folder.fill"
         case .general: return "gearshape.fill"
+        case .sync: return "icloud.fill"
         case .menuBar: return "menubar.rectangle"
         case .appearance: return "paintbrush.fill"
         case .about: return "info.circle.fill"
@@ -32,10 +38,13 @@ enum SettingsSection: String, Identifiable, SettingsDestination {
     var color: Color {
         switch self {
         case .instances: return .teal
+        case .applications: return .indigo
+        case .mail: return .orange
         case .commandLine: return .indigo
         case .logs: return .gray
         case .storage: return .orange
         case .general: return .gray
+        case .sync: return .blue
         case .menuBar: return .blue
         case .appearance: return .purple
         case .about: return .gray
@@ -46,8 +55,8 @@ enum SettingsSection: String, Identifiable, SettingsDestination {
 struct SettingsWindow: View {
     @Environment(AppModel.self) private var model
     private let groups: [SettingsSidebarGroup<SettingsSection>] = [
-        .init("databases", header: "Workspace", destinations: [.instances, .logs, .storage]),
-        .init("app", header: "App", destinations: [.general, .commandLine, .menuBar, .appearance, .about]),
+        .init("databases", header: "Workspace", destinations: [.instances, .applications, .mail, .logs, .storage]),
+        .init("app", header: "App", destinations: [.general, .about]),
     ]
     var body: some View {
         @Bindable var model = model
@@ -64,14 +73,20 @@ struct SettingsWindow: View {
         .sheet(item: $model.creationRequest) { version in
             InstanceEditor(installation: version.installation, engine: version.engine, version: version.version).environment(model)
         }
+        .sheet(item: $model.upgradeRequest) { update in
+            DatabaseUpgradeSheet(update: update).environment(model)
+        }
     }
     @ViewBuilder private func detail(_ section: SettingsSection) -> some View {
         switch section {
         case .instances: InstancesPane()
+        case .applications: ApplicationsPane()
+        case .mail: MailPane()
         case .commandLine: CommandLinePane()
         case .logs: LogsPane()
         case .storage: StoragePane()
         case .general: GeneralPane()
+        case .sync: SyncPane()
         case .menuBar: MenuBarPane()
         case .appearance: AppearancePane()
         case .about: AboutPane()
@@ -81,17 +96,18 @@ struct SettingsWindow: View {
 
 struct SettingsPane<Destination: SettingsDestination, Content: View>: View {
     let section: Destination
+    var embedded = false
     @ViewBuilder var content: Content
     var body: some View {
         VStack(alignment: .leading, spacing: SettingsLayout.detailSectionSpacing) {
             // The floating shell draws the title. Retain its exact space so
             // the first content group stays on the existing 53pt top grid.
-            Color.clear.frame(height: SettingsLayout.detailHeaderHeight).accessibilityHidden(true)
+            if !embedded { Color.clear.frame(height: SettingsLayout.detailHeaderHeight).accessibilityHidden(true) }
             content
         }
-        .padding(.horizontal, SettingsLayout.detailHorizontalInset)
-        .padding(.top, SettingsLayout.detailTopInset)
-        .padding(.bottom, SettingsLayout.detailBottomInset)
+        .padding(.horizontal, embedded ? 0 : SettingsLayout.detailHorizontalInset)
+        .padding(.top, embedded ? 0 : SettingsLayout.detailTopInset)
+        .padding(.bottom, embedded ? 0 : SettingsLayout.detailBottomInset)
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 }

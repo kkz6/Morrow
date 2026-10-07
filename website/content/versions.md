@@ -39,7 +39,7 @@ morrow doctor
 
 ## Upgrade data deliberately
 
-Changing the executable of an existing instance is rejected. Create a new instance with the desired release, then migrate data using the database’s supported tools. Automated migration is planned.
+Ordinary instance settings cannot change its executable. Compatible maintenance releases have an explicit [backup and update workflow](/docs/updates). For another release series, create a new instance and migrate data using the database’s supported tools. Automated migration between series is planned.
 
 External Homebrew cleanup may remove a recorded executable. Morrow reports a missing version and preserves the data. Arbitrary historical patch downloads and uninstalling shared native packages are not implemented.
 

@@ -52,6 +52,7 @@ public struct StateStore: Sendable {
     // Serialize long operations across the app and CLI independently of the
     // short metadata lock. A refresh can still read state during an install.
     public func operation<T>(_ body: () throws -> T) throws -> T { try locked(name: "operation.lock", body) }
+    public func syncOperation<T>(_ body: () throws -> T) throws -> T { try locked(name: "sync.lock", body) }
     private func readUnlocked() throws -> MorrowState {
         let file = root.appendingPathComponent("state.json")
         guard FileManager.default.fileExists(atPath: file.path) else { return MorrowState() }

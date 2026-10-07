@@ -4,9 +4,19 @@ import MorrowCore
 struct LogsPane: View {
     @Environment(AppModel.self) private var model
     @State private var viewer = LogViewerModel()
-    private var selected: DatabaseInstance? {
-        model.instances.first(where: { $0.id == model.logInstanceID }) ?? model.instances.first
+    private struct LogSource: Identifiable {
+        let id: UUID
+        let name: String
+        let detail: String
+        let symbol: String
+        let url: URL
+        let status: InstanceStatus
     }
+    private var sources: [LogSource] {
+        model.instances.map { LogSource(id: $0.id, name: $0.name, detail: "\($0.engine.title) \($0.installation.version)", symbol: $0.engine.symbol, url: model.manager.store.logURL($0), status: model.statuses[$0.id] ?? .unknown) }
+        + model.mailServices.map { LogSource(id: $0.id, name: $0.name, detail: "Mailpit \($0.installation.version)", symbol: "envelope.fill", url: model.mail.logURL($0), status: model.mailStatuses[$0.id] ?? .unknown) }
+    }
+    private var selected: LogSource? { sources.first { $0.id == model.logInstanceID } ?? sources.first }
     var body: some View {
         SettingsPane(section: SettingsSection.logs) {
             if let instance = selected {
@@ -14,14 +24,14 @@ struct LogsPane: View {
                     SettingRow(title: "Instance") {
                         SettingsSelect(label: "Instance",
                             selection: Binding(get: { selected?.id }, set: { model.logInstanceID = $0 }),
-                            options: model.instances.map { .init(value: Optional($0.id), title: $0.name, symbol: $0.engine.symbol) })
+                            options: sources.map { .init(value: Optional($0.id), title: $0.name, symbol: $0.symbol) })
                             .frame(maxWidth: 210, alignment: .trailing)
                     }
                 }
                 HStack(spacing: 8) {
-                    Text("\(instance.engine.title) \(instance.installation.version)").font(.system(size: 12)).foregroundStyle(.secondary)
+                    Text(instance.detail).font(.system(size: 12)).foregroundStyle(.secondary)
                     Spacer()
-                    StatusBadge(status: model.statuses[instance.id] ?? .unknown)
+                    StatusBadge(status: instance.status)
                 }
                 HStack(spacing: 8) {
                     SettingsInput(placeholder: "Search logs", text: $viewer.query, symbol: "magnifyingglass", clearable: true)
@@ -54,7 +64,7 @@ struct LogsPane: View {
         .task(id: selected?.id) {
             guard let instance = selected else { return }
             if model.preview { viewer.previewOutput(); return }
-            viewer.configure(url: model.manager.store.logURL(instance))
+            viewer.configure(url: instance.url)
             await viewer.refresh()
             while !Task.isCancelled {
                 do { try await Task.sleep(for: .seconds(1)) } catch { return }

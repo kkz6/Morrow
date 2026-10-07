@@ -52,7 +52,7 @@ private struct NativeSettingsSelect<Value: Hashable>: NSViewRepresentable {
             for (index, option) in options.enumerated() {
                 button.addItem(withTitle: option.title)
                 button.lastItem?.tag = index
-                button.lastItem?.image = NSImage(systemSymbolName: option.symbol, accessibilityDescription: nil)
+                button.lastItem?.image = BrandIcons.menuImage(for: option.symbol) ?? NSImage(systemSymbolName: BrandIcons.fallbackSymbol(option.symbol), accessibilityDescription: nil)
                 button.lastItem?.image?.size = NSSize(width: 16, height: 16)
             }
         }
@@ -117,8 +117,12 @@ private final class SelectPopUpButton: NSPopUpButton {
         NSBezierPath(roundedRect: bounds, xRadius: 6, yRadius: 6).fill()
     }
     private func drawSymbol(_ symbol: String, rect: NSRect, color: NSColor, size: CGFloat) {
+        if let image = BrandIcons.image(for: symbol) {
+            image.draw(in: BrandIcons.fit(image.size, in: rect), from: .zero, operation: .sourceOver, fraction: isEnabled ? 1 : 0.4)
+            return
+        }
         let config = NSImage.SymbolConfiguration(pointSize: size, weight: .regular)
             .applying(NSImage.SymbolConfiguration(paletteColors: [color]))
-        NSImage(systemSymbolName: symbol, accessibilityDescription: nil)?.withSymbolConfiguration(config)?.draw(in: rect)
+        NSImage(systemSymbolName: BrandIcons.fallbackSymbol(symbol), accessibilityDescription: nil)?.withSymbolConfiguration(config)?.draw(in: rect)
     }
 }

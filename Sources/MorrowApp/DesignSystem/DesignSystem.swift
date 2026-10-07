@@ -41,13 +41,16 @@ struct IconTile: View {
 
     var body: some View {
         RoundedRectangle(cornerRadius: DS.Radius.tile, style: .continuous)
-            .fill(color.gradient)
+            .fill(BrandIcons.image(for: symbol) == nil ? AnyShapeStyle(color.gradient) : AnyShapeStyle(Color(nsColor: .controlBackgroundColor)))
             .frame(width: size, height: size)
-            .overlay(
-                Image(systemName: symbol)
-                    .font(.system(size: size * 0.5, weight: .semibold))
-                    .foregroundStyle(.white)
-            )
+            .overlay {
+                if let image = BrandIcons.image(for: symbol) {
+                    Image(nsImage: image).resizable().scaledToFit().frame(width: size * 0.76, height: size * 0.76)
+                } else {
+                    Image(systemName: BrandIcons.fallbackSymbol(symbol))
+                        .font(.system(size: size * 0.5, weight: .semibold)).foregroundStyle(.white)
+                }
+            }
             .shadow(color: color.opacity(0.25), radius: 1, y: 0.5)
     }
 }

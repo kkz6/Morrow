@@ -14,7 +14,7 @@ struct DatabasePopover: View {
                     Image(systemName: "plus").font(.system(size: 12, weight: .semibold)).frame(width: 22, height: 22)
                 }.buttonStyle(MenuIconButtonStyle()).help("New instance").disabled(model.busy)
             }.padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 10)
-            if model.instances.isEmpty {
+            if model.instances.isEmpty && model.mailServices.isEmpty {
                 VStack(spacing: 8) {
                     Image(systemName: "externaldrive.badge.plus").font(.system(size: 28, weight: .light)).foregroundStyle(.teal)
                     Text("Your workspace starts here").font(.system(size: 13, weight: .medium))
@@ -22,15 +22,16 @@ struct DatabasePopover: View {
                     Button("Create Instance") { model.requestCreation(); openSettings() }.buttonStyle(MenuActionButtonStyle())
                         .padding(.top, 6)
                 }.frame(maxWidth: .infinity).padding(.vertical, 25)
-            } else if !model.instances.isEmpty {
+            } else {
                 ScrollView {
                     VStack(spacing: 0) {
                         ForEach(Array(model.instances.enumerated()), id: \.element.id) { index, instance in
                             PopoverInstanceRow(instance: instance)
                             if index < model.instances.count - 1 { Divider().padding(.leading, 54).opacity(0.5) }
                         }
+                        ForEach(model.mailServices) { service in PopoverMailRow(service: service) }
                     }
-                }.frame(height: CGFloat(min(model.instances.count, 6)) * 58).scrollBounceBehavior(.basedOnSize)
+                }.frame(height: CGFloat(min(model.instances.count + model.mailServices.count, 6)) * 58).scrollBounceBehavior(.basedOnSize)
             }
             if let activity = model.activity {
                 HStack(spacing: 8) { ProgressView().controlSize(.mini); Text(activity).font(.system(size: 11)).lineLimit(2); Spacer() }
@@ -43,7 +44,7 @@ struct DatabasePopover: View {
                 Button { openSettings() } label: { Image(systemName: "gearshape").frame(width: 26, height: 26) }
                     .buttonStyle(MenuIconButtonStyle()).help("Settings").keyboardShortcut(",", modifiers: .command)
                 Button { NSApplication.shared.terminate(nil) } label: { Image(systemName: "power").frame(width: 26, height: 26) }
-                    .buttonStyle(MenuIconButtonStyle()).help("Quit Morrow — databases stay running").disabled(model.busy)
+                    .buttonStyle(MenuIconButtonStyle()).help("Quit Morrow — services stay running").disabled(model.busy)
             }.foregroundStyle(.secondary).padding(.horizontal, 16).padding(.vertical, 5)
         }.frame(width: 340)
             .task { await model.refresh() }
@@ -78,6 +79,34 @@ private struct PopoverInstanceRow: View {
             Button {
                 NSPasteboard.general.clearContents(); NSPasteboard.general.setString(instance.connectionURL, forType: .string)
             } label: { Image(systemName: "doc.on.doc").font(.system(size: 11)) }.buttonStyle(MenuIconButtonStyle()).help("Copy connection address")
+        }.padding(.horizontal, 16).frame(height: 58)
+    }
+}
+
+private struct PopoverMailRow: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.openSettingsWindow) private var openSettings
+    let service: MailService
+    private var status: InstanceStatus { model.mailStatuses[service.id] ?? .unknown }
+    private var active: Bool { [.running, .starting].contains(status) }
+    var body: some View {
+        HStack(spacing: 10) {
+            IconTile(symbol: "envelope.fill", color: .orange, size: 28)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(service.name).font(.system(size: 12, weight: .medium))
+                Text("SMTP · :\(service.smtpPort)").font(.system(size: 10)).foregroundStyle(.tertiary)
+            }
+            Spacer()
+            Circle().fill(status == .running ? Color.green : status == .starting ? .orange : .secondary.opacity(0.4)).frame(width: 6, height: 6).help(status.title)
+            Button {
+                let id = service.id, stop = active
+                model.perform(stop ? "Stopping mail…" : "Starting mail…") { manager in
+                    let mail = MailManager(store: manager.store, runner: manager.runner)
+                    if stop { try mail.stop(id) } else { try mail.start(id) }
+                }
+            } label: { Image(systemName: active ? "stop.fill" : "play.fill").font(.system(size: 10)) }.buttonStyle(MenuIconButtonStyle()).disabled(model.busy)
+            Button { NSWorkspace.shared.open(service.inboxURL) } label: { Image(systemName: "tray").font(.system(size: 11)) }.buttonStyle(MenuIconButtonStyle()).help("Open test inbox").disabled(status != .running)
+            Button { model.showMailLogs(service); openSettings() } label: { Image(systemName: "terminal").font(.system(size: 11)) }.buttonStyle(MenuIconButtonStyle()).help("View mail logs")
         }.padding(.horizontal, 16).frame(height: 58)
     }
 }

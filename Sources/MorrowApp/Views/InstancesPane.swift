@@ -13,10 +13,11 @@ struct InstancesPane: View {
             HStack {
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Your local workspace").font(.system(size: 13, weight: .medium))
-                    Text("\(model.runningCount) running · \(model.instances.count) instances").font(.system(size: 11)).foregroundStyle(.secondary)
+                    Text("\(model.databaseRunningCount) running · \(model.instances.count) instances").font(.system(size: 11)).foregroundStyle(.secondary)
                 }
                 Spacer()
                 if !model.instances.isEmpty {
+                    Button("Check Updates") { model.checkUpdates() }.settingsButton().disabled(model.busy)
                     Button { model.requestCreation() } label: { Label("New Instance", systemImage: "plus") }
                         .settingsButton().disabled(model.busy)
                 }
@@ -42,6 +43,9 @@ struct InstancesPane: View {
                     if filtered.isEmpty { Text("No matching instances").font(.system(size: 12)).foregroundStyle(.secondary).padding(20) }
                 }
             }
+            if !model.databaseUpdates.isEmpty {
+                SettingsNote(text: "Version checks finished. Updates and migration requirements appear on each instance.")
+            }
             SettingsNote(text: "Each instance has its own port and data directory. Your databases keep running when you close Morrow.")
         }
         .sheet(item: $editing) { InstanceEditor(existing: $0).environment(model) }
@@ -54,6 +58,7 @@ struct InstanceRow: View {
     let edit: () -> Void
     let logs: () -> Void
     private var status: InstanceStatus { model.statuses[instance.id] ?? .unknown }
+    private var update: DatabaseUpdate? { model.databaseUpdates.first { $0.instanceID == instance.id } }
     private var active: Bool { status == .running || status == .starting }
     var body: some View {
         HStack(spacing: 12) {
@@ -62,6 +67,13 @@ struct InstanceRow: View {
                 VStack(alignment: .leading, spacing: 3) {
                     Text(instance.name).font(.system(size: 13, weight: .semibold)).foregroundStyle(.primary)
                     Text("\(instance.engine.title) \(instance.installation.version) · :\(String(instance.port))").font(.system(size: 11)).foregroundStyle(.secondary)
+                    if let update, let version = update.availableVersion, version != update.currentVersion {
+                        Text(update.canUpgrade ? "Update available: \(version)" : "\(version) requires migration").font(.system(size: 11)).foregroundStyle(.orange)
+                    }
+                    if let update, update.availableVersion == nil && !model.manager.needsUpdateRecovery(instance.id) {
+                        Text(update.message).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(2)
+                    }
+                    if model.manager.needsUpdateRecovery(instance.id) { Text("Update recovery needed").font(.system(size: 11)).foregroundStyle(.orange) }
                 }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
             }.buttonStyle(.plain).help("Instance settings")
             StatusBadge(status: status)
@@ -73,6 +85,12 @@ struct InstanceRow: View {
             } label: { Image(systemName: active ? "stop.fill" : "play.fill").font(.system(size: 11)) }
                 .buttonStyle(SettingsButtonStyle(height: 28, iconOnly: true)).help(active ? "Stop instance" : "Start instance").disabled(model.busy || status == .missingBinary)
             Menu {
+                if model.manager.needsUpdateRecovery(instance.id) {
+                    Button("Recover Interrupted Update…") { model.upgradeRequest = DatabaseUpdate(instanceID: instance.id, name: instance.name, currentVersion: instance.installation.version, availableVersion: nil, formula: nil, canUpgrade: false, message: "Recovery") }
+                } else if let update, update.canUpgrade {
+                    Button("Update to \(update.availableVersion ?? "Latest")…") { model.upgradeRequest = update }.disabled(model.busy)
+                }
+                Button("Check for Updates") { model.checkUpdates() }.disabled(model.busy)
                 Button("Instance Settings…", action: edit)
                 Button("View Logs…", action: logs)
                 Button("Copy Connection Address") { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(instance.connectionURL, forType: .string) }
