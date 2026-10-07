@@ -4,7 +4,8 @@ import MorrowCore
 enum SettingsSection: String, Identifiable, SettingsDestination {
     case instances, logs, storage, general, commandLine, menuBar, appearance, about
     var id: String { rawValue }
-    var title: LocalizedStringKey {
+    var title: LocalizedStringKey { LocalizedStringKey(textTitle) }
+    var textTitle: String {
         switch self {
         case .instances: return "Databases"
         case .commandLine: return "Command Line"
@@ -37,7 +38,7 @@ enum SettingsSection: String, Identifiable, SettingsDestination {
         case .general: return .gray
         case .menuBar: return .blue
         case .appearance: return .purple
-        case .about: return .teal
+        case .about: return .gray
         }
     }
 }
@@ -83,10 +84,9 @@ struct SettingsPane<Destination: SettingsDestination, Content: View>: View {
     @ViewBuilder var content: Content
     var body: some View {
         VStack(alignment: .leading, spacing: SettingsLayout.detailSectionSpacing) {
-            HStack(spacing: DS.Spacing.sm) {
-                IconTile(symbol: section.symbol, color: section.color, size: 22)
-                Text(section.title).font(.system(size: 18, weight: .semibold))
-            }.frame(height: SettingsLayout.detailHeaderHeight)
+            // The floating shell draws the title. Retain its exact space so
+            // the first content group stays on the existing 53pt top grid.
+            Color.clear.frame(height: SettingsLayout.detailHeaderHeight).accessibilityHidden(true)
             content
         }
         .padding(.horizontal, SettingsLayout.detailHorizontalInset)

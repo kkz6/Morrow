@@ -13,7 +13,7 @@ morrow CLI ─────────────────┘       │
                                   └── user launchd jobs
 ```
 
-The menu and Settings window use ZoneBar's shared components. An AppKit
+The menu and Settings window use shared UI components. An AppKit
 controller owns the fixed window frame and close button; SwiftUI owns pane
 content. Geometry is centralized in `SettingsLayout`. The window is 720×620
 points, and the menu popover is 340 points wide. Native materials, semantic

@@ -1,5 +1,6 @@
 import SwiftUI
 import AppKit
+import MorrowCore
 
 @main
 struct MorrowApp: App {
@@ -11,6 +12,7 @@ struct MorrowApp: App {
         let snapshot = CommandLine.arguments.contains("--snapshot")
         let model = AppModel(preview: snapshot)
         if CommandLine.arguments.contains("--logs") { model.selection = .logs }
+        if CommandLine.arguments.contains("--about") { model.selection = .about }
         if snapshot && CommandLine.arguments.contains("--snapshot-installed") {
             model.instances = []
             model.statuses = [:]
@@ -19,6 +21,13 @@ struct MorrowApp: App {
             model.selection = .logs
             model.logInstanceID = model.instances.first?.id
         }
+        if snapshot && CommandLine.arguments.contains("--snapshot-scrolled") {
+            let installation = model.installations[0]
+            model.instances = (1...18).map { DatabaseInstance(name: "project-\($0)", installation: installation, port: 5400 + $0) }
+            model.statuses = Dictionary(uniqueKeysWithValues: model.instances.map { ($0.id, .stopped) })
+            model.selection = .instances
+        }
+        if snapshot && CommandLine.arguments.contains("--snapshot-dark") { model.preferences.appearance = "dark" }
         if snapshot, let index = CommandLine.arguments.firstIndex(of: "--snapshot-section"),
            index + 1 < CommandLine.arguments.count,
            let section = SettingsSection(rawValue: CommandLine.arguments[index + 1]) {
@@ -64,7 +73,27 @@ struct MorrowApp: App {
 
 private struct SettingsRoot: View {
     let model: AppModel
-    var body: some View { SettingsWindow().environment(model).tint(.morrowAccent).preferredColorScheme(model.colorScheme) }
+    var body: some View {
+        SettingsWindow().environment(model).tint(.morrowAccent).preferredColorScheme(model.colorScheme)
+            .background(SettingsWindowAppearance(scheme: model.colorScheme))
+    }
+}
+
+private struct SettingsWindowAppearance: NSViewRepresentable {
+    let scheme: ColorScheme?
+    func makeNSView(context: Context) -> AppearanceTrackingView { AppearanceTrackingView() }
+    func updateNSView(_ view: AppearanceTrackingView, context: Context) {
+        view.scheme = scheme
+        view.apply()
+    }
+}
+
+private final class AppearanceTrackingView: NSView {
+    var scheme: ColorScheme?
+    override func viewDidMoveToWindow() { super.viewDidMoveToWindow(); apply() }
+    func apply() {
+        window?.appearance = scheme.map { NSAppearance(named: $0 == .dark ? .darkAqua : .aqua)! }
+    }
 }
 
 @MainActor final class AppDelegate: NSObject, NSApplicationDelegate {
@@ -90,6 +119,15 @@ private struct SettingsRoot: View {
         let window = controller.prepareWindow(SettingsRoot(model: model))
         window.orderFront(nil)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
+            if args.contains("--snapshot-scrolled"), let view = window.contentView, let scroll = findScrollView(in: view) {
+                scroll.contentView.scroll(to: NSPoint(x: 0, y: 180))
+                scroll.reflectScrolledClipView(scroll.contentView)
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                    save(view: view, to: directory.appendingPathComponent("settings.png"))
+                    NSApplication.shared.terminate(nil)
+                }
+                return
+            }
             if let view = window.contentView { save(view: view, to: directory.appendingPathComponent("settings.png")) }
             let menu = NSHostingView(rootView: DatabasePopover().environment(model).tint(.morrowAccent)
                 .background(Color(nsColor: .windowBackgroundColor)).preferredColorScheme(.light))
@@ -115,6 +153,11 @@ private struct SettingsRoot: View {
             }
             NSApplication.shared.terminate(nil)
         }
+    }
+    private static func findScrollView(in view: NSView) -> NSScrollView? {
+        if let scroll = view as? NSScrollView { return scroll }
+        for child in view.subviews { if let scroll = findScrollView(in: child) { return scroll } }
+        return nil
     }
     private static func save(view: NSView, to url: URL) {
         view.layoutSubtreeIfNeeded()

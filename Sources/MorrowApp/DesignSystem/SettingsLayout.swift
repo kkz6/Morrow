@@ -32,6 +32,7 @@ enum SettingsLayout {
 /// A destination displayed by the reusable settings sidebar and detail header.
 protocol SettingsDestination: Identifiable, Hashable {
     var title: LocalizedStringKey { get }
+    var textTitle: String { get }
     var symbol: String { get }
     var color: Color { get }
 }
@@ -55,6 +56,7 @@ struct SettingsShell<Destination: SettingsDestination, Detail: View>: View {
     @Binding var selection: Destination
     let groups: [SettingsSidebarGroup<Destination>]
     @ViewBuilder let detail: (Destination) -> Detail
+    @State private var scrolled = false
 
     var body: some View {
         HStack(spacing: 0) {
@@ -70,9 +72,15 @@ struct SettingsShell<Destination: SettingsDestination, Detail: View>: View {
 
             ScrollView {
                 detail(selection)
+                    .background(SettingsScrollObserver(scrolled: $scrolled))
             }
             .scrollContentBackground(.hidden)
             .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .id(selection)
+            .overlay(alignment: .topLeading) {
+                FloatingSettingsHeader(section: selection, scrolled: scrolled)
+                    .frame(height: FloatingHeaderMetrics.height).allowsHitTesting(false)
+            }
         }
         // Match the fixed frame owned by SettingsWindowController. The hosting
         // controller has intrinsic sizing disabled, so this is a content layout
@@ -83,6 +91,7 @@ struct SettingsShell<Destination: SettingsDestination, Detail: View>: View {
         )
         .background(VisualEffectView(material: .underWindowBackground).ignoresSafeArea())
         .ignoresSafeArea()
+        .onChange(of: selection) { _, _ in scrolled = false }
     }
 }
 

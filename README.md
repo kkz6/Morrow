@@ -1,8 +1,7 @@
 # Morrow
 
 A small native macOS menu bar app and CLI for local database development.
-Settings and menu layouts reuse ZoneBar's SwiftUI design system and AppKit
-window host. The CLI and app share `MorrowCore`; databases run as native
+The CLI and app share `MorrowCore`; databases run as native
 processes managed by macOS launchd.
 
 ## Build and open
@@ -131,5 +130,4 @@ instances, export/import and migration, S3-compatible backup destinations,
 remote server management, and eventually PHP/Go toolchains. These capabilities
 are not presented as working controls in this preview.
 
-The shared Settings components are adapted from ZoneBar under its MIT license,
-included in `Resources/ZoneBar-LICENSE.txt` and in the app bundle.
+Required third-party notices are included with the application resources.

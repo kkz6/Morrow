@@ -39,7 +39,6 @@ struct DatabasePopover: View {
             if let error = model.error { ErrorCard(message: error) { model.error = nil }.padding(10) }
             Divider().opacity(0.4)
             HStack(spacing: 12) {
-                Text("Native · Local").font(.system(size: 10)).foregroundStyle(.tertiary)
                 Spacer()
                 Button { openSettings() } label: { Image(systemName: "gearshape").frame(width: 26, height: 26) }
                     .buttonStyle(SettingsButtonStyle(height: 28, iconOnly: true)).help("Settings").keyboardShortcut(",", modifiers: .command)

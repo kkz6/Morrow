@@ -17,7 +17,8 @@ cp "$binary_directory/MorrowMenuBar" "$app/Contents/MacOS/MorrowMenuBar"
 cp "$binary_directory/morrow-cli" "$app/Contents/MacOS/morrow"
 cp Resources/Info.plist "$app/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Add :DTSDKName string macosx$MORROW_SDK_VERSION" "$app/Contents/Info.plist"
-cp Resources/ZoneBar-LICENSE.txt "$app/Contents/Resources/"
+cp Resources/ThirdPartyNotices.txt "$app/Contents/Resources/"
+rm -f "$app/Contents/Resources/ZoneBar-LICENSE.txt"
 if [[ ! -f Resources/AppIcon.icns ]]; then
     xcrun swift scripts/create-icon.swift .build/AppIcon.iconset
     iconutil -c icns .build/AppIcon.iconset -o Resources/AppIcon.icns

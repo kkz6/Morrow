@@ -150,32 +150,29 @@ struct StoragePane: View {
 }
 
 struct AboutPane: View {
+    private var version: String {
+        Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.1.0"
+    }
     var body: some View {
         SettingsPane(section: SettingsSection.about) {
+            HStack(spacing: 12) {
+                Image(nsImage: NSImage(named: NSImage.applicationIconName) ?? NSImage())
+                    .resizable().frame(width: 44, height: 44)
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Morrow").font(.system(size: 20, weight: .semibold))
+                    Text("Version \(version)").font(.system(size: 12)).foregroundStyle(.secondary)
+                }
+                Spacer()
+            }.padding(.vertical, 8)
             SettingsCard {
-                VStack(spacing: 10) {
-                    IconTile(symbol: "externaldrive.fill", color: .morrowAccent, size: 60)
-                    Text("Morrow").font(.system(size: 26, weight: .semibold, design: .rounded))
-                    Text("Native databases, quietly managed.").font(.system(size: 13)).foregroundStyle(.secondary)
-                    Text("Version 0.1.0 · Developer Preview").font(.system(size: 11)).foregroundStyle(.tertiary)
-                }.frame(maxWidth: .infinity).padding(.vertical, 28)
-            }
-            SettingsGroup(header: "Built for macOS") {
-                SettingRow(title: "Native Swift app", subtitle: "Database setup is handled during creation")
+                SettingsActionRow(title: "Documentation…", symbol: "book") {
+                    NSWorkspace.shared.open(URL(string: "https://kkz6.github.io/Morrow/")!)
+                }
                 SettingsDivider()
-                SettingRow(title: "Shared CLI", subtitle: "The app and morrow command use the same core")
+                SettingsActionRow(title: "Source Code…", symbol: "chevron.left.forwardslash.chevron.right") {
+                    NSWorkspace.shared.open(URL(string: "https://github.com/kkz6/Morrow")!)
+                }
             }
-            SettingsCard {
-                Text("Guides, command reference, and project development.")
-                    .font(.system(size: 13)).foregroundStyle(.secondary)
-                    .frame(maxWidth: .infinity, alignment: .leading).padding(12)
-                SettingsDivider()
-                HStack(spacing: 6) {
-                    Button("Documentation…") { NSWorkspace.shared.open(URL(string: "https://kkz6.github.io/Morrow/")!) }.settingsButton(expands: true)
-                    Button("View GitHub…") { NSWorkspace.shared.open(URL(string: "https://github.com/kkz6/Morrow")!) }.settingsButton(expands: true)
-                }.padding(6)
-            }
-            SettingsNote(text: "Settings components adapted from ZoneBar, used under its MIT license.")
         }
     }
 }

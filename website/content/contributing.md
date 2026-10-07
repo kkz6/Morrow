@@ -14,7 +14,9 @@ Make shared behavior changes in the core so both interfaces remain consistent. K
 
 Use the shared DesignSystem components for controls. Action buttons use neutral rounded rectangles with a light border and subtle shadow. Card actions span the available width with an inset; paired actions share equal widths. Icon controls follow the same surface and state styling. Native keyboard shortcuts and disabled states remain available.
 
-About links to the documentation and repository. Settings cards provide full-width actions for command installation and opening storage folders.
+About presents a compact app name and version with documentation and source links. Keep marketing text and implementation details out of this pane. The menu footer contains only its settings and quit controls. Settings cards provide full-width actions for command installation and opening storage folders.
+
+Settings titles and icons remain pinned while detail content scrolls. The header samples the window's native material only after scrolling begins. Its alpha mask remains opaque through the title's midpoint, then fades smoothly to transparent. Keep the title outside the effect, avoid opaque fills or bottom borders, and disable the fade animation when Reduce Motion is enabled. The shared layout retains its existing window size and gutters in both appearances.
 
 ## Build and verify
 
