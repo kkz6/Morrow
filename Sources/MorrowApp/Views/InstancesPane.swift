@@ -17,7 +17,7 @@ struct InstancesPane: View {
                 }
                 Spacer()
                 Button { model.requestCreation() } label: { Label("New Instance", systemImage: "plus") }
-                    .buttonStyle(.borderedProminent).controlSize(.small)
+                    .settingsButton()
                     .disabled(model.busy)
             }
             if model.instances.isEmpty {
@@ -27,7 +27,8 @@ struct InstancesPane: View {
                         Text("A home for your databases").font(.system(size: 16, weight: .semibold))
                         Text("Choose a database and version. Morrow uses an existing installation or installs it while creating your instance.")
                             .font(.system(size: 12)).foregroundStyle(.secondary).multilineTextAlignment(.center).frame(maxWidth: 310)
-                        Button("Create Instance") { model.requestCreation() }.buttonStyle(.borderedProminent).disabled(model.busy)
+                        Button("Create Instance") { model.requestCreation() }.settingsButton(expands: true).disabled(model.busy)
+                            .padding(.horizontal, 28).padding(.top, 6)
                     }.frame(maxWidth: .infinity).padding(.vertical, 38)
                 }
             } else {
@@ -68,8 +69,8 @@ struct InstanceRow: View {
                 model.perform(active ? "Stopping \(instance.name)…" : "Starting \(instance.name)…") { manager in
                     if shouldStop { try manager.stop(id) } else { try manager.start(id) }
                 }
-            } label: { Image(systemName: active ? "stop.fill" : "play.fill").font(.system(size: 11)).frame(width: 22, height: 22) }
-                .buttonStyle(.borderless).help(active ? "Stop instance" : "Start instance").disabled(model.busy || status == .missingBinary)
+            } label: { Image(systemName: active ? "stop.fill" : "play.fill").font(.system(size: 11)) }
+                .buttonStyle(SettingsButtonStyle(height: 28, iconOnly: true)).help(active ? "Stop instance" : "Start instance").disabled(model.busy || status == .missingBinary)
             Menu {
                 Button("Instance Settings…", action: edit)
                 Button("View Logs…", action: logs)
@@ -77,7 +78,7 @@ struct InstanceRow: View {
                 Button("Open Data Folder") { NSWorkspace.shared.open(model.manager.store.dataDirectory(instance)) }
                 Divider()
                 Button("Restart") { let id = instance.id; model.perform("Restarting \(instance.name)…") { try $0.restart(id) } }.disabled(!active || model.busy)
-            } label: { Image(systemName: "ellipsis").frame(width: 16) }.menuStyle(.borderlessButton).fixedSize()
+            } label: { Image(systemName: "ellipsis").frame(width: 16) }.settingsMenuControl()
         }.padding(.horizontal, 12).padding(.vertical, 14)
     }
 }
@@ -177,13 +178,13 @@ struct InstanceEditor: View {
             if let activity = model.activity { HStack { ProgressView().controlSize(.small); Text(activity).font(.system(size: 12)) } }
             HStack {
                 if let existing {
-                    Button("Remove…", role: .destructive) { confirmRemoval = true }.disabled(model.busy || isRunning)
-                    Button("Open Data") { NSWorkspace.shared.open(model.manager.store.dataDirectory(existing)) }
+                    Button("Remove…", role: .destructive) { confirmRemoval = true }.settingsButton().disabled(model.busy || isRunning)
+                    Button("Open Data") { NSWorkspace.shared.open(model.manager.store.dataDirectory(existing)) }.settingsButton()
                 }
                 Spacer()
-                Button("Cancel") { dismiss() }.keyboardShortcut(.cancelAction).disabled(model.busy)
+                Button("Cancel") { dismiss() }.settingsButton().keyboardShortcut(.cancelAction).disabled(model.busy)
                 Button(existing == nil ? "Create Instance" : "Save Changes", action: save)
-                    .buttonStyle(.borderedProminent).keyboardShortcut(.defaultAction)
+                    .settingsButton().keyboardShortcut(.defaultAction)
                     .disabled(model.busy || isRunning || portIssue != nil)
             }
         }.padding(20).frame(width: 470)

@@ -94,7 +94,7 @@ private struct SettingsRoot: View {
             let menu = NSHostingView(rootView: DatabasePopover().environment(model).tint(.morrowAccent)
                 .background(Color(nsColor: .windowBackgroundColor)).preferredColorScheme(.light))
             let instanceRows = min(model.instances.count, 6)
-            let height = CGFloat(model.instances.isEmpty ? 230 : 88 + instanceRows * 58)
+            let height = CGFloat(model.instances.isEmpty ? 266 : 92 + instanceRows * 58)
             menu.frame = NSRect(x: 0, y: 0, width: 340, height: height)
             let menuWindow = NSWindow(contentRect: menu.frame, styleMask: [.borderless], backing: .buffered, defer: false)
             menuWindow.contentView = menu

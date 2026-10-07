@@ -45,7 +45,8 @@ struct LogsPane: View {
                         Image(systemName: "terminal").font(.system(size: 30)).foregroundStyle(.secondary)
                         Text("No instance logs yet").font(.system(size: 15, weight: .semibold))
                         Text("Create a database instance to view its output here.").font(.system(size: 12)).foregroundStyle(.secondary)
-                        Button("Go to Instances") { model.selection = .instances }
+                        Button("Go to Databases") { model.selection = .instances }.settingsButton(expands: true)
+                            .padding(.horizontal, 28).padding(.top, 6)
                     }.frame(maxWidth: .infinity).padding(.vertical, 40)
                 }
             }

@@ -35,10 +35,8 @@ struct ControlIconButton: View {
     let help: String
     let action: () -> Void
     var body: some View {
-        Button(action: action) { Image(systemName: symbol).font(.system(size: 12)).frame(width: ControlLayout.height, height: ControlLayout.height) }
-            .buttonStyle(.plain)
-            .background(Color(nsColor: .textBackgroundColor), in: RoundedRectangle(cornerRadius: ControlLayout.radius))
-            .overlay(RoundedRectangle(cornerRadius: ControlLayout.radius).strokeBorder(DS.dividerColor, lineWidth: 1))
+        Button(action: action) { Image(systemName: symbol).font(.system(size: 12)) }
+            .buttonStyle(SettingsButtonStyle(height: ControlLayout.height, iconOnly: true))
             .help(help).accessibilityLabel(help)
     }
 }

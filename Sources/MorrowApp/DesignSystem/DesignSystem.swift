@@ -26,7 +26,7 @@ enum DS {
     }
 
     /// Visible, theme-adaptive border used on every card and input.
-    static let borderColor = Color.gray.opacity(0.55)
+    static let borderColor = Color.gray.opacity(0.30)
     /// Lighter hairline used to separate rows inside a card.
     static let dividerColor = Color.gray.opacity(0.28)
 }
@@ -180,4 +180,3 @@ extension View {
             .labelsHidden()
     }
 }
-

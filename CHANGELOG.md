@@ -14,6 +14,7 @@
 - Explicit current Xcode/SDK builds and verified SDK records in the app binary.
 - Nuxt documentation with Markdown guides, search, and automatic GitHub Pages deployment.
 - Removed the separate Versions screen; database setup now lives entirely in creation.
+- Standardized action buttons to the supplied macOS reference, with inset card actions, matching dialog controls, and About links to documentation and source.
 
 Remote hosting, authenticated instance configuration, backups, S3 storage,
 RabbitMQ, and language toolchains are planned and not included in this preview.

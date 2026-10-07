@@ -10,6 +10,12 @@ order: 8
 
 Make shared behavior changes in the core so both interfaces remain consistent. Keep database creation as one operation; engine and version selection belong in the creation dialog.
 
+## App interface
+
+Use the shared DesignSystem components for controls. Action buttons use neutral rounded rectangles with a light border and subtle shadow. Card actions span the available width with an inset; paired actions share equal widths. Icon controls follow the same surface and state styling. Native keyboard shortcuts and disabled states remain available.
+
+About links to the documentation and repository. Settings cards provide full-width actions for command installation and opening storage folders.
+
 ## Build and verify
 
 ```sh

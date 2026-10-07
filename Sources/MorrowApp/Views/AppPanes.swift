@@ -10,12 +10,10 @@ struct CommandLinePane: View {
         SettingsPane(section: SettingsSection.commandLine) {
             SettingsNote(text: "Manage the same databases from Terminal. The app and CLI share your configuration, versions, and data.")
             SettingsGroup {
-                SettingRow(icon: "terminal.fill", iconColor: .indigo, title: "morrow command", subtitle: "Install into your local bin directory") {
-                    Button(installed ? "Installed" : "Install CLI") {
-                        do { try CLIInstaller.install(source: source); installed = true }
-                        catch { model.error = error.localizedDescription }
-                    }.disabled(installed || model.preview)
-                }
+                SettingsActionRow(title: installed ? "CLI Installed" : "Install Command Line Tool…", symbol: "terminal", detail: "morrow") {
+                    do { try CLIInstaller.install(source: source); installed = true }
+                    catch { model.error = error.localizedDescription }
+                }.disabled(installed || model.preview)
             }
             Text(CLIInstaller.defaultDestination.path).font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary).textSelection(.enabled)
             SettingsGroup(header: "Terminal Setup") {
@@ -67,7 +65,7 @@ struct GeneralPane: View {
                             var preferences = model.preferences; preferences.homebrewPath = path
                             model.savePreferences(preferences)
                             Task { await model.refresh() }
-                        }.disabled(model.busy)
+                        }.settingsButton(height: ControlLayout.height).disabled(model.busy)
                     }
                 }.padding(12)
             }
@@ -124,16 +122,12 @@ struct StoragePane: View {
     var body: some View {
         SettingsPane(section: SettingsSection.storage) {
             SettingsGroup(header: "Local Storage") {
-                SettingRow(icon: "folder.fill", iconColor: .orange, title: "Morrow Data", subtitle: "Instances, configuration, and logs") {
-                    Button("Open") { NSWorkspace.shared.open(model.manager.store.root) }
-                }
+                SettingsActionRow(title: "Open Morrow Data…", symbol: "folder") { NSWorkspace.shared.open(model.manager.store.root) }
                 SettingsDivider()
-                SettingRow(icon: "archivebox.fill", iconColor: .teal, title: "Preserved Data", subtitle: "Data from removed instances") {
-                    Button("Open") {
-                        let path = model.manager.store.root.appendingPathComponent("archives")
-                        do { try FileManager.default.createDirectory(at: path, withIntermediateDirectories: true); NSWorkspace.shared.open(path) }
-                        catch { model.error = error.localizedDescription }
-                    }
+                SettingsActionRow(title: "Open Preserved Data…", symbol: "archivebox") {
+                    let path = model.manager.store.root.appendingPathComponent("archives")
+                    do { try FileManager.default.createDirectory(at: path, withIntermediateDirectories: true); NSWorkspace.shared.open(path) }
+                    catch { model.error = error.localizedDescription }
                 }
             }
             Text(model.manager.store.root.path).font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary).textSelection(.enabled)
@@ -143,8 +137,8 @@ struct StoragePane: View {
                     ForEach(Array(model.instances.enumerated()), id: \.element.id) { index, instance in
                         SettingRow(title: LocalizedStringKey(instance.name), subtitle: LocalizedStringKey(instance.engine.title)) {
                             HStack {
-                                Button("Logs") { model.showLogs(for: instance) }
-                                Button("Reveal") { NSWorkspace.shared.activateFileViewerSelecting([model.manager.store.instanceDirectory(instance)]) }
+                                Button("Logs") { model.showLogs(for: instance) }.settingsButton(height: 30)
+                                Button("Reveal") { NSWorkspace.shared.activateFileViewerSelecting([model.manager.store.instanceDirectory(instance)]) }.settingsButton(height: 30)
                             }
                         }
                         if index < model.instances.count - 1 { SettingsDivider() }
@@ -170,6 +164,16 @@ struct AboutPane: View {
                 SettingRow(title: "Native Swift app", subtitle: "Database setup is handled during creation")
                 SettingsDivider()
                 SettingRow(title: "Shared CLI", subtitle: "The app and morrow command use the same core")
+            }
+            SettingsCard {
+                Text("Guides, command reference, and project development.")
+                    .font(.system(size: 13)).foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity, alignment: .leading).padding(12)
+                SettingsDivider()
+                HStack(spacing: 6) {
+                    Button("Documentation…") { NSWorkspace.shared.open(URL(string: "https://kkz6.github.io/Morrow/")!) }.settingsButton(expands: true)
+                    Button("View GitHub…") { NSWorkspace.shared.open(URL(string: "https://github.com/kkz6/Morrow")!) }.settingsButton(expands: true)
+                }.padding(6)
             }
             SettingsNote(text: "Settings components adapted from ZoneBar, used under its MIT license.")
         }
