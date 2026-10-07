@@ -79,7 +79,8 @@ final class HeaderTitleView: NSView {
         NSGradient(starting: tint, ending: tint.blended(withFraction: 0.1, of: .black) ?? tint)?.draw(in: tile, angle: -90)
         let config = NSImage.SymbolConfiguration(pointSize: 11, weight: .semibold)
             .applying(NSImage.SymbolConfiguration(paletteColors: [.white]))
-        NSImage(systemSymbolName: symbol, accessibilityDescription: nil)?.withSymbolConfiguration(config)?.draw(in: rect.insetBy(dx: 5, dy: 5))
+        let titleSymbol = symbol == "info.circle.fill" ? "info.circle" : symbol
+        NSImage(systemSymbolName: titleSymbol, accessibilityDescription: nil)?.withSymbolConfiguration(config)?.draw(in: rect.insetBy(dx: 5, dy: 5))
         let text = NSAttributedString(string: heading, attributes: [.font: NSFont.systemFont(ofSize: 18, weight: .semibold), .foregroundColor: NSColor.labelColor])
         text.draw(at: NSPoint(x: rect.maxX + DS.Spacing.sm,
             y: SettingsLayout.detailTopInset + (SettingsLayout.detailHeaderHeight - text.size().height) / 2))

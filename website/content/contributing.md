@@ -12,11 +12,11 @@ Make shared behavior changes in the core so both interfaces remain consistent. K
 
 ## App interface
 
-Use the shared DesignSystem components for controls. Action buttons use neutral rounded rectangles with a light border and subtle shadow. Card actions span the available width with an inset; paired actions share equal widths. Icon controls follow the same surface and state styling. Native keyboard shortcuts and disabled states remain available.
+Use the shared DesignSystem components for controls. Action buttons use quiet translucent surfaces, a thin border, and medium-weight text without raised shadows. `SettingsCard` publishes its size and coordinate space; full-width actions automatically round only corners adjacent to the card edges. A single action rounds all corners, first and last actions follow top and bottom edges, and middle actions stay square. Compact controls retain their standard radius. Do not specify row positions or per-pane corner overrides.
 
 In the menu popover, use compact actions with a translucent surface and borderless secondary icons. Icon backplates appear only on hover or press. Keep creation buttons centered and appropriately sized rather than stretching a heavy settings-card button across the menu.
 
-About presents a compact app name and version with documentation and source links. Keep marketing text and implementation details out of this pane. The menu footer contains only its settings and quit controls. Settings cards provide full-width actions for command installation and opening storage folders.
+About centers a modest app identity above a Resources group with documentation, source, and issue-reporting links. Keep marketing text and implementation details out of this pane. Empty database views offer one creation action at the card's bottom edge. The menu footer contains only its settings and quit controls. Settings cards provide full-width actions for command installation and opening storage folders.
 
 Settings titles and icons remain pinned while detail content scrolls. The header samples the window's native material only after scrolling begins. Its alpha mask remains opaque through the title's midpoint, then fades smoothly to transparent. Keep the title outside the effect, avoid opaque fills or bottom borders, and disable the fade animation when Reduce Motion is enabled. The shared layout retains its existing window size and gutters in both appearances.
 

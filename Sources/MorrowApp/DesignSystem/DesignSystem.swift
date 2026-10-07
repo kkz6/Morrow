@@ -84,10 +84,20 @@ struct SettingsNote: View {
 /// matching the rounded grouped lists in the reference design.
 struct SettingsCard<Content: View>: View {
     @ViewBuilder var content: Content
+    @State private var cardID = UUID()
+    @State private var cardSize = CGSize.zero
 
     var body: some View {
         VStack(spacing: 0) {
             content
+        }
+        .coordinateSpace(name: cardID)
+        .environment(\.settingsCardContext, SettingsCardContext(id: cardID, size: cardSize))
+        .background {
+            GeometryReader { geometry in
+                Color.clear.onAppear { cardSize = geometry.size }
+                    .onChange(of: geometry.size) { _, size in cardSize = size }
+            }
         }
         .background(
             RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
@@ -97,7 +107,7 @@ struct SettingsCard<Content: View>: View {
             RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
                 .strokeBorder(DS.borderColor, lineWidth: 1)
         )
-        .shadow(color: .black.opacity(0.10), radius: 7, y: 2)
+        .shadow(color: .black.opacity(0.035), radius: 2, y: 1)
     }
 }
 

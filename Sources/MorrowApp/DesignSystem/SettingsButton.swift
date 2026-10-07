@@ -4,25 +4,35 @@ import SwiftUI
 /// Settings actions can expand across a card; compact icon controls share the
 /// same border, surface, pressed state, and shadow.
 struct SettingsButtonStyle: ButtonStyle {
-    var height: CGFloat = 34
+    var height: CGFloat = 32
     var expands = false
     var iconOnly = false
     var alignment: Alignment = .center
     @Environment(\.isEnabled) private var enabled
     @State private var hovering = false
+    @State private var boundsInCard = CGRect.zero
+    @Environment(\.settingsCardContext) private var card
+    private var corners: ActionCorners { ActionCorners.resolve(button: boundsInCard, card: card?.size) }
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: height < 32 ? 12 : 14, weight: .semibold))
+            .font(.system(size: height < 32 ? 12 : 13, weight: .medium))
             .foregroundStyle(foreground(role: configuration.role))
             .padding(.horizontal, iconOnly ? 0 : 12)
             .frame(minWidth: iconOnly ? height : 64,
                    maxWidth: expands ? .infinity : nil,
                    minHeight: height, maxHeight: height, alignment: alignment)
-            .background(surface(pressed: configuration.isPressed), in: RoundedRectangle(cornerRadius: 6))
-            .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(DS.dividerColor, lineWidth: 1))
-            .shadow(color: .black.opacity(enabled ? 0.06 : 0.02), radius: 1, y: 1)
-            .contentShape(RoundedRectangle(cornerRadius: 6))
+            .background(surface(pressed: configuration.isPressed), in: corners.shape)
+            .overlay(corners.shape.strokeBorder(Color.primary.opacity(enabled ? 0.13 : 0.07), lineWidth: 0.75))
+            .contentShape(corners.shape)
+            .background {
+                if let card {
+                    GeometryReader { geometry in
+                        Color.clear.onAppear { boundsInCard = geometry.frame(in: .named(card.id)) }
+                            .onChange(of: geometry.frame(in: .named(card.id))) { _, frame in boundsInCard = frame }
+                    }
+                }
+            }
             .onHover { hovering = $0 }
     }
     private func foreground(role: ButtonRole?) -> Color {
@@ -30,22 +40,19 @@ struct SettingsButtonStyle: ButtonStyle {
         return role == .destructive ? .red : .primary
     }
     private func surface(pressed: Bool) -> Color {
-        if enabled && pressed { return Color(nsColor: .controlBackgroundColor).opacity(0.65) }
-        if enabled && hovering { return Color(nsColor: .textBackgroundColor) }
-        return Color(nsColor: .controlBackgroundColor)
+        Color.primary.opacity(!enabled ? 0.012 : pressed ? 0.075 : hovering ? 0.045 : 0.02)
     }
 }
 
 extension View {
-    func settingsButton(height: CGFloat = 34, expands: Bool = false) -> some View {
+    func settingsButton(height: CGFloat = 32, expands: Bool = false) -> some View {
         buttonStyle(SettingsButtonStyle(height: height, expands: expands))
     }
     func settingsMenuControl(height: CGFloat = 28) -> some View {
         menuStyle(.borderlessButton).menuIndicator(.hidden)
             .frame(width: height, height: height)
-            .background(Color(nsColor: .controlBackgroundColor), in: RoundedRectangle(cornerRadius: 6))
-            .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(DS.dividerColor, lineWidth: 1))
-            .shadow(color: .black.opacity(0.06), radius: 1, y: 1)
+            .background(Color.primary.opacity(0.02), in: RoundedRectangle(cornerRadius: 8))
+            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.primary.opacity(0.13), lineWidth: 0.75))
             .tint(.primary)
     }
 }

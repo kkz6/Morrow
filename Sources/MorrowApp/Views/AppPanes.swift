@@ -155,22 +155,23 @@ struct AboutPane: View {
     }
     var body: some View {
         SettingsPane(section: SettingsSection.about) {
-            HStack(spacing: 12) {
+            VStack(spacing: 8) {
                 Image(nsImage: NSImage(named: NSImage.applicationIconName) ?? NSImage())
-                    .resizable().frame(width: 44, height: 44)
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("Morrow").font(.system(size: 20, weight: .semibold))
-                    Text("Version \(version)").font(.system(size: 12)).foregroundStyle(.secondary)
-                }
-                Spacer()
-            }.padding(.vertical, 8)
-            SettingsCard {
-                SettingsActionRow(title: "Documentation…", symbol: "book") {
+                    .resizable().frame(width: 56, height: 56)
+                Text("Morrow").font(.system(size: 22, weight: .medium))
+                Text("Version \(version)").font(.system(size: 12)).foregroundStyle(.secondary)
+            }.frame(maxWidth: .infinity).padding(.top, 16).padding(.bottom, 20)
+            SettingsGroup(header: "Resources") {
+                SettingsActionRow(title: "Documentation", symbol: "book") {
                     NSWorkspace.shared.open(URL(string: "https://kkz6.github.io/Morrow/")!)
                 }
                 SettingsDivider()
-                SettingsActionRow(title: "Source Code…", symbol: "chevron.left.forwardslash.chevron.right") {
+                SettingsActionRow(title: "Source Code", symbol: "chevron.left.forwardslash.chevron.right") {
                     NSWorkspace.shared.open(URL(string: "https://github.com/kkz6/Morrow")!)
+                }
+                SettingsDivider()
+                SettingsActionRow(title: "Report a Problem", symbol: "bubble.left") {
+                    NSWorkspace.shared.open(URL(string: "https://github.com/kkz6/Morrow/issues/new")!)
                 }
             }
         }

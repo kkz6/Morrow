@@ -16,20 +16,21 @@ struct InstancesPane: View {
                     Text("\(model.runningCount) running · \(model.instances.count) instances").font(.system(size: 11)).foregroundStyle(.secondary)
                 }
                 Spacer()
-                Button { model.requestCreation() } label: { Label("New Instance", systemImage: "plus") }
-                    .settingsButton()
-                    .disabled(model.busy)
+                if !model.instances.isEmpty {
+                    Button { model.requestCreation() } label: { Label("New Instance", systemImage: "plus") }
+                        .settingsButton().disabled(model.busy)
+                }
             }
             if model.instances.isEmpty {
                 SettingsCard {
-                    VStack(spacing: 12) {
-                        Image(systemName: "externaldrive.badge.plus").font(.system(size: 34, weight: .light)).foregroundStyle(.teal)
-                        Text("A home for your databases").font(.system(size: 16, weight: .semibold))
-                        Text("Choose a database and version. Morrow uses an existing installation or installs it while creating your instance.")
-                            .font(.system(size: 12)).foregroundStyle(.secondary).multilineTextAlignment(.center).frame(maxWidth: 310)
-                        Button("Create Instance") { model.requestCreation() }.settingsButton(expands: true).disabled(model.busy)
-                            .padding(.horizontal, 28).padding(.top, 6)
-                    }.frame(maxWidth: .infinity).padding(.vertical, 38)
+                    VStack(spacing: 10) {
+                        Image(systemName: "externaldrive.badge.plus").font(.system(size: 28, weight: .light)).foregroundStyle(.teal)
+                        Text("No databases yet").font(.system(size: 14, weight: .medium))
+                        Text("Create an instance to start your project.")
+                            .font(.system(size: 12)).foregroundStyle(.secondary)
+                    }.frame(maxWidth: .infinity).padding(.vertical, 24)
+                    SettingsDivider()
+                    SettingsActionRow(title: "Create Instance…", symbol: "plus") { model.requestCreation() }.disabled(model.busy)
                 }
             } else {
                 SettingsInput(placeholder: "Find an instance", text: $query, symbol: "magnifyingglass", clearable: true)

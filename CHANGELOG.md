@@ -18,6 +18,7 @@
 - Simplified About to app identity, version, and links; removed the menu footer caption and product-level third-party references.
 - Added fixed settings headers with a native gradient blur while scrolling, smooth appearance changes, and Reduce Motion support.
 - Refined menu controls with borderless secondary icons and a compact, understated creation action.
+- Added automatic card-edge corner geometry, lighter shared actions, a single-action database empty state, and a balanced About resource group.
 
 Remote hosting, authenticated instance configuration, backups, S3 storage,
 RabbitMQ, and language toolchains are planned and not included in this preview.
