@@ -70,3 +70,34 @@ struct SettingsActionRow: View {
         .padding(6)
     }
 }
+
+/// Menu controls are quieter than card actions: no raised icon backplates,
+/// compact typography, and a translucent action surface that fits the popover.
+struct MenuIconButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var enabled
+    @State private var hovering = false
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .foregroundStyle(enabled ? (hovering ? Color.primary : .secondary) : .secondary.opacity(0.4))
+            .frame(width: 26, height: 26)
+            .background(Color.primary.opacity(enabled && configuration.isPressed ? 0.09 : enabled && hovering ? 0.045 : 0),
+                        in: RoundedRectangle(cornerRadius: 5))
+            .contentShape(Rectangle())
+            .onHover { hovering = $0 }
+    }
+}
+
+struct MenuActionButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var enabled
+    @State private var hovering = false
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label.font(.system(size: 12, weight: .medium))
+            .foregroundStyle(enabled ? Color.primary : .secondary)
+            .padding(.horizontal, 16).frame(minWidth: 146, minHeight: 30, maxHeight: 30)
+            .background(Color.primary.opacity(configuration.isPressed ? 0.08 : hovering ? 0.05 : 0.025),
+                        in: RoundedRectangle(cornerRadius: 6))
+            .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Color.primary.opacity(0.12), lineWidth: 0.75))
+            .contentShape(RoundedRectangle(cornerRadius: 6))
+            .onHover { hovering = $0 }
+    }
+}

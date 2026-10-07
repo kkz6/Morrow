@@ -17,6 +17,7 @@
 - Standardized action buttons to the supplied macOS reference, with inset card actions, matching dialog controls, and About links to documentation and source.
 - Simplified About to app identity, version, and links; removed the menu footer caption and product-level third-party references.
 - Added fixed settings headers with a native gradient blur while scrolling, smooth appearance changes, and Reduce Motion support.
+- Refined menu controls with borderless secondary icons and a compact, understated creation action.
 
 Remote hosting, authenticated instance configuration, backups, S3 storage,
 RabbitMQ, and language toolchains are planned and not included in this preview.

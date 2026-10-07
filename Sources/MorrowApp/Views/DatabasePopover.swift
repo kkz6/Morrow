@@ -12,15 +12,15 @@ struct DatabasePopover: View {
                 Text("\(model.runningCount) running").font(.system(size: 11)).foregroundStyle(.secondary)
                 Button { model.requestCreation(); openSettings() } label: {
                     Image(systemName: "plus").font(.system(size: 12, weight: .semibold)).frame(width: 22, height: 22)
-                }.buttonStyle(SettingsButtonStyle(height: 26, iconOnly: true)).help("New instance").disabled(model.busy)
+                }.buttonStyle(MenuIconButtonStyle()).help("New instance").disabled(model.busy)
             }.padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 10)
             if model.instances.isEmpty {
                 VStack(spacing: 8) {
                     Image(systemName: "externaldrive.badge.plus").font(.system(size: 28, weight: .light)).foregroundStyle(.teal)
                     Text("Your workspace starts here").font(.system(size: 13, weight: .medium))
-                    Text("Create an instance. Installation is handled for you.").font(.system(size: 11)).foregroundStyle(.secondary)
-                    Button("Create Instance") { model.requestCreation(); openSettings() }.settingsButton(expands: true)
-                        .padding(.horizontal, 16).padding(.top, 6)
+                    Text("Create a database to get started.").font(.system(size: 11)).foregroundStyle(.secondary)
+                    Button("Create Instance") { model.requestCreation(); openSettings() }.buttonStyle(MenuActionButtonStyle())
+                        .padding(.top, 6)
                 }.frame(maxWidth: .infinity).padding(.vertical, 25)
             } else if !model.instances.isEmpty {
                 ScrollView {
@@ -41,9 +41,9 @@ struct DatabasePopover: View {
             HStack(spacing: 12) {
                 Spacer()
                 Button { openSettings() } label: { Image(systemName: "gearshape").frame(width: 26, height: 26) }
-                    .buttonStyle(SettingsButtonStyle(height: 28, iconOnly: true)).help("Settings").keyboardShortcut(",", modifiers: .command)
+                    .buttonStyle(MenuIconButtonStyle()).help("Settings").keyboardShortcut(",", modifiers: .command)
                 Button { NSApplication.shared.terminate(nil) } label: { Image(systemName: "power").frame(width: 26, height: 26) }
-                    .buttonStyle(SettingsButtonStyle(height: 28, iconOnly: true)).help("Quit Morrow — databases stay running").disabled(model.busy)
+                    .buttonStyle(MenuIconButtonStyle()).help("Quit Morrow — databases stay running").disabled(model.busy)
             }.foregroundStyle(.secondary).padding(.horizontal, 16).padding(.vertical, 5)
         }.frame(width: 340)
             .task { await model.refresh() }
@@ -71,13 +71,13 @@ private struct PopoverInstanceRow: View {
                     if shouldStop { try manager.stop(id) } else { try manager.start(id) }
                 }
             } label: { Image(systemName: active ? "stop.fill" : "play.fill").font(.system(size: 10)) }
-                .buttonStyle(SettingsButtonStyle(height: 26, iconOnly: true)).help(active ? "Stop" : "Start").disabled(model.busy || status == .missingBinary)
+                .buttonStyle(MenuIconButtonStyle()).help(active ? "Stop" : "Start").disabled(model.busy || status == .missingBinary)
             Button { model.showLogs(for: instance); openSettings() } label: {
                 Image(systemName: "terminal").font(.system(size: 11))
-            }.buttonStyle(SettingsButtonStyle(height: 26, iconOnly: true)).help("View logs in Morrow")
+            }.buttonStyle(MenuIconButtonStyle()).help("View logs in Morrow")
             Button {
                 NSPasteboard.general.clearContents(); NSPasteboard.general.setString(instance.connectionURL, forType: .string)
-            } label: { Image(systemName: "doc.on.doc").font(.system(size: 11)) }.buttonStyle(SettingsButtonStyle(height: 26, iconOnly: true)).help("Copy connection address")
+            } label: { Image(systemName: "doc.on.doc").font(.system(size: 11)) }.buttonStyle(MenuIconButtonStyle()).help("Copy connection address")
         }.padding(.horizontal, 16).frame(height: 58)
     }
 }
