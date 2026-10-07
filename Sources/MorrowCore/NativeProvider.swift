@@ -1,0 +1,99 @@
+import Foundation
+
+/// Each provider describes a foreground native process. launchd owns its
+/// lifetime; server data and sockets always belong to the Morrow instance.
+public struct NativeProvider: Sendable {
+    public let store: StateStore
+    public let runner: any CommandRunning
+    public init(store: StateStore, runner: any CommandRunning = CommandRunner()) { self.store = store; self.runner = runner }
+
+    public func initialize(_ instance: DatabaseInstance) throws {
+        let fm = FileManager.default
+        let base = store.instanceDirectory(instance)
+        let data = store.dataDirectory(instance)
+        guard !fm.fileExists(atPath: base.path) else { throw MorrowError.message("An instance directory already exists. It has been preserved.") }
+        try fm.createDirectory(at: base, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        switch instance.engine {
+        case .postgresql:
+            try runner.run(instance.installation.prefix + "/bin/initdb", ["-D", data.path, "-U", "postgres", "--auth-local=trust", "--auth-host=trust", "--encoding=UTF8", "--locale=C"], environment: [:]).checked()
+        case .mysql:
+            try runner.run(instance.installation.executable, ["--no-defaults", "--initialize-insecure", "--basedir=\(instance.installation.prefix)", "--datadir=\(data.path)"], environment: [:]).checked()
+        case .mariadb:
+            try runner.run(instance.installation.initializationTool ?? instance.installation.prefix + "/bin/mariadb-install-db", ["--no-defaults", "--basedir=\(instance.installation.prefix)", "--datadir=\(data.path)", "--auth-root-authentication-method=normal"], environment: [:]).checked()
+        default:
+            try fm.createDirectory(at: data, withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
+        }
+        try writeConfiguration(instance)
+    }
+    public func writeConfiguration(_ instance: DatabaseInstance) throws {
+        let config = configuration(instance)
+        try config.write(to: store.configURL(instance), atomically: true, encoding: .utf8)
+        try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: store.configURL(instance).path)
+    }
+    public func arguments(_ instance: DatabaseInstance) -> [String] {
+        let data = store.dataDirectory(instance).path
+        let config = store.configURL(instance).path
+        switch instance.engine {
+        case .postgresql: return [instance.installation.executable, "-D", data, "-c", "config_file=\(config)"]
+        case .mysql, .mariadb: return [instance.installation.executable, "--defaults-file=\(config)"]
+        case .mongodb: return [instance.installation.executable, "--config", config]
+        case .redis, .valkey: return [instance.installation.executable, config]
+        case .memcached: return [instance.installation.executable, "-l", "127.0.0.1", "-p", String(instance.port), "-m", String(instance.memoryMB), "-U", "0"]
+        }
+    }
+    public func configuration(_ instance: DatabaseInstance) -> String {
+        let data = store.dataDirectory(instance).path
+        let base = store.instanceDirectory(instance).path
+        switch instance.engine {
+        case .postgresql:
+            return """
+            # Managed by Morrow. Change settings through the app or CLI.
+            listen_addresses = '127.0.0.1'
+            port = \(instance.port)
+            max_connections = \(instance.maxConnections)
+            shared_buffers = '\(instance.memoryMB)MB'
+            unix_socket_directories = ''
+            hba_file = '\(quotePG(data))/pg_hba.conf'
+            ident_file = '\(quotePG(data))/pg_ident.conf'
+            logging_collector = off
+            """
+        case .mysql, .mariadb:
+            return """
+            [mysqld]
+            basedir="\(quoteINI(instance.installation.prefix))"
+            datadir="\(quoteINI(data))"
+            socket="\(quoteINI(store.socketURL(instance).path))"
+            pid-file="\(quoteINI(base))/server.pid"
+            bind-address=127.0.0.1
+            port=\(instance.port)
+            max-connections=\(instance.maxConnections)
+            \(instance.engine == .mysql ? "mysqlx=0" : "")
+            """
+        case .mongodb:
+            return """
+            storage:
+              dbPath: \(jsonString(data))
+            net:
+              bindIp: 127.0.0.1
+              port: \(instance.port)
+            processManagement:
+              fork: false
+            """
+        case .redis, .valkey:
+            return """
+            bind 127.0.0.1
+            protected-mode yes
+            port \(instance.port)
+            dir \(jsonString(data))
+            daemonize no
+            appendonly yes
+            maxmemory \(instance.memoryMB)mb
+            maxmemory-policy noeviction
+            """
+        case .memcached: return "# Memcached uses launch arguments generated by Morrow.\n"
+        }
+    }
+    private func quotePG(_ value: String) -> String { value.replacingOccurrences(of: "'", with: "''").replacingOccurrences(of: "\\", with: "\\\\") }
+    private func quoteINI(_ value: String) -> String { value.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"") }
+    private func jsonString(_ value: String) -> String { String(decoding: try! JSONEncoder().encode(value), as: UTF8.self) }
+}

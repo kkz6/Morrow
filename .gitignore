@@ -1,0 +1,12 @@
+.build/
+.swiftpm/
+build/
+.DS_Store
+*.xcuserstate
+node_modules/
+.nuxt/
+.output/
+website/app/generated/
+.env
+.env.*
+!.env.example
