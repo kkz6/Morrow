@@ -2,6 +2,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 morrow_cli_source="${1:-$(pwd)/build/Morrow.app/Contents/MacOS/morrow}"
+morrow_cli_source="$(python3 -c 'import os,sys; print(os.path.abspath(sys.argv[1]))' "$morrow_cli_source")"
 if [[ ! -x "$morrow_cli_source" ]]; then
     echo "Build the app first or pass the path to a standalone morrow binary." >&2
     exit 1

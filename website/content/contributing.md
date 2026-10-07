@@ -51,3 +51,7 @@ The repository’s `AGENTS.md` records this requirement for future coding sessio
 ## Current scope
 
 This is a developer preview for local databases. Authentication controls, backup/export, S3 destinations, remote server management, RabbitMQ, and PHP/Go runtimes are future work.
+
+## Dependency status
+
+The Nuxt toolchain currently reports upstream high-severity npm audit advisories involving its development dependencies. Patched Git parser versions are pinned through overrides. The published site contains static HTML, CSS, and client scripts; its development server stays on 127.0.0.1. Recheck advisories when updating dependencies rather than forcing an incompatible Nuxt downgrade.
