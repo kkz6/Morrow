@@ -12,7 +12,7 @@ Make shared behavior changes in the core so both interfaces remain consistent. K
 
 ## App interface
 
-Use the shared DesignSystem components for controls. Action buttons use quiet translucent surfaces, a thin border, and medium-weight text without raised shadows. `SettingsCard` publishes its size and coordinate space; full-width actions automatically round only corners adjacent to the card edges. A single action rounds all corners, first and last actions follow top and bottom edges, and middle actions stay square. Compact controls retain their standard radius. Do not specify row positions or per-pane corner overrides.
+Use the shared DesignSystem components for controls. Action buttons use a subtle light surface that adapts to light and dark mode, a thin border, and medium-weight text without raised shadows. `SettingsCard` publishes its size and coordinate space; full-width actions keep softly rounded interior corners and automatically increase the radius at the card edges. A single action rounds all corners, first and last actions follow top and bottom edges, and middle actions retain a gentle six-point radius. Compact controls retain their standard radius. Do not specify row positions or per-pane corner overrides.
 
 In the menu popover, use compact actions with a translucent surface and borderless secondary icons. Icon backplates appear only on hover or press. Keep creation buttons centered and appropriately sized rather than stretching a heavy settings-card button across the menu.
 

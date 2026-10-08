@@ -9,6 +9,7 @@ struct SettingsButtonStyle: ButtonStyle {
     var iconOnly = false
     var alignment: Alignment = .center
     @Environment(\.isEnabled) private var enabled
+    @Environment(\.colorScheme) private var colorScheme
     @State private var hovering = false
     @State private var boundsInCard = CGRect.zero
     @Environment(\.settingsCardContext) private var card
@@ -40,7 +41,11 @@ struct SettingsButtonStyle: ButtonStyle {
         return role == .destructive ? .red : .primary
     }
     private func surface(pressed: Bool) -> Color {
-        Color.primary.opacity(!enabled ? 0.012 : pressed ? 0.075 : hovering ? 0.045 : 0.02)
+        if colorScheme == .dark {
+            return Color.white.opacity(!enabled ? 0.025 : pressed ? 0.12 : hovering ? 0.085 : 0.055)
+        }
+        if pressed && enabled { return Color.black.opacity(0.035) }
+        return Color.white.opacity(!enabled ? 0.35 : hovering ? 0.95 : 0.75)
     }
 }
 

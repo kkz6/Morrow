@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Softened shared action-button corners and added a subtle light background with theme-aware hover, pressed, and disabled states.
+
 - Sites and Project Directories UI for parked-folder discovery, enable/pause/remove controls, explicit links, per-project PHP, document roots, and HTTPS.
 - Shared PHP-FPM/Caddy/dnsmasq hosting with loopback listeners, validated reloads, and a watcher that keeps running after the menu bar app closes.
 - Folder-based app-port linking for npm development scripts and other HTTP runtimes.
