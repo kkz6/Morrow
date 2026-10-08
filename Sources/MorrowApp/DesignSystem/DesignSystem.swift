@@ -17,6 +17,9 @@ enum DS {
         static let control: CGFloat = 13
         static let selection: CGFloat = 11
         static let tile: CGFloat = 8
+        static let action: CGFloat = 5
+        static let actionInterior: CGFloat = 3
+        static let actionEdge: CGFloat = 6
     }
 
     enum Size {
