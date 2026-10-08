@@ -2,7 +2,8 @@
 
 ## Unreleased
 
-- Added a subtle light button background with theme-aware hover, pressed, and disabled states; refined shared corners to three points inside groups, five for compact actions, and six at card edges.
+- Added a subtle light button background with theme-aware hover, pressed, and disabled states; shared actions use small interior corners and larger outer card-edge corners.
+- Balanced grouped-action padding and dividers, updated geometry tracking, and added a shared side-by-side action group with independent outer corners.
 
 - Sites and Project Directories UI for parked-folder discovery, enable/pause/remove controls, explicit links, per-project PHP, document roots, and HTTPS.
 - Shared PHP-FPM/Caddy/dnsmasq hosting with loopback listeners, validated reloads, and a watcher that keeps running after the menu bar app closes.

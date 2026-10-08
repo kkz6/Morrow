@@ -13,7 +13,7 @@ struct SettingsButtonStyle: ButtonStyle {
     @State private var hovering = false
     @State private var boundsInCard = CGRect.zero
     @Environment(\.settingsCardContext) private var card
-    private var corners: ActionCorners { ActionCorners.resolve(button: boundsInCard, card: card?.size) }
+    private var corners: ActionCorners { ActionCorners.resolve(button: boundsInCard, card: card?.size, grouped: expands) }
 
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -28,10 +28,9 @@ struct SettingsButtonStyle: ButtonStyle {
             .contentShape(corners.shape)
             .background {
                 if let card {
-                    GeometryReader { geometry in
-                        Color.clear.onAppear { boundsInCard = geometry.frame(in: .named(card.id)) }
-                            .onChange(of: geometry.frame(in: .named(card.id))) { _, frame in boundsInCard = frame }
-                    }
+                    Color.clear.onGeometryChange(for: CGRect.self) { geometry in
+                        geometry.frame(in: .named(card.id))
+                    } action: { boundsInCard = $0 }
                 }
             }
             .onHover { hovering = $0 }
@@ -79,7 +78,18 @@ struct SettingsActionRow: View {
             }
         }
         .buttonStyle(SettingsButtonStyle(expands: true, alignment: .leading))
-        .padding(6)
+        .padding(SettingsLayout.actionInset)
+    }
+}
+
+/// Inset peer actions share one gutter. Button geometry determines which
+/// individual corners touch the card, without first/last styling at call sites.
+struct SettingsActionGroup<Content: View>: View {
+    @ViewBuilder var content: Content
+    var body: some View {
+        HStack(spacing: SettingsLayout.actionSpacing) { content }
+            .buttonStyle(SettingsButtonStyle(expands: true))
+            .padding(SettingsLayout.actionInset)
     }
 }
 

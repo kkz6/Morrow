@@ -19,7 +19,7 @@ enum DS {
         static let tile: CGFloat = 8
         static let action: CGFloat = 5
         static let actionInterior: CGFloat = 3
-        static let actionEdge: CGFloat = 6
+        static let actionEdge: CGFloat = 11
     }
 
     enum Size {
@@ -122,7 +122,7 @@ struct SettingsDivider: View {
     var body: some View {
         Rectangle()
             .fill(DS.dividerColor)
-            .frame(height: 1)
+            .frame(height: 0.5)
             .accessibilityHidden(true)
     }
 }
