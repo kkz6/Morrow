@@ -35,6 +35,11 @@ public struct StateStore: Sendable {
             : FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/LaunchAgents")
         return base.appendingPathComponent("\(instance.label).plist")
     }
+    public func loginAgentURL(label: String) -> URL {
+        let base = isolated ? root.appendingPathComponent("LaunchAgents") : FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/LaunchAgents")
+        return base.appendingPathComponent(label + ".plist")
+    }
+    public var workerEnvironment: [String: String] { isolated ? ["MORROW_HOME": root.path] : [:] }
     public func load() throws -> MorrowState { try locked { try readUnlocked() } }
     @discardableResult
     public func update<T>(_ mutate: (inout MorrowState) throws -> T) throws -> T {

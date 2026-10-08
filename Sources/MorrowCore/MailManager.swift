@@ -41,7 +41,7 @@ public struct MailManager: Sendable {
     private func current(_ id: UUID) throws -> MailService { try resolve(id.uuidString) }
     public func suggestedPort(_ start: Int, excluding otherPort: Int? = nil) throws -> Int {
         let state = try store.load()
-        let used = Set(state.instances.map(\.port) + state.mailServices.flatMap { [$0.smtpPort, $0.httpPort] })
+        let used = Set(state.instances.map(\.port) + state.mailServices.flatMap { [$0.smtpPort, $0.httpPort] } + state.webReservedPorts)
         for port in start..<min(start + 1000, 65536) where port >= 1024 && port != otherPort {
             if !used.contains(port) && DatabaseManager.portAvailable(port) { return port }
         }
@@ -53,7 +53,7 @@ public struct MailManager: Sendable {
         let state = try store.load()
         let others = state.mailServices.filter { $0.id != excluding }
         guard !others.contains(where: { $0.name.lowercased() == name.lowercased() }) else { throw MorrowError.message("A mail service with that name already exists.") }
-        let reserved = Set(state.instances.map(\.port) + others.flatMap { [$0.smtpPort, $0.httpPort] })
+        let reserved = Set(state.instances.map(\.port) + others.flatMap { [$0.smtpPort, $0.httpPort] } + state.webReservedPorts)
         for port in [smtpPort, httpPort] {
             guard !reserved.contains(port), DatabaseManager.portAvailable(port) else { throw MorrowError.message("Port \(port) is in use. Choose another port.") }
         }

@@ -33,6 +33,24 @@ let help = """
 Morrow — databases and development runtimes.
 
   morrow doctor                          Check Homebrew and local paths
+  morrow site park <directory>            Discover folder-name.test projects
+  morrow site unpark <directory>          Remove parked routes; preserve files
+  morrow site directories                 List parked directories
+  morrow site directory <path> on|off     Enable or pause directory discovery
+  morrow site link [path] --port <port>   Link a local app port to its folder domain
+      --domain <name> --https             Optional custom name and HTTPS
+  morrow site unlink <domain>             Remove an explicit project link
+  morrow site list [--json]               Show project routes and actual status
+  morrow site start|stop                  Control Caddy, DNS and PHP-FPM
+  morrow site refresh                     Refresh parked projects and routes
+  morrow site watch                       Watch directories while running
+  morrow site secure|unsecure <domain>   Toggle a site's local HTTPS
+  morrow site php [version]               Select an installed PHP-FPM version
+      --install                          Reuse/install complete Homebrew PHP
+  morrow site configure                  Set suffix, ports, HTTPS and login defaults
+  morrow site setup [--remove]            Administrator setup for DNS and clean URLs
+  morrow site trust                      Trust this Mac's local CA in the login keychain
+  morrow site open|logs <domain>          Open a site or print its routing log
   morrow mail create <name>               Create a local SMTP testing server
       --smtp-port <port>                 Default: next free port from 1025
       --http-port <port>                 Default: next free port from 8025
@@ -128,6 +146,7 @@ func main() throws {
         print("Instances: \(try manager.store.load().instances.count)")
         return
     }
+    if command == "site" { try siteMain(args, manager: SiteManager(store: manager.store, runner: manager.runner)); return }
     if command == "mail" { try mailMain(args, manager: MailManager(store: manager.store, runner: manager.runner)); return }
     if command == "sync" { try syncMain(args, manager: WorkspaceSync(store: manager.store, runner: manager.runner)); return }
     if command == "tool" { try toolsMain(args, manager: RuntimeManager(store: manager.store, runner: manager.runner)); return }
@@ -342,6 +361,81 @@ func mailMain(_ args: [String], manager: MailManager) throws {
         default: try manager.remove(service.id, deleteMessages: options.flags.contains("--delete-messages")); print("Mail server removed.")
         }
     default: throw MorrowError.message("Unknown mail command. Run morrow --help.")
+    }
+}
+
+func siteMain(_ args: [String], manager: SiteManager) throws {
+    guard let action = args.first else { throw MorrowError.message("Run morrow site --help or morrow --help.") }
+    let remaining = Array(args.dropFirst())
+    let cli = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath()
+    switch action {
+    case "setup":
+        let options = try Options(remaining, allowedValues: ["--http-port", "--https-port", "--dns-port", "--suffixes", "--user"], allowedFlags: ["--remove"])
+        try options.requireCount(0, usage: "sudo morrow site setup [--http-port 8080 --https-port 8443 --dns-port 5354 --suffixes test]")
+        if options.flags.contains("--remove") { try SiteSystemSetup.remove(); print("Removed Morrow's owned resolver and forwarding setup."); return }
+        guard let uid = UInt32(options.values["--user"] ?? ProcessInfo.processInfo.environment["SUDO_UID"] ?? ""), uid > 0 else { throw MorrowError.message("Run this through sudo, or supply the Mac user's UID with --user.") }
+        try SiteSystemSetup.install(http: options.number("--http-port", default: 8080), https: options.number("--https-port", default: 8443), dns: options.number("--dns-port", default: 5354), suffixes: (options.values["--suffixes"] ?? "test").components(separatedBy: ","), uid: uid)
+        print("Local DNS and ports 80/443 configured. Start Sites as your normal user.")
+    case "park", "unpark":
+        let options = try Options(remaining); try options.requireCount(1, usage: "morrow site \(action) <directory>")
+        if action == "park" { try manager.park(options.positional[0]) } else { try manager.unpark(options.positional[0]) }
+        print(action == "park" ? "Project directory parked." : "Directory routes removed; files preserved.")
+    case "directories":
+        guard remaining.isEmpty else { throw MorrowError.message("Usage: morrow site directories") }
+        for item in try manager.store.load().web.directories { print("\(item.enabled ? "Enabled" : "Paused") · \(item.path)") }
+    case "directory":
+        let options = try Options(remaining); try options.requireCount(2, usage: "morrow site directory <path> on|off")
+        guard ["on", "off"].contains(options.positional[1]) else { throw MorrowError.message("Use on or off.") }
+        let path = URL(fileURLWithPath: options.positional[0]).standardizedFileURL.resolvingSymlinksInPath().path
+        guard let item = try manager.store.load().web.directories.first(where: { $0.path == path }) else { throw MorrowError.message("That directory is not parked.") }
+        try manager.setDirectory(item.id, enabled: options.positional[1] == "on")
+    case "link":
+        let options = try Options(remaining, allowedValues: ["--port", "--domain"], allowedFlags: ["--https"])
+        guard options.positional.count <= 1 else { throw MorrowError.message("Usage: morrow site link [path] [--port <port>] [--domain <name>] [--https]") }
+        let port = try options.values["--port"].map { _ in try options.number("--port", default: 0) }
+        let site = try manager.link(path: options.positional.first ?? FileManager.default.currentDirectoryPath, port: port, domain: options.values["--domain"], https: options.flags.contains("--https") ? true : nil)
+        print("Linked \(site.domain) → \(port.map { "127.0.0.1:\($0)" } ?? site.documentRoot)\n\(manager.url(site).absoluteString)")
+    case "list":
+        let options = try Options(remaining, allowedFlags: ["--json"]); try options.requireCount(0, usage: "morrow site list [--json]")
+        let web = try manager.store.load().web, status = try manager.status()
+        if options.flags.contains("--json") { try printJSON(web.sites) }
+        else { for site in web.sites { print("\(site.domain) · \(site.mode.rawValue) · \(status.sites[site.id]?.rawValue ?? "Unknown") · \(manager.url(site, web: web).absoluteString)\(site.issue.map { "\n  " + $0 } ?? "")") } }
+    case "start", "stop", "refresh", "watch", "trust":
+        guard remaining.isEmpty else { throw MorrowError.message("Usage: morrow site \(action)") }
+        switch action {
+        case "start": try manager.start(cli: cli); print("Local hosting started. Use Sites → Enable Local Domains for clean URLs.")
+        case "stop": try manager.stop(); print("Local hosting stopped.")
+        case "trust": try manager.trustCertificate(); print("Trusted Morrow's local CA for this user.")
+        case "refresh": try manager.refreshProjects(force: true); print("Projects refreshed.")
+        default:
+            while try manager.store.load().web.enabled {
+                do { try manager.refreshProjects() } catch { FileHandle.standardError.write(Data((error.localizedDescription + "\n").utf8)) }
+                Thread.sleep(forTimeInterval: 3)
+            }
+        }
+    case "php":
+        let options = try Options(remaining, allowedFlags: ["--install"])
+        guard options.positional.count <= 1 else { throw MorrowError.message("Usage: morrow site php [version] [--install]") }
+        if options.flags.contains("--install") { guard options.positional.isEmpty else { throw MorrowError.message("--install selects Homebrew's current complete PHP.") }; try manager.installPHP() }
+        else if let version = options.positional.first {
+            guard let item = try manager.availablePHP().first(where: { $0.version == version || $0.version.hasPrefix(version + ".") || $0.id == version }) else { throw MorrowError.message("No complete PHP-FPM installation matches that version.") }
+            try manager.selectPHP(item); print("Sites uses PHP \(item.version).")
+        } else { for item in try manager.availablePHP() { print("PHP \(item.version) · \(item.prefix)") } }
+    case "secure", "unsecure", "unlink", "open", "logs":
+        let options = try Options(remaining); try options.requireCount(1, usage: "morrow site \(action) <domain>")
+        var site = try manager.resolve(options.positional[0])
+        if action == "secure" || action == "unsecure" { site.https = action == "secure"; try manager.update(site) }
+        else if action == "unlink" { try manager.unlink(site.id) }
+        else if action == "open" { try CommandRunner().run("/usr/bin/open", [manager.url(site).absoluteString]).checked() }
+        else { print((try? String(contentsOf: manager.logURL, encoding: .utf8).suffix(32768)) ?? "No web logs yet.") }
+    case "configure":
+        let options = try Options(remaining, allowedValues: ["--suffix", "--http-port", "--https-port", "--dns-port", "--https", "--autostart"])
+        try options.requireCount(0, usage: "morrow site configure [--suffix test] [--https on|off] [--autostart on|off] [listener ports]")
+        func toggle(_ key: String) throws -> Bool? { guard let value = options.values[key] else { return nil }; guard ["on", "off"].contains(value) else { throw MorrowError.message("Use on or off for \(key).") }; return value == "on" }
+        func port(_ key: String) throws -> Int? { try options.values[key].map { _ in try options.number(key, default: 0) } }
+        try manager.configure(suffix: options.values["--suffix"], defaultHTTPS: toggle("--https"), http: port("--http-port"), https: port("--https-port"), dns: port("--dns-port"), autoStart: toggle("--autostart"))
+        print("Hosting defaults saved. Changed suffixes or ports may need system setup again.")
+    default: throw MorrowError.message("Unknown site command. Run morrow --help.")
     }
 }
 

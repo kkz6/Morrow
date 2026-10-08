@@ -143,3 +143,33 @@ The default folder is `iCloud Drive/Morrow`. Automatic setup is a local opt-in. 
 Creation options: `--smtp-port <port>`, `--http-port <port>`, `--version <detected-version-or-current>`, `--autostart`, `--start`. Defaults use a detected Mailpit binary and free ports starting at 1025 and 8025.
 
 Configuration options: `--smtp-port <port>`, `--http-port <port>`, `--name <name>`, `--autostart on|off`. Read [Local SMTP testing](/docs/mail) for app settings and inbox behavior.
+
+## Sites and project directories
+
+| Command | Purpose |
+| --- | --- |
+| `morrow site park <directory>` | Discover immediate project folders |
+| `morrow site unpark <directory>` | Remove automatic routes, preserving folders |
+| `morrow site directories` | List parked directories |
+| `morrow site directory <path> on|off` | Enable or pause discovery |
+| `morrow site link [path] [--port <port>] [--domain <name>] [--https]` | Link a project or an app port; omitted path means the working directory |
+| `morrow site unlink <domain>` | Remove an explicit link |
+| `morrow site list [--json]` | List routes; text includes status, JSON includes route records |
+| `morrow site start` | Start user-owned Caddy, DNS, PHP-FPM, and watcher jobs |
+| `morrow site stop` | Stop hosting and remove its login jobs |
+| `morrow site refresh` | Reconcile directory changes and routes |
+| `morrow site watch` | Run the enabled workspace watcher in the foreground |
+| `morrow site php [version] [--install]` | List/select complete PHP-FPM installations, or reuse/install current Homebrew PHP |
+| `morrow site secure <domain>` | Enable local HTTPS |
+| `morrow site unsecure <domain>` | Change the route to HTTP |
+| `morrow site configure [options]` | Change suffix, listener ports, and new-site HTTPS/login defaults |
+| `morrow site setup [options] [--remove]` | Administrator setup/removal of owned DNS and loopback forwarding |
+| `morrow site trust` | Trust Morrow's local CA in this user's login keychain |
+| `morrow site open <domain>` | Open the project URL |
+| `morrow site logs <domain>` | Print recent routing output |
+
+Configuration options: `--suffix <namespace>`, `--http-port <port>`, `--https-port <port>`, `--dns-port <port>`, `--https on|off`, `--autostart on|off`. Stop hosting before changing listener ports.
+
+System setup options: `--http-port`, `--https-port`, `--dns-port`, `--suffixes <comma-separated-namespaces>`, `--user <uid>` for authorization integrations. Under sudo, the original user's UID is inferred from `SUDO_UID`. System setup never takes over another tool's resolver file.
+
+Read [Sites and project directories](/docs/sites) for PHP roots, development-script integration, private namespaces, certificates, and the system authorization step.

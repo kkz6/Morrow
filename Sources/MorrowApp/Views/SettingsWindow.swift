@@ -2,12 +2,13 @@ import SwiftUI
 import MorrowCore
 
 enum SettingsSection: String, Identifiable, SettingsDestination {
-    case instances, applications, mail, logs, storage, general, commandLine, sync, menuBar, appearance, about
+    case instances, sites, applications, mail, logs, storage, general, commandLine, sync, menuBar, appearance, about
     var id: String { rawValue }
     var title: LocalizedStringKey { LocalizedStringKey(textTitle) }
     var textTitle: String {
         switch self {
         case .instances: return "Databases"
+        case .sites: return "Sites"
         case .applications: return "Applications"
         case .mail: return "Mail"
         case .commandLine: return "Command Line"
@@ -23,6 +24,7 @@ enum SettingsSection: String, Identifiable, SettingsDestination {
     var symbol: String {
         switch self {
         case .instances: return "externaldrive.fill"
+        case .sites: return "globe"
         case .applications: return "chevron.left.forwardslash.chevron.right"
         case .mail: return "envelope.fill"
         case .commandLine: return "chevron.left.forwardslash.chevron.right"
@@ -38,6 +40,7 @@ enum SettingsSection: String, Identifiable, SettingsDestination {
     var color: Color {
         switch self {
         case .instances: return .teal
+        case .sites: return .blue
         case .applications: return .indigo
         case .mail: return .orange
         case .commandLine: return .indigo
@@ -55,7 +58,7 @@ enum SettingsSection: String, Identifiable, SettingsDestination {
 struct SettingsWindow: View {
     @Environment(AppModel.self) private var model
     private let groups: [SettingsSidebarGroup<SettingsSection>] = [
-        .init("databases", header: "Workspace", destinations: [.instances, .applications, .mail, .logs, .storage]),
+        .init("databases", header: "Workspace", destinations: [.instances, .sites, .applications, .mail, .logs, .storage]),
         .init("app", header: "App", destinations: [.general, .about]),
     ]
     var body: some View {
@@ -80,6 +83,7 @@ struct SettingsWindow: View {
     @ViewBuilder private func detail(_ section: SettingsSection) -> some View {
         switch section {
         case .instances: InstancesPane()
+        case .sites: SitesPane()
         case .applications: ApplicationsPane()
         case .mail: MailPane()
         case .commandLine: CommandLinePane()

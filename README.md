@@ -92,6 +92,22 @@ morrow tool shell
 
 See the [update guide](https://kkz6.github.io/Morrow/docs/updates) and [runtime guide](https://kkz6.github.io/Morrow/docs/applications). Arbitrary historical patches, project-specific runtime files, and web/PHP-FPM service management are not included yet.
 
+## Sites and parked projects
+
+Settings → Sites manages parked project directories, PHP-FPM hosting, static roots, project HTTPS, and app-port links. Caddy and dnsmasq are native Homebrew dependencies. Folder discovery continues through a managed watcher after the menu bar app closes.
+
+```sh
+morrow site park "$HOME/Projects"
+morrow site start
+morrow site php 8.4
+# From a Node/Go/other HTTP project folder:
+morrow site link --port 3000
+```
+
+Use `morrow site configure --suffix morrow.test` to choose a private namespace. Sites → Enable Local Domains performs the separate administrator DNS/forwarding setup; Sites → Trust Local HTTPS Certificate trusts this Mac's CA. Existing Herd/Valet resolvers and occupied web ports require resolving ownership first. Before system setup, URLs use Morrow's high listener ports.
+
+See the [Sites guide](https://kkz6.github.io/Morrow/docs/sites) for npm `predev` integration, project settings, HTTPS toggles, and setup/removal commands.
+
 ## Local SMTP testing
 
 Settings → Mail creates a native Mailpit server with SMTP and a browser inbox. It reuses existing binaries or installs Mailpit through Homebrew, validates both ports, captures mail locally, and exposes logs and lifecycle controls in the app and CLI.

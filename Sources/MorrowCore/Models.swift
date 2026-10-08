@@ -158,16 +158,18 @@ public struct MorrowState: Codable, Sendable {
     public var schemaVersion = 1
     public var instances: [DatabaseInstance] = []
     public var preferences = AppPreferences()
+    public var web = WebWorkspace()
     public var mailServices: [MailService] = []
     public var tools: [RuntimeInstallation] = []
     public var toolDefaults: [String: String] = [:]
     public init() {}
-    enum CodingKeys: String, CodingKey { case schemaVersion, instances, preferences, mailServices, tools, toolDefaults }
+    enum CodingKeys: String, CodingKey { case schemaVersion, instances, preferences, web, mailServices, tools, toolDefaults }
     public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         schemaVersion = try values.decodeIfPresent(Int.self, forKey: .schemaVersion) ?? 1
         instances = try values.decodeIfPresent([DatabaseInstance].self, forKey: .instances) ?? []
         preferences = try values.decodeIfPresent(AppPreferences.self, forKey: .preferences) ?? AppPreferences()
+        web = try values.decodeIfPresent(WebWorkspace.self, forKey: .web) ?? WebWorkspace()
         mailServices = try values.decodeIfPresent([MailService].self, forKey: .mailServices) ?? []
         tools = try values.decodeIfPresent([RuntimeInstallation].self, forKey: .tools) ?? []
         toolDefaults = try values.decodeIfPresent([String: String].self, forKey: .toolDefaults) ?? [:]

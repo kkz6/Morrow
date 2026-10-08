@@ -15,6 +15,8 @@ final class AppModel {
     var installations: [Installation] = []
     var statuses: [UUID: InstanceStatus] = [:]
     var channels: [VersionChannel] = []
+    var web = WebWorkspace()
+    var webStatus: WebStatus?
     var mailServices: [MailService] = []
     var mailStatuses: [UUID: InstanceStatus] = [:]
     var tools: [RuntimeInstallation] = []
@@ -31,6 +33,7 @@ final class AppModel {
     var selection: SettingsSection = .instances
     var creationRequest: InstanceCreationRequest?
     var logInstanceID: UUID?
+    var logSiteID: UUID?
     @ObservationIgnored let manager: DatabaseManager
     @ObservationIgnored private var monitor: Task<Void, Never>?
     @ObservationIgnored private var refreshing = false
@@ -70,6 +73,7 @@ final class AppModel {
     }
     func showLogs(for instance: DatabaseInstance) {
         creationRequest = nil
+        logSiteID = nil
         logInstanceID = instance.id
         selection = .logs
     }
@@ -100,10 +104,13 @@ final class AppModel {
                 let mail = MailManager(store: manager.store, runner: manager.runner)
                 let mailStatuses = Dictionary(uniqueKeysWithValues: state.mailServices.map { ($0.id, mail.status($0)) })
                 let report = readSyncReport ? try? WorkspaceSync(store: manager.store, runner: manager.runner).report() : nil
-                return (state, installations, statuses, installer.executable != nil, report, mailStatuses)
+                let webStatus = try SiteManager(store: manager.store, runner: manager.runner).status()
+                return (state, installations, statuses, installer.executable != nil, report, mailStatuses, webStatus)
             }.value
             instances = snapshot.0.instances
             preferences = snapshot.0.preferences
+            web = snapshot.0.web
+            webStatus = snapshot.6
             mailServices = snapshot.0.mailServices
             mailStatuses = snapshot.5
             tools = snapshot.0.tools
@@ -141,8 +148,24 @@ final class AppModel {
             channelActivity = false
         }
     }
+    var sites: SiteManager { SiteManager(store: manager.store, runner: manager.runner) }
+    func installSiteSystemSetup() {
+        let cli = cliURL
+        perform("Configuring local domains…", operation: { manager in
+            let sites = SiteManager(store: manager.store, runner: manager.runner)
+            let web = try manager.store.load().web
+            if let issue = SiteSystemSetup.setupIssue(suffixes: web.suffixes) { throw MorrowError.message(issue) }
+            let command = try sites.setupCommand(cli: cli)
+            let script = "do shell script " + Self.appleScriptString(command) + " with administrator privileges"
+            try manager.runner.run("/usr/bin/osascript", ["-e", script], environment: [:]).checked()
+            try sites.refreshProjects(force: true)
+        })
+    }
+    private nonisolated static func appleScriptString(_ value: String) -> String {
+        "\"" + value.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"") + "\""
+    }
     var mail: MailManager { MailManager(store: manager.store, runner: manager.runner) }
-    func showMailLogs(_ service: MailService) { logInstanceID = service.id; selection = .logs }
+    func showMailLogs(_ service: MailService) { logSiteID = nil; logInstanceID = service.id; selection = .logs }
     var runtimes: RuntimeManager { RuntimeManager(store: manager.store, runner: manager.runner) }
     var cliURL: URL { Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/morrow") }
     func checkUpdates(refresh: Bool = true) {

@@ -8,7 +8,7 @@ order: 4.7
 
 Open **Settings → Applications**, choose an application and version, then click **Use Version**. Morrow verifies and reuses an existing binary, or installs a missing Homebrew channel and selects it in the same operation.
 
-Supported runtimes in this preview are PHP, Go, Flutter, Node.js, Python, and Ruby. The provider catalog can be extended as more runtimes are added. Web sites, PHP-FPM services, project-specific version files, and additional runtimes are future work.
+Supported runtimes in this preview are PHP, Go, Flutter, Node.js, Python, and Ruby. The provider catalog can be extended as more runtimes are added. PHP web hosting and app-port routing live in [Sites](/docs/sites). Automatic ownership of Node/Go development processes, project-specific version files, and additional runtimes are future work.
 
 Morrow reads Homebrew formula kegs, PATH installations, and Herd's PHP binaries. Flutter discovery reads SDK version metadata without running Flutter's first-use bootstrap. If SDK metadata is absent, run `flutter --version` once using that installation and refresh the pane.
 

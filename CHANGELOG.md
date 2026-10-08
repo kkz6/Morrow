@@ -2,6 +2,14 @@
 
 ## Unreleased
 
+- Sites and Project Directories UI for parked-folder discovery, enable/pause/remove controls, explicit links, per-project PHP, document roots, and HTTPS.
+- Shared PHP-FPM/Caddy/dnsmasq hosting with loopback listeners, validated reloads, and a watcher that keeps running after the menu bar app closes.
+- Folder-based app-port linking for npm development scripts and other HTTP runtimes.
+- Configurable private development suffixes, Caddy-managed local certificates, and an explicit per-user CA trust action.
+- Separate administrator setup for owned resolver files, a dedicated loopback DNS alias, and scoped 80/443/DNS forwarding; existing Herd/Valet configuration is preserved.
+- Hosting listeners and linked application ports participate in database/mail port reservations.
+
+
 - Grouped Command Line, Menu Bar, Appearance, and iCloud Sync preferences inside General.
 - Local Mailpit SMTP testing services with a persistent inbox, loopback bindings, dual-port validation, lifecycle controls, in-app logs, CLI commands, and portable iCloud setup recipes.
 - Redis and Valkey use vendor vector brand marks consistently across menu rows, instance details, and selectors.

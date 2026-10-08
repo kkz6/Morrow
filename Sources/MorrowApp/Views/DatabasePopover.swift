@@ -41,6 +41,8 @@ struct DatabasePopover: View {
             Divider().opacity(0.4)
             HStack(spacing: 12) {
                 Spacer()
+                Button { model.selection = .sites; openSettings() } label: { Image(systemName: "globe").frame(width: 26, height: 26) }
+                    .buttonStyle(MenuIconButtonStyle()).help("Sites and project directories")
                 Button { openSettings() } label: { Image(systemName: "gearshape").frame(width: 26, height: 26) }
                     .buttonStyle(MenuIconButtonStyle()).help("Settings").keyboardShortcut(",", modifiers: .command)
                 Button { NSApplication.shared.terminate(nil) } label: { Image(systemName: "power").frame(width: 26, height: 26) }

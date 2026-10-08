@@ -16,12 +16,15 @@ for (const command of new Set(commands)) if (!reference.includes(`morrow db ${co
 const toolSwitch = cli.slice(cli.indexOf('func toolsMain'), cli.indexOf('func mailMain'))
 const toolCommands = [...toolSwitch.matchAll(/^    case ([^:]+):/gm)].flatMap(match => [...match[1].matchAll(/"([a-z]+)"/g)].map(item => item[1]))
 for (const command of new Set(toolCommands)) if (!reference.includes(`morrow tool ${command}`)) failures.push(`CLI reference is missing: morrow tool ${command}`)
-const mailSwitch = cli.slice(cli.indexOf('func mailMain'), cli.indexOf('func syncMain'))
+const mailSwitch = cli.slice(cli.indexOf('func mailMain'), cli.indexOf('func siteMain'))
 const mailCommands = [...mailSwitch.matchAll(/^    case ([^:]+):/gm)].flatMap(match => [...match[1].matchAll(/"([a-z]+)"/g)].map(item => item[1]))
 for (const command of new Set(mailCommands)) if (!reference.includes(`morrow mail ${command}`)) failures.push(`CLI reference is missing: morrow mail ${command}`)
+const siteSwitch = cli.slice(cli.indexOf('func siteMain'), cli.indexOf('func syncMain'))
+const siteCommands = [...siteSwitch.matchAll(/^    case ([^:]+):/gm)].flatMap(match => [...match[1].matchAll(/"([a-z]+)"/g)].map(item => item[1]))
+for (const command of new Set(siteCommands)) if (!reference.includes(`morrow site ${command}`)) failures.push(`CLI reference is missing: morrow site ${command}`)
 const syncSwitch = cli.slice(cli.indexOf('func syncMain'))
 const syncCommands = [...syncSwitch.matchAll(/^    case ([^:]+):/gm)].flatMap(match => [...match[1].matchAll(/"([a-z]+)"/g)].map(item => item[1]))
 for (const command of new Set(syncCommands)) if (!reference.includes(`morrow sync ${command}`)) failures.push(`CLI reference is missing: morrow sync ${command}`)
 try { await access(new URL('../.output/public/index.html', import.meta.url)) } catch { failures.push('Missing homepage') }
 if (failures.length) { console.error(failures.join('\n')); process.exit(1) }
-console.log(`Checked ${docs.length} prerendered docs pages, local documentation links, and ${new Set(commands).size + new Set(toolCommands).size + new Set(syncCommands).size + new Set(mailCommands).size} CLI commands`)
+console.log(`Checked ${docs.length} prerendered docs pages, local documentation links, and ${new Set(commands).size + new Set(toolCommands).size + new Set(syncCommands).size + new Set(mailCommands).size + new Set(siteCommands).size} CLI commands`)

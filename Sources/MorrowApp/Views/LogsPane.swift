@@ -14,16 +14,17 @@ struct LogsPane: View {
     }
     private var sources: [LogSource] {
         model.instances.map { LogSource(id: $0.id, name: $0.name, detail: "\($0.engine.title) \($0.installation.version)", symbol: $0.engine.symbol, url: model.manager.store.logURL($0), status: model.statuses[$0.id] ?? .unknown) }
+        + (model.web.caddyPath == nil ? [] : [LogSource(id: model.web.id, name: "Sites", detail: "Caddy routing", symbol: "globe", url: model.sites.logURL, status: model.webStatus?.proxy ?? .unknown)])
         + model.mailServices.map { LogSource(id: $0.id, name: $0.name, detail: "Mailpit \($0.installation.version)", symbol: "envelope.fill", url: model.mail.logURL($0), status: model.mailStatuses[$0.id] ?? .unknown) }
     }
-    private var selected: LogSource? { sources.first { $0.id == model.logInstanceID } ?? sources.first }
+    private var selected: LogSource? { sources.first { $0.id == (model.logSiteID ?? model.logInstanceID) } ?? sources.first }
     var body: some View {
         SettingsPane(section: SettingsSection.logs) {
             if let instance = selected {
                 SettingsGroup {
                     SettingRow(title: "Instance") {
                         SettingsSelect(label: "Instance",
-                            selection: Binding(get: { selected?.id }, set: { model.logInstanceID = $0 }),
+                            selection: Binding(get: { selected?.id }, set: { model.logSiteID = nil; model.logInstanceID = $0 }),
                             options: sources.map { .init(value: Optional($0.id), title: $0.name, symbol: $0.symbol) })
                             .frame(maxWidth: 210, alignment: .trailing)
                     }

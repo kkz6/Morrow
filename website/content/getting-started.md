@@ -65,3 +65,7 @@ Open **Settings → Applications** to select PHP, Go, Flutter, Node.js, Python, 
 ## Set up another Mac
 
 Open **Settings → General → iCloud Sync** and choose a folder inside iCloud Drive on both Macs. Enable automatic setup on the Mac that should install missing services. Read [iCloud workspace sync](/docs/icloud-sync) for setup, data boundaries, and retry controls.
+
+## Host local projects
+
+Open **Settings → Sites → Project Directories** to park PHP/static project folders. Use `morrow site link --port 3000` from another web project’s folder to route its development server. Read [Sites and project directories](/docs/sites) for local DNS, suffix selection, and HTTPS setup.
