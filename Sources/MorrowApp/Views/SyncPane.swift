@@ -18,7 +18,7 @@ struct SyncPane: View {
                     })).settingsToggle()
                 }
                 SettingsDivider()
-                SettingRow(title: "Set up missing services automatically", subtitle: "Use Homebrew to recreate the synced setup on this Mac") {
+                SettingRow(title: "Set up missing services automatically", subtitle: "Recreate the synced setup on this Mac") {
                     Toggle("Set up missing services automatically", isOn: Binding(get: { model.preferences.autoSetupSyncedServices }, set: { enabled in
                         var preferences = model.preferences; preferences.autoSetupSyncedServices = enabled
                         model.savePreferences(preferences)

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Cleared pending creation before opening service logs, updated the existing log-viewer expectation for sheet presentation, and clarified automatic setup preferences for nvm.
+
 - Added nvm Node version management, official release discovery, LTS selection, and same-series updates that retain existing Node versions.
 - Replaced folder-opening Storage controls with local MinIO S3 servers, bucket creation/empty deletion, private generated credentials, console access, and matching CLI lifecycle/configuration/log commands.
 - Saved installation inventory and runtime channel caches; navigation reuses them while live service readiness checks continue separately.

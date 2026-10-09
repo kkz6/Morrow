@@ -30,13 +30,14 @@ final class LogViewerTests: XCTestCase {
         XCTAssertEqual(viewer.output, "second server\n")
         XCTAssertNil(viewer.error)
     }
-    @MainActor func testLogsActionOpensTheSelectedInstanceInsideSettings() {
+    @MainActor func testLogsActionOpensTheSelectedInstanceInASheet() {
         let model = AppModel(preview: true)
         let instance = model.instances[1]
         model.creationRequest = InstanceCreationRequest(installation: model.installations[0])
         model.showLogs(for: instance)
-        XCTAssertEqual(model.selection, .logs)
-        XCTAssertEqual(model.logInstanceID, instance.id)
+        XCTAssertEqual(model.selection, .instances)
+        XCTAssertEqual(model.logRequest?.title, instance.name)
+        XCTAssertEqual(model.logRequest?.url, model.manager.store.logURL(instance))
         XCTAssertNil(model.creationRequest)
     }
 }

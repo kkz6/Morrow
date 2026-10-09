@@ -101,8 +101,9 @@ final class AppModel {
         creationRequest = InstanceCreationRequest(installation: installation, engine: engine, version: version)
     }
     func showLogs(for instance: DatabaseInstance) {
-        logRequest = ServiceLogRequest(title: instance.name, subtitle: instance.engine.title, url: manager.store.logURL(instance))
+        presentLogs(ServiceLogRequest(title: instance.name, subtitle: instance.engine.title, url: manager.store.logURL(instance)))
     }
+    func presentLogs(_ request: ServiceLogRequest) { creationRequest = nil; logRequest = request }
     var colorScheme: ColorScheme? {
         switch preferences.appearance { case "light": return .light; case "dark": return .dark; default: return nil }
     }
@@ -223,8 +224,8 @@ final class AppModel {
             runtimeChannelsLoading.remove(engine.rawValue)
         }
     }
-    func showSiteLogs() { logRequest = ServiceLogRequest(title: "Sites", subtitle: "Caddy routing", url: sites.logURL) }
-    func showStorageLogs(_ service: ObjectStorageService) { logRequest = ServiceLogRequest(title: service.name, subtitle: "MinIO", url: storage.logURL(service)) }
+    func showSiteLogs() { presentLogs(ServiceLogRequest(title: "Sites", subtitle: "Caddy routing", url: sites.logURL)) }
+    func showStorageLogs(_ service: ObjectStorageService) { presentLogs(ServiceLogRequest(title: service.name, subtitle: "MinIO", url: storage.logURL(service))) }
     func loadBuckets(_ service: ObjectStorageService, force: Bool = false) {
         guard !bucketsLoading.contains(service.id), force || buckets[service.id] == nil else { return }
         bucketsLoading.insert(service.id)
@@ -281,7 +282,7 @@ final class AppModel {
         "\"" + value.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"") + "\""
     }
     var mail: MailManager { MailManager(store: manager.store, runner: manager.runner) }
-    func showMailLogs(_ service: MailService) { logRequest = ServiceLogRequest(title: service.name, subtitle: "Mailpit", url: mail.logURL(service)) }
+    func showMailLogs(_ service: MailService) { presentLogs(ServiceLogRequest(title: service.name, subtitle: "Mailpit", url: mail.logURL(service))) }
     var runtimes: RuntimeManager { RuntimeManager(store: manager.store, runner: manager.runner) }
     var cliURL: URL { Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/morrow") }
     func checkUpdates(refresh: Bool = true) {

@@ -8,7 +8,7 @@ order: 4.9
 
 Open **Settings → General → iCloud Sync**, choose a folder inside iCloud Drive, and enable **Sync workspace with iCloud Drive**. The default is **iCloud Drive/Morrow**. Use the corresponding folder on your other Mac and enable sync there too.
 
-Enable **Set up missing services automatically** on a Mac that should recreate the shared setup with native installers (nvm for Node, Homebrew for other missing software). This permission is local to each Mac and is off by default. Morrow checks the folder approximately every 30 seconds while the app is running and idle. **Sync and Retry Setup** starts a check immediately and retries unresolved recipes.
+Enable **Set up missing services automatically** on a Mac that should recreate the shared setup with native installers (nvm for Node, Homebrew for other missing software). This switch covers missing Node versions too. This permission is local to each Mac and is off by default. Morrow checks the folder approximately every 30 seconds while the app is running and idle. **Sync and Retry Setup** starts a check immediately and retries unresolved recipes.
 
 This developer preview uses a user-accessible iCloud Drive folder, with coordinated file access. It does not depend on CloudKit or an app-specific iCloud entitlement, and works with the shared CLI. Apple handles the folder's delivery between devices; Morrow's status confirms local file reconciliation, not completion of Apple's upload or another Mac's download. For a different folder, make sure it is actually inside iCloud Drive.
 

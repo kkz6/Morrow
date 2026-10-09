@@ -6,7 +6,7 @@ order: 5
 ---
 ## Logs from each service
 
-Click the terminal icon on a database, mail, S3, or site card. The same searchable viewer opens in a separate sheet without changing your selected settings page. Database, mail, and S3 services also expose logs in the menu bar. PHP-FPM logs are available on runtime cards after hosting has created them. DNS has a log icon in Sites.
+Click the terminal icon on a database, mail, S3, or site card. The same searchable viewer opens in a separate sheet without changing your selected settings page. A pending database creation dialog is closed before presenting logs. Database, mail, and S3 services also expose logs in the menu bar. PHP-FPM logs are available on runtime cards after hosting has created them. DNS has a log icon in Sites.
 
 There is no separate Logs item in the sidebar. The viewer supports case-insensitive search, copying displayed lines, manual refresh, and pausing live updates. Live mode checks for new output every second and follows the latest lines. It retains the latest 128 KB to remain responsive; file rotation and truncation reset the reader.
 
