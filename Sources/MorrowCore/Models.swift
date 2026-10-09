@@ -141,8 +141,11 @@ public struct AppPreferences: Codable, Equatable, Sendable {
     public var iCloudSyncEnabled = false
     public var autoSetupSyncedServices = false
     public var syncFolder = ""
+    public var nvmDirectory = ""
+    public var lastSettingsSection = "instances"
+    public var lastRuntime = "php"
     public init() {}
-    enum CodingKeys: String, CodingKey { case showRunningCount, appearance, homebrewPath, iCloudSyncEnabled, autoSetupSyncedServices, syncFolder }
+    enum CodingKeys: String, CodingKey { case showRunningCount, appearance, homebrewPath, iCloudSyncEnabled, autoSetupSyncedServices, syncFolder, nvmDirectory, lastSettingsSection, lastRuntime }
     public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         showRunningCount = try values.decodeIfPresent(Bool.self, forKey: .showRunningCount) ?? true
@@ -151,6 +154,9 @@ public struct AppPreferences: Codable, Equatable, Sendable {
         iCloudSyncEnabled = try values.decodeIfPresent(Bool.self, forKey: .iCloudSyncEnabled) ?? false
         autoSetupSyncedServices = try values.decodeIfPresent(Bool.self, forKey: .autoSetupSyncedServices) ?? false
         syncFolder = try values.decodeIfPresent(String.self, forKey: .syncFolder) ?? ""
+        nvmDirectory = try values.decodeIfPresent(String.self, forKey: .nvmDirectory) ?? ""
+        lastSettingsSection = try values.decodeIfPresent(String.self, forKey: .lastSettingsSection) ?? "instances"
+        lastRuntime = try values.decodeIfPresent(String.self, forKey: .lastRuntime) ?? "php"
     }
 }
 
@@ -158,17 +164,19 @@ public struct MorrowState: Codable, Sendable {
     public var schemaVersion = 1
     public var instances: [DatabaseInstance] = []
     public var preferences = AppPreferences()
+    public var objectStorage: [ObjectStorageService] = []
     public var web = WebWorkspace()
     public var mailServices: [MailService] = []
     public var tools: [RuntimeInstallation] = []
     public var toolDefaults: [String: String] = [:]
     public init() {}
-    enum CodingKeys: String, CodingKey { case schemaVersion, instances, preferences, web, mailServices, tools, toolDefaults }
+    enum CodingKeys: String, CodingKey { case schemaVersion, instances, preferences, objectStorage, web, mailServices, tools, toolDefaults }
     public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         schemaVersion = try values.decodeIfPresent(Int.self, forKey: .schemaVersion) ?? 1
         instances = try values.decodeIfPresent([DatabaseInstance].self, forKey: .instances) ?? []
         preferences = try values.decodeIfPresent(AppPreferences.self, forKey: .preferences) ?? AppPreferences()
+        objectStorage = try values.decodeIfPresent([ObjectStorageService].self, forKey: .objectStorage) ?? []
         web = try values.decodeIfPresent(WebWorkspace.self, forKey: .web) ?? WebWorkspace()
         mailServices = try values.decodeIfPresent([MailService].self, forKey: .mailServices) ?? []
         tools = try values.decodeIfPresent([RuntimeInstallation].self, forKey: .tools) ?? []

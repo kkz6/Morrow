@@ -77,13 +77,17 @@ struct InstanceRow: View {
                 }.frame(maxWidth: .infinity, alignment: .leading).contentShape(Rectangle())
             }.buttonStyle(.plain).help("Instance settings")
             StatusBadge(status: status)
-            Button {
+            ServiceActionButton(kind: active ? .stop : .start, title: active ? "Stop database" : "Start database") {
                 let id = instance.id, shouldStop = active
-                model.perform(active ? "Stopping \(instance.name)…" : "Starting \(instance.name)…") { manager in
+                model.perform(active ? "Stopping \(instance.name)…" : "Starting \(instance.name)…", success: active ? "Database stopped" : "Database started") { manager in
                     if shouldStop { try manager.stop(id) } else { try manager.start(id) }
                 }
-            } label: { Image(systemName: active ? "stop.fill" : "play.fill").font(.system(size: 11)) }
-                .buttonStyle(SettingsButtonStyle(height: 28, iconOnly: true)).help(active ? "Stop instance" : "Start instance").disabled(model.busy || status == .missingBinary)
+            }.disabled(model.busy || status == .missingBinary)
+            ServiceActionButton(kind: .logs, title: "Open database logs", action: logs)
+            ServiceActionButton(kind: .copy, title: "Copy connection address") { model.copy(instance.connectionURL, message: "Connection address copied") }
+            ServiceActionButton(kind: .configuration, title: "View database configuration") {
+                model.configurationRequest = ConfigurationRequest(title: instance.name, files: ConfigurationAccess(store: model.manager.store).database(instance))
+            }
             Menu {
                 if model.manager.needsUpdateRecovery(instance.id) {
                     Button("Recover Interrupted Update…") { model.upgradeRequest = DatabaseUpdate(instanceID: instance.id, name: instance.name, currentVersion: instance.installation.version, availableVersion: nil, formula: nil, canUpgrade: false, message: "Recovery") }
@@ -92,8 +96,7 @@ struct InstanceRow: View {
                 }
                 Button("Check for Updates") { model.checkUpdates() }.disabled(model.busy)
                 Button("Instance Settings…", action: edit)
-                Button("View Logs…", action: logs)
-                Button("Copy Connection Address") { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(instance.connectionURL, forType: .string) }
+                Button("Copy Connection Address") { model.copy(instance.connectionURL, message: "Connection address copied") }
                 Button("Open Data Folder") { NSWorkspace.shared.open(model.manager.store.dataDirectory(instance)) }
                 Divider()
                 Button("Restart") { let id = instance.id; model.perform("Restarting \(instance.name)…") { try $0.restart(id) } }.disabled(!active || model.busy)

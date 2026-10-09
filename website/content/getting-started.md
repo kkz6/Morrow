@@ -60,7 +60,7 @@ Copy the returned address into your application’s database settings. For Postg
 
 ## Manage development runtimes
 
-Open **Settings → Applications** to select PHP, Go, Flutter, Node.js, Python, or Ruby. Existing versions are reused; missing channels use Homebrew. See [Applications and runtimes](/docs/applications) for Terminal setup and companion commands.
+Open **Settings → Runtimes** to select PHP, Go, Flutter, Node.js, Python, or Ruby. Existing versions are reused. Node versions use nvm; other missing channels use Homebrew. Installation discovery is cached rather than repeated on each navigation. See [Applications and runtimes](/docs/applications) for Terminal setup and companion commands.
 
 ## Set up another Mac
 
@@ -69,3 +69,11 @@ Open **Settings → General → iCloud Sync** and choose a folder inside iCloud 
 ## Host local projects
 
 Open **Settings → Sites → Project Directories** to park PHP/static project folders. Use `morrow site link --port 3000` from another web project’s folder to route its development server. Read [Sites and project directories](/docs/sites) for local DNS, suffix selection, and HTTPS setup.
+
+## Add local S3 storage
+
+Open **Settings → Object Storage → Create S3 Server** to run MinIO and configure buckets. The equivalent CLI command is `morrow storage create local-s3 --start`. Read [Local S3 storage](/docs/object-storage) for application settings and credential access.
+
+## Find your preferences and logs
+
+General is a single scrollable page with grouped headings for appearance, menu bar, command line, and iCloud sync. Service cards provide their own logs and configuration actions. The sidebar groups Projects, Services, and App for navigation; it has no separate Logs item.

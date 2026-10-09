@@ -49,4 +49,6 @@ RabbitMQ, further database providers, backups, and language runtimes are planned
 
 ## Engine icons
 
-Redis and Valkey use their vendor brand marks in instance rows, the menu bar, creation, and log selectors. The marks are bundled as transparent vector assets and remain sharp in light and dark appearances.
+Redis and Valkey use their vendor brand marks in instance rows, the menu bar, and creation selectors. The marks are bundled as transparent vector assets and remain sharp in light and dark appearances.
+
+Each database card provides a shared live status indicator, red stop/play controls, a terminal icon for its log sheet, and a configuration icon to inspect generated settings. Change values using the service settings rather than editing the generated file.

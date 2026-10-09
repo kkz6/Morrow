@@ -47,4 +47,4 @@ morrow db recover my-app
 
 The instance's action menu also offers **Recover Interrupted Update…**. An update that finished successfully but was interrupted during final bookkeeping is finalized with its new version rather than restoring old data. Recovery restores the saved pre-update data, so writes made during a failed readiness check are not part of the restored database. If recovery cannot complete, its journal and files remain available and the error explains what needs attention.
 
-Backups live under `~/Library/Application Support/Morrow/backups/<instance-id>/<backup-id>`. Open them from **Settings → Storage → Open Update Backups**. Retention is manual in this preview; monitor disk space and keep independent backups for important data.
+Backups live under `~/Library/Application Support/Morrow/backups/<instance-id>/<backup-id>`. Find them in that directory with Finder. **Object Storage** manages local S3 services; it is not a backup-folder browser. Retention is manual in this preview; monitor disk space and keep independent backups for important data.

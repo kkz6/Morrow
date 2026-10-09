@@ -6,11 +6,11 @@ order: 4.7
 ---
 ## Select a version
 
-Open **Settings → Applications**, choose an application and version, then click **Use Version**. Morrow verifies and reuses an existing binary, or installs a missing Homebrew channel and selects it in the same operation.
+Open **Settings → Runtimes**, choose an application and version, then click **Use Version**. Morrow verifies and reuses an existing binary, or installs a missing version and selects it in the same operation. Node.js uses nvm; the other runtimes use Homebrew for missing versions.
 
 Supported runtimes in this preview are PHP, Go, Flutter, Node.js, Python, and Ruby. The provider catalog can be extended as more runtimes are added. PHP web hosting and app-port routing live in [Sites](/docs/sites). Automatic ownership of Node/Go development processes, project-specific version files, and additional runtimes are future work.
 
-Morrow reads Homebrew formula kegs, PATH installations, and Herd's PHP binaries. Flutter discovery reads SDK version metadata without running Flutter's first-use bootstrap. If SDK metadata is absent, run `flutter --version` once using that installation and refresh the pane.
+Morrow reads nvm version directories, Homebrew formula kegs, PATH installations, and Herd's PHP binaries. Installed versions and downloaded channel lists are cached on disk. Navigation uses that cache; the refresh icon explicitly rescans installations and available versions. A missing or day-old installation inventory is refreshed when the app starts. Service readiness continues to use live process checks. Flutter discovery reads SDK version metadata without running Flutter's first-use bootstrap. If SDK metadata is absent, run `flutter --version` once using that installation and refresh the pane.
 
 ```sh
 morrow tool catalog
@@ -21,7 +21,28 @@ morrow tool use php 8.4
 morrow tool list
 ```
 
-`tool install` without a version reuses an available runtime first. Explicit `current` or `latest` selects the current Homebrew channel. A version series reuses an existing matching installation or chooses an available formula such as `php@8.4`. Exact historical releases are usable if already installed; Homebrew cannot provide every old patch version.
+`tool install` without a version reuses an available runtime first. Explicit `current` or `latest` selects the current release from the runtime's provider. A version series reuses an existing matching installation or chooses an available formula such as `php@8.4`. Exact historical releases are usable if already installed; Homebrew cannot provide every old patch version.
+
+## Node.js with nvm
+
+Choose **Node.js** and **Latest LTS · nvm**, or select an exact release. The release catalog comes from Node's official distribution index. Installation uses nvm's native Node downloads and checksum verification; no container engine is installed.
+
+```sh
+morrow tool install node lts
+morrow tool use node 24
+morrow tool channels node
+morrow tool exec node --command npm -- --version
+```
+
+The release series here is illustrative. nvm can resolve a release series or an exact numeric version. Morrow reuses a detected compatible installation before downloading. Existing Homebrew/PATH Node versions remain selectable.
+
+Morrow uses a directory selected in **General → Node Version Manager**, then `NVM_DIR` if set, an existing `~/.nvm`, or its own `tools/nvm` directory. It reuses an available nvm script; otherwise it obtains the pinned nvm v0.40.8 scripts from the official nvm repository. Morrow does not edit your shell startup files. Selecting an nvm installation updates its default alias as well as Morrow's saved default. Existing Node versions remain on disk.
+
+## Configuration and PHP logs
+
+Use the configuration icon on a runtime card to open its configuration. PHP exposes its loaded `php.ini` and additional `.ini` files in a shared editor, with an **Open in Editor** action. Saving preserves file permissions and refuses to overwrite a file changed elsewhere; restart affected services to apply settings. These PHP files may be shared with applications outside Morrow. A generated Morrow PHP-FPM pool, when present, is visible read-only; its managed settings belong in Sites. The reload icon rereads a file after an outside edit.
+
+nvm's default alias is visible as a managed, read-only file. Change it using version selection. Runtimes without a shared configuration file show an explanation; their project-specific configuration stays in the project. PHP-FPM cards expose the hosting log when one exists.
 
 ## Run the selected runtime
 
@@ -63,7 +84,7 @@ morrow tool upgrade php
 morrow tool upgrade php 8.4
 ```
 
-The default version is updated only if the selected installation was the default. Other version selections remain recorded. Homebrew dependencies can be updated globally during an upgrade; external package cleanup can later remove pinned formula versions. External runtimes must be updated with their original installer.
+The default version is updated only if the selected installation was the default. Other version selections remain recorded. Homebrew dependencies can be updated globally during an upgrade; external package cleanup can later remove pinned formula versions. External non-Node runtimes must be updated with their original installer. Node checks use the official Node catalog and install the newest release in the same major series through nvm, retaining the previous version. A refresh does not require Homebrew when only Node is tracked.
 
 Flutter is a Homebrew cask with one current installable release. Morrow copies selected Flutter SDKs into its own `tools/flutter/<version>` directory before selecting them. This preserves selected SDKs when Homebrew replaces its global cask. Flutter's own `upgrade` command can mutate an SDK; use Morrow's update command to retain separate versions. Flutter builds can require Git, Xcode, Android SDK, or other target-platform dependencies in addition to the SDK.
 

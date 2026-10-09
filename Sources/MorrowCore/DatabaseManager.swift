@@ -21,7 +21,7 @@ public struct DatabaseManager: Sendable {
     }
     public func suggestedPort(engine: DatabaseEngine) throws -> Int {
         let state = try store.load()
-        let used = Set(state.instances.map(\.port) + state.mailServices.flatMap { [$0.smtpPort, $0.httpPort] } + state.webReservedPorts)
+        let used = Set(state.instances.map(\.port) + state.mailServices.flatMap { [$0.smtpPort, $0.httpPort] } + state.webReservedPorts + state.objectStorage.flatMap { [$0.apiPort, $0.consolePort] })
         for port in engine.defaultPort..<min(engine.defaultPort + 1000, 65536) {
             if !used.contains(port) && Self.portAvailable(port) { return port }
         }
@@ -49,7 +49,7 @@ public struct DatabaseManager: Sendable {
         guard (1024...65535).contains(port) else { throw MorrowError.message("Choose a port between 1024 and 65535.") }
         let state = try store.load()
         let others = state.instances.filter { $0.id != excluding }
-        guard !others.contains(where: { $0.port == port }), !state.mailServices.contains(where: { $0.smtpPort == port || $0.httpPort == port }), !state.webReservedPorts.contains(port), Self.portAvailable(port) else {
+        guard !others.contains(where: { $0.port == port }), !state.mailServices.contains(where: { $0.smtpPort == port || $0.httpPort == port }), !state.webReservedPorts.contains(port), !state.objectStorage.contains(where: { $0.apiPort == port || $0.consolePort == port }), Self.portAvailable(port) else {
             throw MorrowError.message("Port \(port) is already in use. Choose another port.")
         }
     }
@@ -78,7 +78,7 @@ public struct DatabaseManager: Sendable {
             try Self.validate(instance)
             let state = try store.load()
             guard !state.instances.contains(where: { $0.name.lowercased() == instance.name.lowercased() }) else { throw MorrowError.message("An instance with that name already exists.") }
-            guard !state.instances.contains(where: { $0.port == instance.port }), !state.mailServices.contains(where: { $0.smtpPort == instance.port || $0.httpPort == instance.port }), !state.webReservedPorts.contains(instance.port), Self.portAvailable(instance.port) else {
+            guard !state.instances.contains(where: { $0.port == instance.port }), !state.mailServices.contains(where: { $0.smtpPort == instance.port || $0.httpPort == instance.port }), !state.webReservedPorts.contains(instance.port), !state.objectStorage.contains(where: { $0.apiPort == instance.port || $0.consolePort == instance.port }), Self.portAvailable(instance.port) else {
                 throw MorrowError.message("Port \(instance.port) is already in use. Choose another port.")
             }
             guard FileManager.default.isExecutableFile(atPath: instance.installation.executable) else {
@@ -134,7 +134,7 @@ public struct DatabaseManager: Sendable {
             guard existing.installation == proposed.installation else { throw MorrowError.message("Create a separate instance to use another database version. Data migration is required between major versions.") }
             let others = try store.load().instances.filter { $0.id != proposed.id }
             guard !others.contains(where: { $0.name.lowercased() == proposed.name.lowercased() }) else { throw MorrowError.message("That name is already in use.") }
-            guard !others.contains(where: { $0.port == proposed.port }), !(try store.load().mailServices.contains { $0.smtpPort == proposed.port || $0.httpPort == proposed.port }), !(try store.load().webReservedPorts.contains(proposed.port)), Self.portAvailable(proposed.port) else { throw MorrowError.message("That port is already in use.") }
+            guard !others.contains(where: { $0.port == proposed.port }), !(try store.load().mailServices.contains { $0.smtpPort == proposed.port || $0.httpPort == proposed.port }), !(try store.load().webReservedPorts.contains(proposed.port)), !(try store.load().objectStorage.contains { $0.apiPort == proposed.port || $0.consolePort == proposed.port }), Self.portAvailable(proposed.port) else { throw MorrowError.message("That port is already in use.") }
             try NativeProvider(store: store, runner: runner).writeConfiguration(proposed)
             try writeJob(proposed)
             try syncLoginJob(proposed)

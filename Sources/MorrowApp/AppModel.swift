@@ -13,6 +13,18 @@ struct InstanceCreationRequest: Identifiable {
 final class AppModel {
     var instances: [DatabaseInstance] = []
     var installations: [Installation] = []
+    var inventory = ApplicationInventory()
+    var inventoryLoading = false
+    var runtimeChannelsLoading: Set<String> = []
+    var objectStorage: [ObjectStorageService] = []
+    var storageStatuses: [UUID: InstanceStatus] = [:]
+    var buckets: [UUID: [String]] = [:]
+    var bucketsLoading: Set<UUID> = []
+    var toast: ToastNotice?
+    var logRequest: ServiceLogRequest?
+    var configurationRequest: ConfigurationRequest?
+    var httpsMessage = ""
+    @ObservationIgnored private var toastTask: Task<Void, Never>?
     var statuses: [UUID: InstanceStatus] = [:]
     var channels: [VersionChannel] = []
     var web = WebWorkspace()
@@ -30,7 +42,13 @@ final class AppModel {
     var activity: String?
     var channelActivity = false
     var homebrewAvailable = false
-    var selection: SettingsSection = .instances
+    var selection: SettingsSection = .instances {
+        didSet {
+            guard !preview else { return }
+            preferences.lastSettingsSection = selection.rawValue
+            try? manager.store.update { $0.preferences.lastSettingsSection = selection.rawValue }
+        }
+    }
     var creationRequest: InstanceCreationRequest?
     var logInstanceID: UUID?
     var logSiteID: UUID?
@@ -43,6 +61,17 @@ final class AppModel {
 
     init(manager: DatabaseManager = DatabaseManager(), preview: Bool = false) {
         self.manager = manager; self.preview = preview
+        if !preview {
+            inventory = InventoryStore(store: manager.store).load()
+            installations = inventory.databases
+            if let state = try? manager.store.load() {
+                preferences = state.preferences
+                instances = state.instances; tools = state.tools; toolDefaults = state.toolDefaults
+                web = state.web; mailServices = state.mailServices; objectStorage = state.objectStorage
+                selection = SettingsSection(rawValue: preferences.lastSettingsSection) ?? .instances
+                if selection == .logs { selection = .instances }
+            }
+        }
         if preview {
             homebrewAvailable = true
             let pg = Installation(engine: .postgresql, formula: "postgresql@17", version: "17.6", prefix: "/opt/homebrew/Cellar/postgresql@17/17.6")
@@ -61,7 +90,7 @@ final class AppModel {
     }
     var busy: Bool { activity != nil }
     var databaseRunningCount: Int { statuses.values.filter { $0 == .running }.count }
-    var runningCount: Int { databaseRunningCount + mailStatuses.values.filter { $0 == .running }.count }
+    var runningCount: Int { databaseRunningCount + mailStatuses.values.filter { $0 == .running }.count + storageStatuses.values.filter { $0 == .running }.count }
     var unconfiguredInstallations: [Installation] {
         let used = Set(instances.map { $0.installation.id })
         return installations.filter { !used.contains($0.id) }
@@ -72,10 +101,7 @@ final class AppModel {
         creationRequest = InstanceCreationRequest(installation: installation, engine: engine, version: version)
     }
     func showLogs(for instance: DatabaseInstance) {
-        creationRequest = nil
-        logSiteID = nil
-        logInstanceID = instance.id
-        selection = .logs
+        logRequest = ServiceLogRequest(title: instance.name, subtitle: instance.engine.title, url: manager.store.logURL(instance))
     }
     var colorScheme: ColorScheme? {
         switch preferences.appearance { case "light": return .light; case "dark": return .dark; default: return nil }
@@ -83,6 +109,8 @@ final class AppModel {
     func startMonitoring() {
         guard monitor == nil, !preview else { return }
         monitor = Task { [weak self] in
+            await self?.refresh()
+            await self?.loadInventory()
             while !Task.isCancelled {
                 await self?.refresh()
                 await self?.syncIfDue()
@@ -99,13 +127,15 @@ final class AppModel {
             let snapshot = try await Task.detached {
                 let state = try manager.store.load()
                 let installer = try manager.installer()
-                let installations = try installer.installations()
+                let installations = state.instances.map(\.installation)
                 let statuses = Dictionary(uniqueKeysWithValues: state.instances.map { ($0.id, manager.status($0)) })
                 let mail = MailManager(store: manager.store, runner: manager.runner)
                 let mailStatuses = Dictionary(uniqueKeysWithValues: state.mailServices.map { ($0.id, mail.status($0)) })
                 let report = readSyncReport ? try? WorkspaceSync(store: manager.store, runner: manager.runner).report() : nil
                 let webStatus = try SiteManager(store: manager.store, runner: manager.runner).status()
-                return (state, installations, statuses, installer.executable != nil, report, mailStatuses, webStatus)
+                let storage = ObjectStorageManager(store: manager.store, runner: manager.runner)
+                let storageStatuses = Dictionary(uniqueKeysWithValues: state.objectStorage.map { ($0.id, storage.status($0)) })
+                return (state, installations, statuses, installer.executable != nil, report, mailStatuses, webStatus, storageStatuses)
             }.value
             instances = snapshot.0.instances
             preferences = snapshot.0.preferences
@@ -115,13 +145,19 @@ final class AppModel {
             mailStatuses = snapshot.5
             tools = snapshot.0.tools
             toolDefaults = snapshot.0.toolDefaults
-            installations = snapshot.1
+            let previousInventory = inventory
+            for item in snapshot.1 where !inventory.databases.contains(where: { $0.id == item.id }) { inventory.databases.append(item) }
+            for item in snapshot.0.web.php where !inventory.runtimes.contains(where: { $0.id == item.id }) { inventory.runtimes.append(item) }
+            for item in snapshot.0.tools where !inventory.runtimes.contains(where: { $0.id == item.id }) { inventory.runtimes.append(item) }
+            installations = inventory.databases
+            objectStorage = snapshot.0.objectStorage; storageStatuses = snapshot.7
+            if previousInventory != inventory { try? InventoryStore(store: manager.store).save(inventory) }
             statuses = snapshot.2
             homebrewAvailable = snapshot.3
             if let report = snapshot.4 { syncReport = report }
         } catch { self.error = error.localizedDescription }
     }
-    func perform(_ title: String, operation: @escaping @Sendable (DatabaseManager) throws -> Void, completion: (() -> Void)? = nil) {
+    func perform(_ title: String, success: String? = nil, operation: @escaping @Sendable (DatabaseManager) throws -> Void, completion: (() -> Void)? = nil) {
         guard !busy, !preview else { return }
         activity = title; error = nil
         let manager = manager
@@ -130,10 +166,12 @@ final class AppModel {
                 try await Task.detached { try operation(manager) }.value
                 await refresh()
                 activity = nil
+                if let success { notify(success) }
                 completion?()
             } catch {
                 await refresh()
                 self.error = error.localizedDescription
+                notify(error.localizedDescription, error: true)
             }
             if activity == title { activity = nil }
         }
@@ -146,6 +184,84 @@ final class AppModel {
             do { channels = try await Task.detached { try manager.installer().channels() }.value }
             catch { self.error = error.localizedDescription }
             channelActivity = false
+        }
+    }
+    func notify(_ text: String, error: Bool = false) {
+        toastTask?.cancel(); toast = ToastNotice(text: text, error: error)
+        toastTask = Task { do { try await Task.sleep(for: .seconds(error ? 8 : 3)) } catch { return }; toast = nil }
+    }
+    func copy(_ value: String, message: String = "Copied") { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(value, forType: .string); notify(message) }
+    func loadInventory(force: Bool = false) async {
+        guard !preview, !inventoryLoading else { return }
+        if !force, let date = inventory.updatedAt, Date().timeIntervalSince(date) < 86400 { return }
+        inventoryLoading = true
+        let manager = manager
+        do {
+            let value = try await Task.detached {
+                var value = ApplicationInventory()
+                value.databases = try manager.installer().installations()
+                value.runtimes = try RuntimeManager(store: manager.store, runner: manager.runner).installations()
+                value.mail = try MailManager(store: manager.store, runner: manager.runner).installations()
+                value.updatedAt = Date(); return value
+            }.value
+            var cached = value; cached.channels = inventory.channels
+            inventory = cached; installations = cached.databases
+            try InventoryStore(store: manager.store).save(cached)
+        } catch { notify(error.localizedDescription, error: true) }
+        inventoryLoading = false
+    }
+    func loadRuntimeChannels(_ engine: RuntimeEngine, force: Bool = false) {
+        guard !preview, !runtimeChannelsLoading.contains(engine.rawValue), force || inventory.channels[engine.rawValue] == nil else { return }
+        runtimeChannelsLoading.insert(engine.rawValue)
+        let runtimes = runtimes
+        Task {
+            do {
+                let channels = try await Task.detached { try runtimes.channels(engine) }.value
+                inventory.channels[engine.rawValue] = channels
+                try InventoryStore(store: manager.store).save(inventory)
+            } catch { notify(error.localizedDescription, error: true) }
+            runtimeChannelsLoading.remove(engine.rawValue)
+        }
+    }
+    func showSiteLogs() { logRequest = ServiceLogRequest(title: "Sites", subtitle: "Caddy routing", url: sites.logURL) }
+    func showStorageLogs(_ service: ObjectStorageService) { logRequest = ServiceLogRequest(title: service.name, subtitle: "MinIO", url: storage.logURL(service)) }
+    func loadBuckets(_ service: ObjectStorageService, force: Bool = false) {
+        guard !bucketsLoading.contains(service.id), force || buckets[service.id] == nil else { return }
+        bucketsLoading.insert(service.id)
+        let storage = storage
+        Task {
+            defer { bucketsLoading.remove(service.id) }
+            do { buckets[service.id] = try await Task.detached { try storage.buckets(service) }.value }
+            catch { notify(error.localizedDescription, error: true) }
+        }
+    }
+    var storage: ObjectStorageManager { ObjectStorageManager(store: manager.store, runner: manager.runner) }
+    func showConfiguration(_ runtime: RuntimeInstallation) {
+        guard !busy, !preview else { return }
+        let manager = manager
+        activity = "Finding configuration…"
+        Task {
+            defer { activity = nil }
+            do {
+                let files = try await Task.detached { try ConfigurationAccess(store: manager.store, runner: manager.runner).files(runtime) }.value
+                if files.isEmpty { notify("This runtime has no shared configuration file; use its project settings.") }
+                else { configurationRequest = ConfigurationRequest(title: runtime.engine.title + " " + runtime.version, files: files) }
+            } catch { notify(error.localizedDescription, error: true) }
+        }
+    }
+    func trustHTTPS() {
+        perform("Trusting local HTTPS…", operation: { manager in try SiteManager(store: manager.store, runner: manager.runner).trustCertificate() }, completion: { [self] in
+            checkHTTPS()
+        })
+    }
+    func checkHTTPS() {
+        guard !busy, !preview else { return }
+        activity = "Checking HTTPS…"; error = nil
+        let sites = sites
+        Task {
+            defer { activity = nil }
+            do { httpsMessage = try await Task.detached { try sites.httpsSummary() }.value; notify(httpsMessage) }
+            catch { httpsMessage = error.localizedDescription; self.error = error.localizedDescription; notify(httpsMessage, error: true) }
         }
     }
     var sites: SiteManager { SiteManager(store: manager.store, runner: manager.runner) }
@@ -165,7 +281,7 @@ final class AppModel {
         "\"" + value.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"") + "\""
     }
     var mail: MailManager { MailManager(store: manager.store, runner: manager.runner) }
-    func showMailLogs(_ service: MailService) { logSiteID = nil; logInstanceID = service.id; selection = .logs }
+    func showMailLogs(_ service: MailService) { logRequest = ServiceLogRequest(title: service.name, subtitle: "Mailpit", url: mail.logURL(service)) }
     var runtimes: RuntimeManager { RuntimeManager(store: manager.store, runner: manager.runner) }
     var cliURL: URL { Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/morrow") }
     func checkUpdates(refresh: Bool = true) {
@@ -215,16 +331,7 @@ final class AppModel {
 }
 
 extension DatabaseEngine {
-    var symbol: String {
-        switch self {
-        case .postgresql: return "cylinder.split.1x2.fill"
-        case .mysql, .mariadb: return "externaldrive.fill"
-        case .mongodb: return "leaf.fill"
-        case .redis: return "morrow.redis"
-        case .valkey: return "morrow.valkey"
-        case .memcached: return "bolt.fill"
-        }
-    }
+    var symbol: String { "morrow." + rawValue }
     var color: Color {
         switch self {
         case .postgresql: return .blue
@@ -240,22 +347,12 @@ extension DatabaseEngine {
 
 struct StatusBadge: View {
     let status: InstanceStatus
-    var body: some View {
-        HStack(spacing: 5) {
-            Circle().fill(color).frame(width: 6, height: 6)
-            Text(status.title).font(.system(size: 11, weight: .medium))
-        }
-        .foregroundStyle(.secondary)
-        .padding(.horizontal, 8).padding(.vertical, 5)
-        .background(color.opacity(0.09), in: Capsule())
-        .accessibilityElement(children: .combine)
-    }
+    var body: some View { ServiceStatusView(status: status) }
+}
+
+extension RuntimeEngine {
+    var symbol: String { "morrow." + rawValue }
     var color: Color {
-        switch status {
-        case .running: return .green
-        case .starting: return .orange
-        case .failed, .missingBinary: return .red
-        case .stopped, .unknown: return .secondary
-        }
+        switch self { case .php: return .indigo; case .go: return .cyan; case .flutter: return .blue; case .node: return .green; case .python: return .yellow; case .ruby: return .red }
     }
 }

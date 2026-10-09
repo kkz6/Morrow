@@ -55,7 +55,7 @@ Mailpit captures messages for inspection rather than forwarding them to recipien
 
 Choose **Open Inbox** in Settings or use the menu-bar inbox button. Mailpit's browser inbox lets you inspect HTML, plain text, recipients, headers, and attachments.
 
-The **Logs** action opens server output inside Morrow's existing searchable log viewer. Mail services also appear in that viewer's selector.
+The card's **Logs** action opens the shared searchable log sheet directly. The same action is available in the menu bar. The red stop icon controls the owned mail process; the plain dot and status label report actual readiness.
 
 ```sh
 morrow mail logs local-mail

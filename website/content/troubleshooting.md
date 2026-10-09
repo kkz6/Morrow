@@ -24,7 +24,7 @@ morrow doctor
 
 ## A database cannot start
 
-Open Logs for that instance or run:
+Open the terminal icon on that instance's card or run:
 
 ```sh
 morrow db logs my-app
@@ -56,10 +56,20 @@ Local builds are ad-hoc signed. Developer ID signing and notarization are still 
 
 Morrow parses launchd exit codes numerically. The `last exit code = (never exited)` placeholder means a new process has not exited, rather than a startup failure. Launching states remain **Starting** until the managed process listens on its configured port.
 
-Real startup failures show a short excerpt from that attempt. Open **Logs** for the full server output. Older shutdown messages are not included in a new startup error.
+Real startup failures show a short excerpt from that attempt. Open the card's terminal icon for the full server output. Older shutdown messages are not included in a new startup error.
 
 ## How service status is measured
 
 Morrow locates the managed PID through launchd and checks whether that process is alive through the operating system. A live process is **Running** only after a readiness check succeeds; a live process without readiness is **Starting**. PostgreSQL uses `pg_isready` when included in the installation; MySQL and MariaDB use their native administration ping tools. Redis and Valkey use a protocol PING, and Memcached uses its VERSION command. MongoDB and installations without an administration client use process liveness plus TCP readiness, which confirms a listener rather than authenticated query health.
 
 Service logs are diagnostics and are never interpreted as the current process status. Updates and the CLI use the same readiness rules as the menu bar and Settings. Status refreshes periodically; a process transition can occur between checks.
+
+## HTTPS appears to do nothing
+
+Enable HTTPS on the project card, start local hosting, then use **Domain Setup → Trust Local HTTPS Certificate**. Morrow verifies trust and displays the result or error. Use **Check HTTPS** to verify a local TLS response; it also explains when HTTPS is enabled only as a default for future projects.
+
+Without system routing, use the displayed HTTPS URL including the listener port (normally 8443). Certificate trust alone does not configure DNS or forward port 443. **Enable Local Domains** reports resolver ownership and listener conflicts. Existing Herd/Valet configuration must be resolved through that tool, or use an independent suffix such as `morrow.test`. See [Sites](/docs/sites) for the setup sequence.
+
+## Installed versions look stale
+
+Discovery results persist across navigation and app restarts. Use the refresh icon in Runtimes to rescan installations and available releases. Starting the app with a missing or day-old inventory also refreshes installations. A saved version does not guarantee its executable remains present after an external package cleanup; Morrow validates it before use.

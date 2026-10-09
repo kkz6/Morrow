@@ -24,17 +24,19 @@ struct SitesPane: View {
                 SettingRow(title: "Web server") {
                     HStack {
                         StatusBadge(status: model.webStatus?.proxy ?? .stopped)
-                        Button(model.web.enabled ? "Stop" : "Start") {
+                        ServiceActionButton(kind: model.web.enabled ? .stop : .start, title: model.web.enabled ? "Stop local hosting" : "Start local hosting") {
                             let stop = model.web.enabled, cli = model.cliURL
-                            model.perform(stop ? "Stopping Sites…" : "Starting Sites…") { manager in
+                            model.perform(stop ? "Stopping Sites…" : "Starting Sites…", success: stop ? "Local hosting stopped" : "Local hosting started") { manager in
                                 let sites = SiteManager(store: manager.store, runner: manager.runner)
                                 if stop { try sites.stop() } else { try sites.start(cli: cli) }
                             }
-                        }.settingsButton(height: 28).disabled(model.busy)
+                        }.disabled(model.busy)
                     }
                 }
                 SettingsDivider()
-                SettingRow(title: "Local DNS") { StatusBadge(status: model.webStatus?.dns ?? .stopped) }
+                SettingRow(title: "Local DNS") {
+                    HStack { ServiceStatusView(status: model.webStatus?.dns ?? .stopped); ServiceActionButton(kind: .logs, title: "Open DNS logs") { model.logRequest = ServiceLogRequest(title: "Local DNS", subtitle: "dnsmasq", url: model.sites.dnsLogURL) } }
+                }
                 SettingsDivider()
                 SettingRow(title: "Default PHP") {
                     if php.isEmpty {
@@ -43,7 +45,7 @@ struct SitesPane: View {
                         SettingsSelect(label: "Sites PHP version", selection: Binding(get: { model.web.defaultPHPID ?? php.first?.id ?? "" }, set: { id in
                             guard let item = php.first(where: { $0.id == id }) else { return }
                             model.perform("Selecting PHP \(item.version)…") { try SiteManager(store: $0.store, runner: $0.runner).selectPHP(item) }
-                        }), options: php.map { .init(value: $0.id, title: $0.version, symbol: "chevron.left.forwardslash.chevron.right") }).disabled(model.busy)
+                        }), options: php.map { .init(value: $0.id, title: $0.version, symbol: "morrow.php") }).disabled(model.busy)
                     }
                 }
                 SettingsDivider()
@@ -54,11 +56,14 @@ struct SitesPane: View {
                     .font(.system(size: 12)).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading).padding(12)
                 SettingsDivider()
                 SettingsActionRow(title: model.webStatus?.systemConfigured == true ? "Local Domains Configured" : "Enable Local Domains…", symbol: "network") { model.installSiteSystemSetup() }
-                    .disabled(model.busy || model.webStatus?.systemConfigured == true || SiteSystemSetup.setupIssue(suffixes: model.web.suffixes) != nil)
+                    .disabled(model.busy || model.webStatus?.systemConfigured == true)
                 SettingsDivider()
                 SettingsActionRow(title: "Trust Local HTTPS Certificate…", symbol: "lock.shield") {
-                    model.perform("Trusting the local certificate…") { try SiteManager(store: $0.store, runner: $0.runner).trustCertificate() }
-                }.disabled(model.busy || !model.web.sites.contains(where: \.https) || !FileManager.default.fileExists(atPath: model.sites.certificateURL.path))
+                    model.trustHTTPS()
+                }.disabled(model.busy)
+                SettingsDivider()
+                SettingsActionRow(title: "Check HTTPS", symbol: "checkmark.shield") { model.checkHTTPS() }.disabled(model.busy)
+                if !model.httpsMessage.isEmpty { Text(model.httpsMessage).font(.system(size: 12)).foregroundStyle(.secondary).padding(12) }
             }
             HStack {
                 SectionHeader(title: "Projects")
@@ -90,11 +95,7 @@ struct SitesPane: View {
         .sheet(isPresented: $settings) { HostingSettingsSheet().environment(model) }
         .sheet(isPresented: $adding) { LinkSiteSheet().environment(model) }
         .sheet(item: $editing) { SiteEditor(site: $0, php: php).environment(model) }
-        .task(id: model.web.defaultPHPID) {
-            guard !model.preview else { return }
-            let sites = model.sites
-            php = (try? await Task.detached { try sites.availablePHP() }.value) ?? []
-        }
+        .task(id: model.inventory.runtimes.map(\.id)) { php = model.inventory.runtimes.filter { $0.engine == .php && $0.phpFPM != nil } }
     }
     private func siteRow(_ site: LocalSite) -> some View {
         HStack(spacing: 12) {
@@ -102,19 +103,24 @@ struct SitesPane: View {
             VStack(alignment: .leading, spacing: 3) {
                 Text(site.domain).font(.system(size: 13, weight: .semibold))
                 Text(site.mode == .proxy ? "127.0.0.1:\(site.proxyPort.map(String.init) ?? "—")" : site.documentRoot).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
-                Text(site.issue ?? model.webStatus?.sites[site.id]?.rawValue ?? "Stopped").font(.system(size: 11)).foregroundStyle(site.issue == nil ? Color.secondary : Color.orange).lineLimit(2)
+                Text(site.ignored ? "Ignored for .\(model.web.suffix) hosting" : site.issue ?? model.webStatus?.sites[site.id]?.rawValue ?? "Stopped").font(.system(size: 11)).foregroundStyle(site.issue == nil ? Color.secondary : Color.orange).lineLimit(2)
             }
             Spacer()
             Toggle("HTTPS for \(site.domain)", isOn: Binding(get: { site.https }, set: { value in
                 var changed = site; changed.https = value
                 let saved = changed
-                model.perform("Updating HTTPS…") { try SiteManager(store: $0.store, runner: $0.runner).update(saved) }
+                model.perform("Updating HTTPS…", success: value ? "HTTPS enabled. Trust the local certificate in Domain Setup, then check HTTPS." : "HTTPS disabled for this project") { try SiteManager(store: $0.store, runner: $0.runner).update(saved) }
             })).labelsHidden().toggleStyle(.switch).controlSize(.small).disabled(model.busy || site.issue != nil)
+            ServiceActionButton(kind: .logs, title: "Open site routing logs") { model.showSiteLogs() }
             Menu {
+                Button(site.ignored ? "Include in .\(model.web.suffix) hosting" : "Ignore for .\(model.web.suffix) hosting") {
+                    let ignore = !site.ignored
+                    model.perform(ignore ? "Ignoring project…" : "Including project…", success: ignore ? "Project ignored for local domains; folder preserved" : "Project included in local hosting") { try SiteManager(store: $0.store, runner: $0.runner).ignore(site.id, ignored: ignore) }
+                }
                 Button("Open Site") { NSWorkspace.shared.open(model.sites.url(site, web: model.web)) }
                 Button("Project Settings…") { editing = site }
                 Button("Reveal Project") { NSWorkspace.shared.open(URL(fileURLWithPath: site.path)) }
-                Button("View Routing Log") { model.selection = .logs; model.logSiteID = model.web.id }
+                Button("View Routing Log") { model.showSiteLogs() }
                 if site.directoryID == nil { Button("Unlink", role: .destructive) { model.perform("Removing route…") { try SiteManager(store: $0.store, runner: $0.runner).unlink(site.id) } } }
             } label: { Image(systemName: "ellipsis").frame(width: 16) }.settingsMenuControl().disabled(model.busy)
         }.padding(.horizontal, 12).padding(.vertical, 14)
@@ -138,7 +144,7 @@ private struct ProjectDirectoriesSheet: View {
                             Toggle("Enable directory", isOn: Binding(get: { directory.enabled }, set: { enabled in
                                 model.perform("Updating directory…") { try SiteManager(store: $0.store, runner: $0.runner).setDirectory(directory.id, enabled: enabled) }
                             })).labelsHidden().settingsToggle()
-                            Button { let path = directory.path; model.perform("Removing directory…") { try SiteManager(store: $0.store, runner: $0.runner).unpark(path) } } label: { Image(systemName: "minus") }.settingsButton(height: 28)
+                            ServiceActionButton(kind: .remove, title: "Unpark directory; preserve its project folders") { let path = directory.path; model.perform("Removing directory…", success: "Directory unparked; project folders preserved") { try SiteManager(store: $0.store, runner: $0.runner).unpark(path) } }
                         }.padding(12).disabled(model.busy)
                         if index < model.web.directories.count - 1 { SettingsDivider() }
                     }
@@ -281,7 +287,7 @@ private struct SiteEditor: View {
                 if mode == .php {
                     SettingsDivider()
                     SettingRow(title: "PHP version") {
-                        SettingsSelect(label: "Project PHP version", selection: $phpID, options: [.init(value: "", title: "Sites default", symbol: "gearshape")] + php.map { .init(value: $0.id, title: $0.version, symbol: "chevron.left.forwardslash.chevron.right") })
+                        SettingsSelect(label: "Project PHP version", selection: $phpID, options: [.init(value: "", title: "Sites default", symbol: "gearshape")] + php.map { .init(value: $0.id, title: $0.version, symbol: "morrow.php") })
                     }
                 }
                 SettingsDivider()

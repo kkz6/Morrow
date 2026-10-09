@@ -25,9 +25,20 @@ morrow site unpark "$HOME/Projects"
 
 Folder names are converted to lowercase DNS labels; spaces and unsupported characters become hyphens. Duplicate domains across directories show a conflict instead of silently choosing a project. Use **Project Settings** to choose a unique hostname. Hidden folders, `node_modules`, `vendor`, `build`, and `dist` are skipped during automatic discovery.
 
+## Ignore folders for local hosting
+
+For a folder that should not receive a local domain, open its project menu and choose **Ignore for .test hosting** (the label follows your configured suffix). Morrow keeps the project settings and folder, removes its route from the web server, and shows **Ignored for local hosting**. Directory refreshes retain this choice. Choose **Include in .test hosting** to restore it.
+
+```sh
+morrow site ignore dotfiles.test
+morrow site include dotfiles.test
+```
+
+Ignoring never deletes the application folder. Removing a parked directory is a separate action that un-registers its discovered routes while preserving all folders.
+
 ## Start hosting
 
-Click **Start** in Sites, or:
+Click the play icon beside **Web server** in Sites, or:
 
 ```sh
 morrow site start
@@ -139,13 +150,21 @@ Enable HTTPS on a site, start hosting, then choose **Trust Local HTTPS Certifica
 morrow site trust
 ```
 
+**Domain Setup** displays progress, success, or a visible error when trust is requested. Trust is verified after the certificate is added. **Check HTTPS** connects to an enabled project on the local HTTPS listener and verifies its certificate against Morrow's CA, independently of DNS resolution. A successful listener check does not mean an app's business logic is healthy; its HTTP response code is reported.
+
+```sh
+morrow site check-https
+```
+
+Before system routing is enabled, use the displayed address such as `https://shop.test:8443`. Trusting a certificate does not install DNS or port forwarding. An existing Herd/Valet resolver conflict is shown by **Enable Local Domains**; resolve that ownership or select another suffix before setup. The default HTTPS switch applies only to new sites; existing projects have their own HTTPS toggles.
+
 This installs the public root certificate into this user's login keychain trust settings and may prompt for authorization. Private CA keys remain in Morrow's local `web/caddy-data` directory and are not included in iCloud setup sync. Clients using separate trust stores may need to import the public root certificate separately. Turning off HTTPS changes the route back to HTTP; it does not remove the trusted CA.
 
 ## Logs and actual status
 
 Sites reports live launchd PIDs and listener readiness. PHP projects also need their owned PHP-FPM process and socket; proxy projects need a listening upstream port. These checks indicate routing/runtime readiness, not an application-specific database or business-logic health check.
 
-Use **View Routing Log** to open Caddy output in Morrow's searchable log viewer. Files live under `~/Library/Application Support/Morrow/web`; DNS, PHP-FPM, and watcher output have separate log files there.
+Use the project card's terminal icon or **View Routing Log** to open Caddy output in Morrow's searchable log viewer. Files live under `~/Library/Application Support/Morrow/web`; DNS, PHP-FPM, and watcher output have separate log files there.
 
 ```sh
 morrow site logs shop.test

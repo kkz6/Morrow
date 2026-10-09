@@ -8,7 +8,7 @@ order: 4.9
 
 Open **Settings → General → iCloud Sync**, choose a folder inside iCloud Drive, and enable **Sync workspace with iCloud Drive**. The default is **iCloud Drive/Morrow**. Use the corresponding folder on your other Mac and enable sync there too.
 
-Enable **Set up missing services automatically** on a Mac that should recreate the shared setup with Homebrew. This permission is local to each Mac and is off by default. Morrow checks the folder approximately every 30 seconds while the app is running and idle. **Sync and Retry Setup** starts a check immediately and retries unresolved recipes.
+Enable **Set up missing services automatically** on a Mac that should recreate the shared setup with native installers (nvm for Node, Homebrew for other missing software). This permission is local to each Mac and is off by default. Morrow checks the folder approximately every 30 seconds while the app is running and idle. **Sync and Retry Setup** starts a check immediately and retries unresolved recipes.
 
 This developer preview uses a user-accessible iCloud Drive folder, with coordinated file access. It does not depend on CloudKit or an app-specific iCloud entitlement, and works with the shared CLI. Apple handles the folder's delivery between devices; Morrow's status confirms local file reconciliation, not completion of Apple's upload or another Mac's download. For a different folder, make sure it is actually inside iCloud Drive.
 
@@ -21,11 +21,11 @@ The workspace blueprint contains:
 - Registered runtime release series and selected defaults for PHP, Go, Flutter, Node.js, Python, and Ruby.
 - Appearance and menu-bar count preferences.
 
-Database contents, captured mail/attachments, logs, credentials, executable paths, Homebrew paths, process status, and machine-specific sync preferences remain local. A synced database recipe creates a new, empty instance on another Mac; it does not copy its data or open connections.
+Database contents, captured mail/attachments, logs, credentials, executable paths, Homebrew paths, process status, and machine-specific sync preferences remain local. MinIO server records, objects, and credentials are also local and are not yet included in the blueprint. A synced database recipe creates a new, empty instance on another Mac; it does not copy its data or open connections.
 
 ## Automatic setup
 
-When enabled, Morrow verifies existing installations and reuses a compatible release series before downloading. Missing versions are installed through Homebrew, with the same validation as normal creation. A historical patch that is unavailable may be recreated using an available patch in the same series. The setup report shows the version actually used.
+When enabled, Morrow verifies existing installations and reuses a compatible release series before downloading. Missing Node versions are installed through nvm; other missing versions use Homebrew, with the same validation as normal creation. A historical patch that is unavailable may be recreated using an available patch in the same series. The setup report shows the version actually used.
 
 A new database or mail service starts stopped. Its launch-at-login choice is retained. If its preferred port is occupied, Morrow chooses the next available engine port and reports it. Existing instances keep their machine's local port and data. Settings changes require stopping a running instance; a different engine or release series is reported for local review rather than automatically migrated.
 
@@ -57,4 +57,4 @@ For an explicitly chosen folder:
 morrow sync enable --folder "$HOME/Library/Mobile Documents/com~apple~CloudDocs/Morrow" --auto-install
 ```
 
-The CLI reconciles once per `sync now` invocation. Keep the macOS app open for periodic checks. Homebrew is required for missing software; iCloud Drive must be enabled and the chosen folder available on both Macs. Automatic setup can download large SDKs, especially Flutter.
+The CLI reconciles once per `sync now` invocation. Keep the macOS app open for periodic checks. Homebrew is required for missing database, mail, and non-Node runtime software; Node uses nvm. iCloud Drive must be enabled and the chosen folder available on both Macs. Automatic setup can download large SDKs, especially Flutter.

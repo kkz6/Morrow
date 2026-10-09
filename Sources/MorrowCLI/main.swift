@@ -33,6 +33,19 @@ let help = """
 Morrow — databases and development runtimes.
 
   morrow doctor                          Check Homebrew and local paths
+  morrow storage create <name>            Create a local MinIO S3 server
+      --api-port <port> --console-port <port> --start --autostart
+  morrow storage list [--json]            Show S3 servers and endpoints
+  morrow storage start|stop|restart <name> Control a local S3 server
+  morrow storage configure <name>        Edit a stopped server
+      --name <name> --api-port <port> --console-port <port> --autostart on|off
+  morrow storage logs <name>             Print MinIO server output
+  morrow storage console <name>          Open the MinIO console
+  morrow storage config <name>           Print app configuration including credentials
+  morrow storage buckets <name>          List buckets
+  morrow storage bucket <server> create|delete <bucket>
+  morrow storage remove <name>           Archive the server and its data
+  morrow site ignore|include <domain>    Exclude or restore a local domain; keep folder
   morrow site park <directory>            Discover folder-name.test projects
   morrow site unpark <directory>          Remove parked routes; preserve files
   morrow site directories                 List parked directories
@@ -50,6 +63,7 @@ Morrow — databases and development runtimes.
   morrow site configure                  Set suffix, ports, HTTPS and login defaults
   morrow site setup [--remove]            Administrator setup for DNS and clean URLs
   morrow site trust                      Trust this Mac's local CA in the login keychain
+  morrow site check-https                Verify trust and a local HTTPS listener
   morrow site open|logs <domain>          Open a site or print its routing log
   morrow mail create <name>               Create a local SMTP testing server
       --smtp-port <port>                 Default: next free port from 1025
@@ -85,7 +99,7 @@ Morrow — databases and development runtimes.
   morrow db upgrade <name>               Back up and update a compatible instance
   morrow db recover <name>               Recover an interrupted database update
   morrow tool catalog                    List supported development runtimes
-  morrow tool channels <runtime>          Show Homebrew release channels
+  morrow tool channels <runtime>          Show nvm/Node or Homebrew releases
   morrow tool versions [runtime]          Discover existing runtime versions
   morrow tool install <runtime> [version] Reuse or install a version
   morrow tool use <runtime> <version>     Select the default for Morrow commands
@@ -106,7 +120,8 @@ Morrow — databases and development runtimes.
       --delete-data                      Permanently delete this instance's data
   morrow settings                        Open the macOS Settings window
 
-Instances listen on 127.0.0.1 and use passwordless local development accounts.
+Database instances listen on 127.0.0.1 with local development accounts.
+S3 servers use private generated credentials; Node versions are managed by nvm.
 Versions are installed separately from the app. MORROW_HOME overrides data storage.
 """
 
@@ -146,6 +161,7 @@ func main() throws {
         print("Instances: \(try manager.store.load().instances.count)")
         return
     }
+    if command == "storage" { try storageMain(args, manager: ObjectStorageManager(store: manager.store, runner: manager.runner)); return }
     if command == "site" { try siteMain(args, manager: SiteManager(store: manager.store, runner: manager.runner)); return }
     if command == "mail" { try mailMain(args, manager: MailManager(store: manager.store, runner: manager.runner)); return }
     if command == "sync" { try syncMain(args, manager: WorkspaceSync(store: manager.store, runner: manager.runner)); return }
@@ -400,12 +416,13 @@ func siteMain(_ args: [String], manager: SiteManager) throws {
         let web = try manager.store.load().web, status = try manager.status()
         if options.flags.contains("--json") { try printJSON(web.sites) }
         else { for site in web.sites { print("\(site.domain) · \(site.mode.rawValue) · \(status.sites[site.id]?.rawValue ?? "Unknown") · \(manager.url(site, web: web).absoluteString)\(site.issue.map { "\n  " + $0 } ?? "")") } }
-    case "start", "stop", "refresh", "watch", "trust":
+    case "start", "stop", "refresh", "watch", "trust", "check-https":
         guard remaining.isEmpty else { throw MorrowError.message("Usage: morrow site \(action)") }
         switch action {
         case "start": try manager.start(cli: cli); print("Local hosting started. Use Sites → Enable Local Domains for clean URLs.")
         case "stop": try manager.stop(); print("Local hosting stopped.")
         case "trust": try manager.trustCertificate(); print("Trusted Morrow's local CA for this user.")
+        case "check-https": print(try manager.httpsSummary())
         case "refresh": try manager.refreshProjects(force: true); print("Projects refreshed.")
         default:
             while try manager.store.load().web.enabled {
@@ -421,6 +438,10 @@ func siteMain(_ args: [String], manager: SiteManager) throws {
             guard let item = try manager.availablePHP().first(where: { $0.version == version || $0.version.hasPrefix(version + ".") || $0.id == version }) else { throw MorrowError.message("No complete PHP-FPM installation matches that version.") }
             try manager.selectPHP(item); print("Sites uses PHP \(item.version).")
         } else { for item in try manager.availablePHP() { print("PHP \(item.version) · \(item.prefix)") } }
+    case "ignore", "include":
+        let options = try Options(remaining); try options.requireCount(1, usage: "morrow site \(action) <domain>")
+        let site = try manager.resolve(options.positional[0]); try manager.ignore(site.id, ignored: action == "ignore")
+        print(action == "ignore" ? "Ignored for local domain hosting. Project folder preserved." : "Project included in local domain hosting.")
     case "secure", "unsecure", "unlink", "open", "logs":
         let options = try Options(remaining); try options.requireCount(1, usage: "morrow site \(action) <domain>")
         var site = try manager.resolve(options.positional[0])
@@ -436,6 +457,56 @@ func siteMain(_ args: [String], manager: SiteManager) throws {
         try manager.configure(suffix: options.values["--suffix"], defaultHTTPS: toggle("--https"), http: port("--http-port"), https: port("--https-port"), dns: port("--dns-port"), autoStart: toggle("--autostart"))
         print("Hosting defaults saved. Changed suffixes or ports may need system setup again.")
     default: throw MorrowError.message("Unknown site command. Run morrow --help.")
+    }
+}
+
+func storageMain(_ args: [String], manager: ObjectStorageManager) throws {
+    guard let action = args.first else { throw MorrowError.message("Run morrow storage list or morrow --help.") }
+    let remaining = Array(args.dropFirst())
+    switch action {
+    case "create":
+        let options = try Options(remaining, allowedValues: ["--api-port", "--console-port"], allowedFlags: ["--start", "--autostart"])
+        try options.requireCount(1, usage: "morrow storage create <name> [ports] [--start] [--autostart]")
+        let ports = try manager.suggestedPorts()
+        let service = try manager.create(name: options.positional[0], api: options.number("--api-port", default: ports.0), console: options.number("--console-port", default: ports.1), autoStart: options.flags.contains("--autostart"))
+        if options.flags.contains("--start") { try manager.start(service.id) }
+        print("Created \(service.name): \(service.endpoint.absoluteString)\nConsole: \(service.consoleURL.absoluteString)")
+    case "list":
+        let options = try Options(remaining, allowedFlags: ["--json"]); try options.requireCount(0, usage: "morrow storage list [--json]")
+        let services = try manager.store.load().objectStorage
+        struct Row: Encodable { let service: ObjectStorageService; let status: String }
+        if options.flags.contains("--json") { try printJSON(services.map { Row(service: $0, status: manager.status($0).title) }) }
+        else { for service in services { print("\(service.name) · \(service.endpoint.absoluteString) · \(manager.status(service).title)") } }
+    case "configure":
+        let options = try Options(remaining, allowedValues: ["--name", "--api-port", "--console-port", "--autostart"])
+        try options.requireCount(1, usage: "morrow storage configure <name> [ports] [--name <name>] [--autostart on|off]")
+        var service = try manager.resolve(options.positional[0])
+        service.name = options.values["--name"] ?? service.name
+        service.apiPort = try options.number("--api-port", default: service.apiPort)
+        service.consolePort = try options.number("--console-port", default: service.consolePort)
+        if let value = options.values["--autostart"] { guard ["on", "off"].contains(value) else { throw MorrowError.message("Use --autostart on|off.") }; service.autoStart = value == "on" }
+        try manager.update(service); print("S3 settings saved.")
+    case "bucket":
+        let options = try Options(remaining); try options.requireCount(3, usage: "morrow storage bucket <server> create|delete <bucket>")
+        let service = try manager.resolve(options.positional[0])
+        if options.positional[1] == "create" { try manager.createBucket(options.positional[2], service: service) }
+        else if options.positional[1] == "delete" { try manager.deleteBucket(options.positional[2], service: service) }
+        else { throw MorrowError.message("Use create or delete. Only empty buckets can be deleted.") }
+        print("Bucket operation completed.")
+    case "start", "stop", "restart", "console", "config", "logs", "buckets", "remove":
+        let options = try Options(remaining); try options.requireCount(1, usage: "morrow storage \(action) <name>")
+        let service = try manager.resolve(options.positional[0])
+        switch action {
+        case "start": try manager.start(service.id); print(manager.status(service).title)
+        case "stop": try manager.stop(service.id); print("Stopped")
+        case "restart": try manager.stop(service.id); try manager.start(service.id); print(manager.status(service).title)
+        case "console": try CommandRunner().run("/usr/bin/open", [service.consoleURL.absoluteString]).checked()
+        case "config": print(try manager.configuration(service))
+        case "logs": print((try? String(contentsOf: manager.logURL(service), encoding: .utf8).suffix(32768)) ?? "No MinIO output yet.")
+        case "buckets": for name in try manager.buckets(service) { print(name) }
+        default: try manager.remove(service.id); print("S3 server removed; data archived.")
+        }
+    default: throw MorrowError.message("Unknown storage command. Run morrow --help.")
     }
 }
 

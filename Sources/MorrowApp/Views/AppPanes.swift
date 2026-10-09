@@ -39,6 +39,7 @@ struct GeneralOptionsPane: View {
     @Environment(AppModel.self) private var model
     @State private var loginEnabled = false
     @State private var brewPath = ""
+    @State private var nvmPath = ""
     var body: some View {
         SettingsPane(section: SettingsSection.general, embedded: embedded) {
             SettingsGroup {
@@ -71,10 +72,26 @@ struct GeneralOptionsPane: View {
                     }
                 }.padding(12)
             }
+            SettingsGroup(header: "Node Version Manager") {
+                VStack(alignment: .leading, spacing: 10) {
+                    Text("nvm directory").font(.system(size: 13))
+                    HStack {
+                        SettingsInput(placeholder: "Automatic (existing nvm or Morrow-managed)", text: $nvmPath)
+                        Button("Save") {
+                            let path = nvmPath.trimmingCharacters(in: .whitespacesAndNewlines)
+                            guard path.isEmpty || path.hasPrefix("/") else { model.notify("Choose an absolute nvm directory path.", error: true); return }
+                            var preferences = model.preferences; preferences.nvmDirectory = path
+                            model.savePreferences(preferences); model.notify("nvm directory saved")
+                            Task { await model.loadInventory(force: true) }
+                        }.settingsButton().disabled(model.busy)
+                    }
+                }.padding(12)
+            }
             SettingsNote(text: "Database startup is configured per instance. Morrow uses macOS launchd so services continue running independently of the menu bar app.")
         }.onAppear {
             loginEnabled = model.preview ? false : SMAppService.mainApp.status == .enabled
             brewPath = model.preferences.homebrewPath
+            nvmPath = model.preferences.nvmDirectory
         }
     }
 }
@@ -121,45 +138,6 @@ struct AppearancePane: View {
     }
 }
 
-struct StoragePane: View {
-    @Environment(AppModel.self) private var model
-    var body: some View {
-        SettingsPane(section: SettingsSection.storage) {
-            SettingsGroup(header: "Local Storage") {
-                SettingsActionRow(title: "Open Morrow Data…", symbol: "folder") { NSWorkspace.shared.open(model.manager.store.root) }
-                SettingsDivider()
-                SettingsActionRow(title: "Open Preserved Data…", symbol: "archivebox") {
-                    let path = model.manager.store.root.appendingPathComponent("archives")
-                    do { try FileManager.default.createDirectory(at: path, withIntermediateDirectories: true); NSWorkspace.shared.open(path) }
-                    catch { model.error = error.localizedDescription }
-                }
-            }
-            SettingsGroup {
-                SettingsActionRow(title: "Open Update Backups…", symbol: "clock.arrow.circlepath") {
-                    let path = model.manager.store.root.appendingPathComponent("backups")
-                    do { try FileManager.default.createDirectory(at: path, withIntermediateDirectories: true); NSWorkspace.shared.open(path) }
-                    catch { model.error = error.localizedDescription }
-                }
-            }
-            Text(model.manager.store.root.path).font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary).textSelection(.enabled)
-            SettingsNote(text: "Removing an instance preserves its files by default. View server output in Logs, or open an instance’s data folder below.")
-            if !model.instances.isEmpty {
-                SettingsGroup(header: "Instance Folders") {
-                    ForEach(Array(model.instances.enumerated()), id: \.element.id) { index, instance in
-                        SettingRow(title: LocalizedStringKey(instance.name), subtitle: LocalizedStringKey(instance.engine.title)) {
-                            HStack {
-                                Button("Logs") { model.showLogs(for: instance) }.settingsButton(height: 30)
-                                Button("Reveal") { NSWorkspace.shared.activateFileViewerSelecting([model.manager.store.instanceDirectory(instance)]) }.settingsButton(height: 30)
-                            }
-                        }
-                        if index < model.instances.count - 1 { SettingsDivider() }
-                    }
-                }
-            }
-        }
-    }
-}
-
 struct AboutPane: View {
     private var version: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.1.0"
@@ -190,30 +168,17 @@ struct AboutPane: View {
 }
 
 struct GeneralPane: View {
-    @State private var category = Category.app
-    private enum Category: String, CaseIterable {
-        case app, commandLine, menuBar, appearance, sync
-        var title: String {
-            switch self { case .app: return "App"; case .commandLine: return "Command Line"; case .menuBar: return "Menu Bar"; case .appearance: return "Appearance"; case .sync: return "iCloud Sync" }
-        }
-        var symbol: String {
-            switch self { case .app: return "gearshape.fill"; case .commandLine: return "terminal"; case .menuBar: return "menubar.rectangle"; case .appearance: return "paintbrush.fill"; case .sync: return "icloud.fill" }
-        }
-    }
     var body: some View {
         SettingsPane(section: SettingsSection.general) {
-            SettingsGroup {
-                SettingRow(title: "Preferences") {
-                    SettingsSelect(label: "General preferences", selection: $category, options: Category.allCases.map { .init(value: $0, title: $0.title, symbol: $0.symbol) })
-                }
-            }
-            switch category {
-            case .app: GeneralOptionsPane(embedded: true)
-            case .commandLine: CommandLinePane(embedded: true)
-            case .menuBar: MenuBarPane(embedded: true)
-            case .appearance: AppearancePane(embedded: true)
-            case .sync: SyncPane(embedded: true)
-            }
+            GeneralOptionsPane(embedded: true)
+            SectionHeader(title: "Appearance")
+            AppearancePane(embedded: true)
+            SectionHeader(title: "Menu Bar")
+            MenuBarPane(embedded: true)
+            SectionHeader(title: "Command Line")
+            CommandLinePane(embedded: true)
+            SectionHeader(title: "iCloud Sync")
+            SyncPane(embedded: true)
         }
     }
 }

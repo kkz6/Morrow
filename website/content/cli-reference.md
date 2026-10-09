@@ -87,7 +87,7 @@ Read [Database updates](/docs/updates) for compatibility, shared dependency beha
 | Command | Purpose |
 | --- | --- |
 | `morrow tool catalog` | List supported runtimes |
-| `morrow tool channels <runtime>` | Show installable Homebrew channels and versions |
+| `morrow tool channels <runtime>` | Show official Node/nvm releases or Homebrew channels |
 | `morrow tool versions [runtime]` | Discover existing binaries |
 | `morrow tool install <runtime> [version-or-channel]` | Reuse or install a runtime; defaults to automatic reuse |
 | `morrow tool use <runtime> <version>` | Select a default and create Morrow-owned command wrappers |
@@ -100,7 +100,7 @@ Read [Database updates](/docs/updates) for compatibility, shared dependency beha
 
 Supported runtime names: `php`, `go`, `flutter`, `node`, `python`, `ruby`. Aliases: `nodejs`, `python3`.
 
-For `install` and `use`, numeric release series, existing exact versions, and available formula names are accepted. Installable releases depend on Homebrew. `current` and `latest` choose the current channel; they are installation selectors, not aliases for a saved default.
+For `install` and `use`, numeric release series, existing exact versions, and available formula names are accepted. Node installs use nvm and accept `lts` as well as numeric release series/exact versions. Other installable releases depend on Homebrew. `current` and `latest` choose the current release; they are installation selectors, not aliases for a saved default.
 
 ```sh
 morrow tool install go
@@ -162,9 +162,12 @@ Configuration options: `--smtp-port <port>`, `--http-port <port>`, `--name <name
 | `morrow site php [version] [--install]` | List/select complete PHP-FPM installations, or reuse/install current Homebrew PHP |
 | `morrow site secure <domain>` | Enable local HTTPS |
 | `morrow site unsecure <domain>` | Change the route to HTTP |
+| `morrow site ignore <domain>` | Exclude a project from local hosting, preserving its folder and settings |
+| `morrow site include <domain>` | Restore an ignored project route |
 | `morrow site configure [options]` | Change suffix, listener ports, and new-site HTTPS/login defaults |
 | `morrow site setup [options] [--remove]` | Administrator setup/removal of owned DNS and loopback forwarding |
-| `morrow site trust` | Trust Morrow's local CA in this user's login keychain |
+| `morrow site trust` | Trust and verify Morrow's local CA in this user's login keychain |
+| `morrow site check-https` | Check CA trust and a local project HTTPS listener |
 | `morrow site open <domain>` | Open the project URL |
 | `morrow site logs <domain>` | Print recent routing output |
 
@@ -173,3 +176,24 @@ Configuration options: `--suffix <namespace>`, `--http-port <port>`, `--https-po
 System setup options: `--http-port`, `--https-port`, `--dns-port`, `--suffixes <comma-separated-namespaces>`, `--user <uid>` for authorization integrations. Under sudo, the original user's UID is inferred from `SUDO_UID`. System setup never takes over another tool's resolver file.
 
 Read [Sites and project directories](/docs/sites) for PHP roots, development-script integration, private namespaces, certificates, and the system authorization step.
+
+## Local S3 servers
+
+| Command | Purpose |
+| --- | --- |
+| `morrow storage create <name> [options]` | Reuse/install MinIO and create an isolated local S3 server |
+| `morrow storage list [--json]` | List endpoints and live status; JSON contains service/status pairs |
+| `morrow storage start <name>` | Start and check MinIO readiness |
+| `morrow storage stop <name>` | Stop the managed server |
+| `morrow storage restart <name>` | Stop and start the managed server |
+| `morrow storage configure <name> [options]` | Edit a stopped server's name, ports, and login preference |
+| `morrow storage console <name>` | Open the browser console |
+| `morrow storage config <name>` | Print app environment settings including generated credentials |
+| `morrow storage logs <name>` | Print recent server output |
+| `morrow storage buckets <name>` | List buckets using authenticated S3 requests |
+| `morrow storage bucket <server> create\|delete <bucket>` | Create a bucket or delete an empty bucket |
+| `morrow storage remove <name>` | Stop the server and archive its objects and credentials |
+
+Creation options: `--api-port <port>`, `--console-port <port>`, `--autostart`, `--start`. Configuration options: `--name <name>`, `--api-port <port>`, `--console-port <port>`, `--autostart on\|off`. Missing creation ports select free ports beginning at 9000.
+
+Read [Local S3 storage](/docs/object-storage) for buckets, SDK settings, credentials, and data preservation.

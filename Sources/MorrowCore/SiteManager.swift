@@ -72,6 +72,14 @@ public struct SiteManager: Sendable {
             return site
         }
     }
+    public func ignore(_ id: UUID, ignored: Bool) throws {
+        try store.operation {
+            var web = try store.load().web
+            guard let index = web.sites.firstIndex(where: { $0.id == id }) else { throw MorrowError.message("This project was removed.") }
+            web.sites[index].ignored = ignored
+            try saveAndApply(web)
+        }
+    }
     public func unlink(_ id: UUID) throws {
         try store.operation {
             var web = try store.load().web
@@ -201,7 +209,7 @@ public struct SiteManager: Sendable {
     }
     private func saveAndApply(_ proposed: WebWorkspace) throws {
         var web = proposed
-        if web.defaultPHPID == nil && web.sites.contains(where: { $0.mode == .php && $0.issue == nil }), let php = try availablePHP().first {
+        if web.defaultPHPID == nil && web.sites.contains(where: { $0.mode == .php && $0.issue == nil && !$0.ignored }), let php = try availablePHP().first {
             if !web.php.contains(where: { $0.id == php.id }) { web.php.append(php) }
             web.defaultPHPID = php.id
         }
@@ -225,7 +233,7 @@ public struct SiteManager: Sendable {
             guard FileManager.default.isExecutableFile(atPath: web.cliPath!) else { throw MorrowError.message("The morrow CLI is missing.") }
             web.caddyPath = try nativeTool("caddy", preferred: web.caddyPath)
             web.dnsmasqPath = try nativeTool("dnsmasq", preferred: web.dnsmasqPath)
-            if web.sites.contains(where: { $0.mode == .php && $0.issue == nil }) && web.defaultPHPID == nil {
+            if web.sites.contains(where: { $0.mode == .php && $0.issue == nil && !$0.ignored }) && web.defaultPHPID == nil {
                 let php = try RuntimeManager(store: store, runner: runner).installations().first { $0.engine == .php && Self.fpmExecutable($0) != nil }
                 if let php { web.php.append(php); web.defaultPHPID = php.id }
                 // Other routes can run while PHP projects show 'PHP unavailable'.
@@ -252,7 +260,7 @@ public struct SiteManager: Sendable {
     private func validateListeners(_ web: WebWorkspace) throws {
         try SiteSystemSetup.validatePorts(http: web.httpPort, https: web.httpsPort, dns: web.dnsPort)
         let state = try store.load()
-        let reserved = Set(state.instances.map(\.port) + state.mailServices.flatMap { [$0.smtpPort, $0.httpPort] })
+        let reserved = Set(state.instances.map(\.port) + state.mailServices.flatMap { [$0.smtpPort, $0.httpPort] } + state.objectStorage.flatMap { [$0.apiPort, $0.consolePort] })
         for (port, component) in [(web.httpPort, "caddy"), (web.httpsPort, "caddy"), (web.dnsPort, "dns")] {
             if live(component, web: web) { continue }
             guard !reserved.contains(port), DatabaseManager.portAvailable(port) else { throw MorrowError.message("Port \(port) is unavailable. Choose another Sites listener port.") }
@@ -285,7 +293,7 @@ public struct SiteManager: Sendable {
         }
     }
     private func startPHP(_ web: WebWorkspace) throws {
-        let used = Set(web.sites.filter { $0.mode == .php && $0.issue == nil }.compactMap { $0.phpID ?? web.defaultPHPID })
+        let used = Set(web.sites.filter { $0.mode == .php && $0.issue == nil && !$0.ignored }.compactMap { $0.phpID ?? web.defaultPHPID })
         for item in web.php where !used.contains(item.id) {
             try launchd.unload(label(phpComponent(item), web: web))
             let login = store.loginAgentURL(label: label(phpComponent(item), web: web))
@@ -342,7 +350,8 @@ public struct SiteManager: Sendable {
         let message = configured ? "Local domain routing is installed." : SiteSystemSetup.setupIssue(suffixes: web.suffixes) ?? "Enable Local Domains to use URLs without listener ports."
         var statuses: [UUID: SiteStatus] = [:]
         for site in web.sites {
-            if !FileManager.default.fileExists(atPath: site.path) { statuses[site.id] = .missingFolder }
+            if site.ignored { statuses[site.id] = .ignored }
+            else if !FileManager.default.fileExists(atPath: site.path) { statuses[site.id] = .missingFolder }
             else if site.issue != nil { statuses[site.id] = .configurationIssue }
             else if !proxy { statuses[site.id] = .stopped }
             else if site.mode == .proxy && !(site.proxyPort.map(DatabaseManager.portListening) ?? false) { statuses[site.id] = .waitingForApp }
@@ -353,6 +362,14 @@ public struct SiteManager: Sendable {
         }
         return WebStatus(proxy: proxyStatus, dns: dnsStatus, systemConfigured: configured, setupMessage: message, sites: statuses)
     }
+    public func runtimeLogURL(_ runtime: RuntimeInstallation) -> URL? {
+        guard runtime.engine == .php else { return nil }
+        return base.appendingPathComponent(phpComponent(runtime) + ".log")
+    }
+    public func runtimeConfigurationURL(_ runtime: RuntimeInstallation) -> URL? {
+        guard runtime.engine == .php else { return nil }
+        return base.appendingPathComponent(phpComponent(runtime) + ".conf")
+    }
     public func setupCommand(cli: URL) throws -> String {
         let web = try store.load().web
         func shell(_ value: String) -> String { "'" + value.replacingOccurrences(of: "'", with: "'\\''") + "'" }
@@ -362,5 +379,27 @@ public struct SiteManager: Sendable {
         guard FileManager.default.fileExists(atPath: certificateURL.path) else { throw MorrowError.message("Enable HTTPS on a site and start Sites first to create its local certificate authority.") }
         let keychain = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Keychains/login.keychain-db")
         try runner.run("/usr/bin/security", ["add-trusted-cert", "-r", "trustRoot", "-k", keychain.path, certificateURL.path], environment: [:]).checked()
+        guard certificateTrusted() else { throw MorrowError.message("The root certificate was added, but trust could not be verified. Open the login keychain and set Morrow Development CA to Always Trust.") }
+    }
+    public func certificateTrusted() -> Bool {
+        guard FileManager.default.fileExists(atPath: certificateURL.path) else { return false }
+        return (try? runner.run("/usr/bin/security", ["verify-cert", "-c", certificateURL.path, "-p", "basic"], environment: [:]).status) == 0
+    }
+    public func httpsSummary() throws -> String {
+        let web = try store.load().web
+        let secure = web.sites.filter { $0.https && !$0.ignored && $0.issue == nil }
+        guard !secure.isEmpty else { return "Enable HTTPS on a project card first. The default toggle only applies to new projects." }
+        guard web.enabled else { return "Start Sites to issue local HTTPS certificates." }
+        guard certificateTrusted() else { return "Local CA is not trusted yet. Choose Trust Local HTTPS Certificate." }
+        let domain = secure[0].domain
+        let address = "https://\(domain):\(web.httpsPort)/"
+        let response = try runner.run("/usr/bin/curl", ["--silent", "--show-error", "--max-time", "8", "--noproxy", "*", "--resolve", "\(domain):\(web.httpsPort):127.0.0.1", "--cacert", certificateURL.path, "--output", "/dev/null", "--write-out", "%{http_code}", address], environment: [:])
+        guard response.status == 0 else {
+            throw MorrowError.message("The CA is trusted, but HTTPS did not respond for \(domain). Open the site's routing logs. \(String(response.output.suffix(500)))")
+        }
+        if !SiteSystemSetup.isConfigured(http: web.httpPort, https: web.httpsPort, dns: web.dnsPort, suffixes: web.suffixes) {
+            return "HTTPS responded for \(domain) (HTTP \(response.output)). Use port \(web.httpsPort) until local-domain routing is enabled."
+        }
+        return "Certificate trusted. HTTPS responded for \(domain) (HTTP \(response.output))."
     }
 }

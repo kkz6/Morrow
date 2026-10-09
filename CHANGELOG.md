@@ -2,6 +2,17 @@
 
 ## Unreleased
 
+- Added nvm Node version management, official release discovery, LTS selection, and same-series updates that retain existing Node versions.
+- Replaced folder-opening Storage controls with local MinIO S3 servers, bucket creation/empty deletion, private generated credentials, console access, and matching CLI lifecycle/configuration/log commands.
+- Saved installation inventory and runtime channel caches; navigation reuses them while live service readiness checks continue separately.
+- Organized sidebar navigation into Projects, Services, and App; General is now one scrollable page of grouped preferences without a category selector.
+- Added shared plain status indicators, red stop icons, tooltip descriptions, accessible labels, and toast feedback across service cards and sheets.
+- Moved logs to direct service-card/menu actions using a shared log sheet, removing Logs from sidebar navigation.
+- Added an in-app PHP configuration editor with external-change protection and contextual access to managed configurations.
+- Added brand icons for PHP, Go, Flutter, Node.js, Python, Ruby, MySQL, PostgreSQL, MongoDB, MariaDB, Memcached, and MinIO.
+- Added per-project ignore/include actions that remove local hosting routes while preserving folders and project settings.
+- Certificate trust now verifies the result and reports errors; explicit app/CLI HTTPS checks verify a local TLS response and explain missing port forwarding.
+
 - Added a subtle light button background with theme-aware hover, pressed, and disabled states; shared actions use small interior corners and larger outer card-edge corners.
 - Balanced grouped-action padding and dividers, updated geometry tracking, and added a shared side-by-side action group with independent outer corners.
 
@@ -50,5 +61,5 @@
 - Refined menu controls with borderless secondary icons and a compact, understated creation action.
 - Added automatic card-edge corner geometry, lighter shared actions, a single-action database empty state, and a balanced About resource group.
 
-Remote hosting, authenticated instance configuration, scheduled backups, S3 storage,
+Remote hosting, authenticated instance configuration, scheduled backups, S3 backup delivery,
 RabbitMQ, project-specific runtime selection, and additional toolchains are planned.

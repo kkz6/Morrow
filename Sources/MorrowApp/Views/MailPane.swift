@@ -29,13 +29,13 @@ struct MailPane: View {
                         SettingRow(title: "Mailpit", subtitle: LocalizedStringKey(service.installation.version)) {
                             HStack {
                                 StatusBadge(status: model.mailStatuses[service.id] ?? .unknown)
-                                Button([.running, .starting].contains(model.mailStatuses[service.id] ?? .unknown) ? "Stop" : "Start") {
+                                ServiceActionButton(kind: [.running, .starting].contains(model.mailStatuses[service.id] ?? .unknown) ? .stop : .start, title: [.running, .starting].contains(model.mailStatuses[service.id] ?? .unknown) ? "Stop mail server" : "Start mail server") {
                                     let stop = [.running, .starting].contains(model.mailStatuses[service.id] ?? .unknown)
-                                    model.perform(stop ? "Stopping mail…" : "Starting mail…") { manager in
+                                    model.perform(stop ? "Stopping mail…" : "Starting mail…", success: stop ? "Mail server stopped" : "Mail server started") { manager in
                                         let mail = MailManager(store: manager.store, runner: manager.runner)
                                         if stop { try mail.stop(service.id) } else { try mail.start(service.id) }
                                     }
-                                }.settingsButton(height: 28).disabled(model.busy)
+                                }.disabled(model.busy)
                             }
                         }
                         SettingsDivider()
@@ -47,8 +47,8 @@ struct MailPane: View {
                             .disabled(model.mailStatuses[service.id] != .running)
                         SettingsDivider()
                         HStack {
-                            Button("Settings…") { editing = service }.settingsButton(height: 28)
-                            Button("Logs") { model.showMailLogs(service) }.settingsButton(height: 28)
+                            ServiceActionButton(kind: .configuration, title: "Mail server settings") { editing = service }
+                            ServiceActionButton(kind: .logs, title: "Open Mailpit logs") { model.showMailLogs(service) }
                             Spacer()
                             Button("Remove…", role: .destructive) { removing = service }.settingsButton(height: 28)
                         }.padding(12).disabled(model.busy)
@@ -66,7 +66,7 @@ struct MailPane: View {
             }
         }
     }
-    private func copy(_ text: String) { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(text, forType: .string) }
+    private func copy(_ text: String) { model.copy(text, message: "SMTP settings copied") }
 }
 
 private struct MailEditor: View {
@@ -125,8 +125,7 @@ private struct MailEditor: View {
             if existing == nil {
                 smtp = String((try? model.mail.suggestedPort(1025)) ?? 1025)
                 http = String((try? model.mail.suggestedPort(8025, excluding: Int(smtp))) ?? 8025)
-                let mail = model.mail
-                versions = (try? await Task.detached { try mail.installations() }.value) ?? []
+                versions = model.inventory.mail
             }
         }
         .task(id: "\(name):\(smtp):\(http):\(active)") {

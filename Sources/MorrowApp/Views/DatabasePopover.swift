@@ -14,7 +14,7 @@ struct DatabasePopover: View {
                     Image(systemName: "plus").font(.system(size: 12, weight: .semibold)).frame(width: 22, height: 22)
                 }.buttonStyle(MenuIconButtonStyle()).help("New instance").disabled(model.busy)
             }.padding(.horizontal, 16).padding(.top, 14).padding(.bottom, 10)
-            if model.instances.isEmpty && model.mailServices.isEmpty {
+            if model.instances.isEmpty && model.mailServices.isEmpty && model.objectStorage.isEmpty {
                 VStack(spacing: 8) {
                     Image(systemName: "externaldrive.badge.plus").font(.system(size: 28, weight: .light)).foregroundStyle(.teal)
                     Text("Your workspace starts here").font(.system(size: 13, weight: .medium))
@@ -30,8 +30,9 @@ struct DatabasePopover: View {
                             if index < model.instances.count - 1 { Divider().padding(.leading, 54).opacity(0.5) }
                         }
                         ForEach(model.mailServices) { service in PopoverMailRow(service: service) }
+                        ForEach(model.objectStorage) { service in PopoverStorageRow(service: service) }
                     }
-                }.frame(height: CGFloat(min(model.instances.count + model.mailServices.count, 6)) * 58).scrollBounceBehavior(.basedOnSize)
+                }.frame(height: CGFloat(min(model.instances.count + model.mailServices.count + model.objectStorage.count, 6)) * 58).scrollBounceBehavior(.basedOnSize)
             }
             if let activity = model.activity {
                 HStack(spacing: 8) { ProgressView().controlSize(.mini); Text(activity).font(.system(size: 11)).lineLimit(2); Spacer() }
@@ -48,7 +49,7 @@ struct DatabasePopover: View {
                 Button { NSApplication.shared.terminate(nil) } label: { Image(systemName: "power").frame(width: 26, height: 26) }
                     .buttonStyle(MenuIconButtonStyle()).help("Quit Morrow — services stay running").disabled(model.busy)
             }.foregroundStyle(.secondary).padding(.horizontal, 16).padding(.vertical, 5)
-        }.frame(width: 340)
+        }.frame(width: 340).serviceFeedback()
             .task { await model.refresh() }
     }
 }
@@ -67,20 +68,47 @@ private struct PopoverInstanceRow: View {
                 Text("\(instance.engine.title) · :\(String(instance.port))").font(.system(size: 10)).foregroundStyle(.tertiary)
             }
             Spacer(minLength: 4)
-            Circle().fill(status == .running ? Color.green : status == .starting ? .orange : .secondary.opacity(0.4)).frame(width: 6, height: 6).help(status.title)
-            Button {
+            ServiceStatusView(status: status, compact: true)
+            ServiceActionButton(kind: active ? .stop : .start, title: active ? "Stop database" : "Start database") {
                 let id = instance.id, shouldStop = active
-                model.perform(active ? "Stopping \(instance.name)…" : "Starting \(instance.name)…") { manager in
+                model.perform(active ? "Stopping \(instance.name)…" : "Starting \(instance.name)…", success: active ? "Database stopped" : "Database started") { manager in
                     if shouldStop { try manager.stop(id) } else { try manager.start(id) }
                 }
-            } label: { Image(systemName: active ? "stop.fill" : "play.fill").font(.system(size: 10)) }
-                .buttonStyle(MenuIconButtonStyle()).help(active ? "Stop" : "Start").disabled(model.busy || status == .missingBinary)
+            }.disabled(model.busy || status == .missingBinary)
             Button { model.showLogs(for: instance); openSettings() } label: {
                 Image(systemName: "terminal").font(.system(size: 11))
             }.buttonStyle(MenuIconButtonStyle()).help("View logs in Morrow")
             Button {
-                NSPasteboard.general.clearContents(); NSPasteboard.general.setString(instance.connectionURL, forType: .string)
+                model.copy(instance.connectionURL, message: "Connection address copied")
             } label: { Image(systemName: "doc.on.doc").font(.system(size: 11)) }.buttonStyle(MenuIconButtonStyle()).help("Copy connection address")
+        }.padding(.horizontal, 16).frame(height: 58)
+    }
+}
+
+private struct PopoverStorageRow: View {
+    @Environment(AppModel.self) private var model
+    @Environment(\.openSettingsWindow) private var openSettings
+    let service: ObjectStorageService
+    private var status: InstanceStatus { model.storageStatuses[service.id] ?? .unknown }
+    private var active: Bool { [.running, .starting].contains(status) }
+    var body: some View {
+        HStack(spacing: 10) {
+            IconTile(symbol: "morrow.minio", color: .red, size: 28)
+            VStack(alignment: .leading, spacing: 3) {
+                Text(service.name).font(.system(size: 12, weight: .medium))
+                Text("S3 · :\(service.apiPort)").font(.system(size: 10)).foregroundStyle(.tertiary)
+            }
+            Spacer()
+            ServiceStatusView(status: status, compact: true)
+            ServiceActionButton(kind: active ? .stop : .start, title: active ? "Stop S3 server" : "Start S3 server") {
+                let stop = active
+                model.perform(stop ? "Stopping S3…" : "Starting S3…", success: stop ? "S3 server stopped" : "S3 server started") { manager in
+                    let storage = ObjectStorageManager(store: manager.store, runner: manager.runner)
+                    if stop { try storage.stop(service.id) } else { try storage.start(service.id) }
+                }
+            }.disabled(model.busy)
+            Button { NSWorkspace.shared.open(service.consoleURL) } label: { Image(systemName: "arrow.up.right.square").font(.system(size: 11)) }.buttonStyle(MenuIconButtonStyle()).help("Open S3 console").disabled(status != .running)
+            Button { model.showStorageLogs(service); openSettings() } label: { Image(systemName: "terminal").font(.system(size: 11)) }.buttonStyle(MenuIconButtonStyle()).help("View MinIO logs")
         }.padding(.horizontal, 16).frame(height: 58)
     }
 }
@@ -99,14 +127,14 @@ private struct PopoverMailRow: View {
                 Text("SMTP · :\(service.smtpPort)").font(.system(size: 10)).foregroundStyle(.tertiary)
             }
             Spacer()
-            Circle().fill(status == .running ? Color.green : status == .starting ? .orange : .secondary.opacity(0.4)).frame(width: 6, height: 6).help(status.title)
-            Button {
+            ServiceStatusView(status: status, compact: true)
+            ServiceActionButton(kind: active ? .stop : .start, title: active ? "Stop mail server" : "Start mail server") {
                 let id = service.id, stop = active
-                model.perform(stop ? "Stopping mail…" : "Starting mail…") { manager in
+                model.perform(stop ? "Stopping mail…" : "Starting mail…", success: stop ? "Mail server stopped" : "Mail server started") { manager in
                     let mail = MailManager(store: manager.store, runner: manager.runner)
                     if stop { try mail.stop(id) } else { try mail.start(id) }
                 }
-            } label: { Image(systemName: active ? "stop.fill" : "play.fill").font(.system(size: 10)) }.buttonStyle(MenuIconButtonStyle()).disabled(model.busy)
+            }.disabled(model.busy)
             Button { NSWorkspace.shared.open(service.inboxURL) } label: { Image(systemName: "tray").font(.system(size: 11)) }.buttonStyle(MenuIconButtonStyle()).help("Open test inbox").disabled(status != .running)
             Button { model.showMailLogs(service); openSettings() } label: { Image(systemName: "terminal").font(.system(size: 11)) }.buttonStyle(MenuIconButtonStyle()).help("View mail logs")
         }.padding(.horizontal, 16).frame(height: 58)

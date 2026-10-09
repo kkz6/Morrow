@@ -9,11 +9,11 @@ enum SettingsSection: String, Identifiable, SettingsDestination {
         switch self {
         case .instances: return "Databases"
         case .sites: return "Sites"
-        case .applications: return "Applications"
+        case .applications: return "Runtimes"
         case .mail: return "Mail"
         case .commandLine: return "Command Line"
         case .logs: return "Logs"
-        case .storage: return "Storage"
+        case .storage: return "Object Storage"
         case .general: return "General"
         case .sync: return "iCloud Sync"
         case .menuBar: return "Menu Bar"
@@ -29,7 +29,7 @@ enum SettingsSection: String, Identifiable, SettingsDestination {
         case .mail: return "envelope.fill"
         case .commandLine: return "chevron.left.forwardslash.chevron.right"
         case .logs: return "terminal.fill"
-        case .storage: return "folder.fill"
+        case .storage: return "externaldrive.badge.icloud"
         case .general: return "gearshape.fill"
         case .sync: return "icloud.fill"
         case .menuBar: return "menubar.rectangle"
@@ -58,7 +58,8 @@ enum SettingsSection: String, Identifiable, SettingsDestination {
 struct SettingsWindow: View {
     @Environment(AppModel.self) private var model
     private let groups: [SettingsSidebarGroup<SettingsSection>] = [
-        .init("databases", header: "Workspace", destinations: [.instances, .sites, .applications, .mail, .logs, .storage]),
+        .init("projects", header: "Projects", destinations: [.sites]),
+        .init("services", header: "Services", destinations: [.instances, .applications, .mail, .storage]),
         .init("app", header: "App", destinations: [.general, .about]),
     ]
     var body: some View {
@@ -73,6 +74,9 @@ struct SettingsWindow: View {
                 if let error = model.error { ErrorCard(message: error) { model.error = nil }.padding(.horizontal, 16).padding(.bottom, 16) }
             }
         }
+        .serviceFeedback()
+        .sheet(item: $model.logRequest) { ServiceLogSheet(request: $0).environment(model) }
+        .sheet(item: $model.configurationRequest) { ConfigurationEditorSheet(request: $0).environment(model) }
         .sheet(item: $model.creationRequest) { version in
             InstanceEditor(installation: version.installation, engine: version.engine, version: version.version).environment(model)
         }

@@ -80,7 +80,7 @@ morrow db upgrade my-project
 morrow db recover my-project # only for an interrupted update
 ```
 
-Settings → Applications manages PHP, Go, Flutter, Node.js, Python, and Ruby. Select a version to reuse or install it and set its Morrow default. Existing binaries are detected before installation. Morrow provides optional PATH wrappers, without changing Homebrew links or shell files. Flutter SDK selections are copied into Morrow storage to preserve them across cask upgrades.
+Settings → Runtimes manages PHP, Go, Flutter, Node.js, Python, and Ruby. Select a version to reuse or install it and set its Morrow default. Existing binaries are detected before installation. Node uses nvm and the official Node release catalog; other missing runtimes use Homebrew. Version discovery is cached on disk so changing pages does not rescan installations. Runtime cards expose configuration files and PHP-FPM logs. Morrow provides optional PATH wrappers, without changing Homebrew links or shell files. Flutter SDK selections are copied into Morrow storage to preserve them across cask upgrades.
 
 ```sh
 morrow tool install php 8.4
@@ -90,7 +90,7 @@ morrow tool updates --refresh
 morrow tool shell
 ```
 
-See the [update guide](https://kkz6.github.io/Morrow/docs/updates) and [runtime guide](https://kkz6.github.io/Morrow/docs/applications). Arbitrary historical patches, project-specific runtime files, and web/PHP-FPM service management are not included yet.
+See the [update guide](https://kkz6.github.io/Morrow/docs/updates) and [runtime guide](https://kkz6.github.io/Morrow/docs/applications). Historical Homebrew patches and project-specific runtime files remain limited by the selected provider. Node supports exact versions through nvm; PHP web hosting is managed in Sites.
 
 ## Sites and parked projects
 
@@ -104,7 +104,7 @@ morrow site php 8.4
 morrow site link --port 3000
 ```
 
-Use `morrow site configure --suffix morrow.test` to choose a private namespace. Sites → Enable Local Domains performs the separate administrator DNS/forwarding setup; Sites → Trust Local HTTPS Certificate trusts this Mac's CA. Existing Herd/Valet resolvers and occupied web ports require resolving ownership first. Before system setup, URLs use Morrow's high listener ports.
+Use `morrow site configure --suffix morrow.test` to choose a private namespace. Sites → Enable Local Domains performs the separate administrator DNS/forwarding setup; Sites → Trust Local HTTPS Certificate trusts this Mac's CA. Existing Herd/Valet resolvers and occupied web ports require resolving ownership first. Before system setup, URLs use Morrow's high listener ports. **Check HTTPS** verifies certificate trust and a local TLS connection, and reports setup errors visibly. Project menus can ignore a folder for domain hosting without deleting it.
 
 See the [Sites guide](https://kkz6.github.io/Morrow/docs/sites) for npm `predev` integration, project settings, HTTPS toggles, and setup/removal commands.
 
@@ -120,6 +120,18 @@ morrow mail inbox local-mail
 
 Both endpoints bind to loopback. Messages are persistent and archived by default on removal. Mail recipes sync through iCloud; messages remain local. See the [SMTP guide](https://kkz6.github.io/Morrow/docs/mail).
 
+## Local S3 storage
+
+Settings → Object Storage creates a native MinIO server and manages buckets. Ports, settings, credentials, and data persist across restarts. The server card and menu bar expose live status, red stop controls, console access, and logs.
+
+```sh
+morrow storage create local-s3 --start
+morrow storage bucket local-s3 create uploads
+morrow storage config local-s3
+```
+
+S3 endpoints are loopback-only. Generated credentials stay in private local files and are not synced. Removing a server archives its data and keys. See the [S3 guide](https://kkz6.github.io/Morrow/docs/object-storage).
+
 ## iCloud workspace setup
 
 Settings → General → iCloud Sync stores a portable workspace blueprint in a folder inside iCloud Drive. Enable sync on each Mac and opt in to automatic Homebrew setup where missing services should be recreated. Morrow shares recipes and runtime defaults; each Mac keeps its own database data and native executable paths.
@@ -134,9 +146,9 @@ The app checks while running; the CLI reconciles on demand. Apple manages file d
 
 ## Data and lifecycle
 
-The app's **Logs** section displays server output directly in Morrow. Choose an
-instance, search its output, pause live updates, refresh, or copy displayed
-lines. Instance menus and the menu bar terminal button open this viewer.
+Terminal icons on service cards and menu rows open the same searchable log
+sheet directly, without a separate Logs sidebar page. Search output, pause
+live updates, refresh, or copy displayed lines.
 Live updates check for appended output each second and retain the most recent
 128 KB; file rotation and truncation reset the reader automatically. Logs
 remain persisted on disk for the CLI and for use after restarting Morrow.
@@ -196,4 +208,4 @@ Required third-party notices are included with the application resources.
 
 ## Preferences
 
-Command Line, Menu Bar, Appearance, and iCloud Sync are grouped in Settings → General. Choose a category in its Preferences selector; About remains separate.
+Command Line, Menu Bar, Appearance, and iCloud Sync are grouped in Settings → General. General is one scrollable page with grouped rows and headings, without a category selector. Navigation groups Sites under Projects, databases/runtimes/mail/S3 under Services, and General/About under App.

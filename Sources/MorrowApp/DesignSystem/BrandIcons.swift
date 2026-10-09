@@ -4,10 +4,10 @@ import AppKit
 @MainActor enum BrandIcons {
     private static var images: [String: NSImage] = [:]
     static func image(for symbol: String) -> NSImage? {
-        guard ["morrow.redis", "morrow.valkey"].contains(symbol) else { return nil }
+        guard symbol.hasPrefix("morrow.") else { return nil }
         if let cached = images[symbol] { return cached }
         let name = String(symbol.dropFirst("morrow.".count))
-        guard let url = Bundle.module.url(forResource: name, withExtension: "pdf", subdirectory: "Assets"), let image = NSImage(contentsOf: url) else { return nil }
+        guard let url = Bundle.module.url(forResource: name, withExtension: "pdf", subdirectory: "Assets") ?? Bundle.module.url(forResource: name, withExtension: "png", subdirectory: "Assets"), let image = NSImage(contentsOf: url) else { return nil }
         image.isTemplate = false; images[symbol] = image
         return image
     }
@@ -24,6 +24,6 @@ import AppKit
         }
     }
     static func fallbackSymbol(_ symbol: String) -> String {
-        switch symbol { case "morrow.redis": return "square.stack.3d.up.fill"; case "morrow.valkey": return "hexagon.fill"; default: return symbol }
+        switch symbol { case "morrow.redis": return "square.stack.3d.up.fill"; case "morrow.valkey": return "hexagon.fill"; case "morrow.php", "morrow.go", "morrow.flutter", "morrow.node", "morrow.python", "morrow.ruby": return "chevron.left.forwardslash.chevron.right"; case "morrow.minio": return "externaldrive.fill"; case "morrow.mysql", "morrow.mariadb", "morrow.mongodb", "morrow.postgresql", "morrow.memcached": return "cylinder.fill"; default: return symbol }
     }
 }
