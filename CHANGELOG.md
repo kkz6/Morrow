@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Made the menu bar popover more compact with a 300-point width, 46-point shared service rows, 24-point controls/icons, tighter header/footer spacing, and a smaller empty state and feedback overlay.
+- Unified menu row layout and separators across databases, mail, and S3, retaining readable labels, tooltips, accessibility names, and all existing actions.
+
 - Fixed locale-based thousands separators in SMTP and S3 menu-bar port labels; ports always display as plain digits.
 
 - Added an in-app Allow Morrow Setup explanation before opening macOS's native helper approval settings.

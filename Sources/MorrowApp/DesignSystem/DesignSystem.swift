@@ -25,7 +25,7 @@ enum DS {
     enum Size {
         static let rowHeight: CGFloat = 46
         static let tile: CGFloat = 26
-        static let popoverWidth: CGFloat = 320
+        static let popoverWidth: CGFloat = MenuLayout.width
     }
 
     /// Visible, theme-adaptive border used on every card and input.

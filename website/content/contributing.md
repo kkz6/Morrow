@@ -16,6 +16,8 @@ Use the shared DesignSystem components for controls. Action buttons use a subtle
 
 In the menu popover, use compact actions with a translucent surface and borderless secondary icons. Icon backplates appear only on hover or press. Keep creation buttons centered and appropriately sized rather than stretching a heavy settings-card button across the menu.
 
+Use `MenuLayout` and `MenuServiceRow` for menu geometry: 300-point width, 46-point rows, 24-point icons and action targets, 12-point horizontal insets, and a shared six-row viewport. Header/footer, empty state, separators, and preview rendering use the same tokens. Keep service names at 12 points and metadata at 10 points; compactness comes from spacing rather than unreadable text. Use the compact service-action and feedback variants in the menu, preserving regular sizes in Settings.
+
 About centers a modest app identity above a Resources group with documentation, source, and issue-reporting links. Keep marketing text and implementation details out of this pane. Empty database views offer one creation action at the card's bottom edge. The menu footer contains only its settings and quit controls. Settings cards provide full-width actions for command installation and service creation.
 
 Settings titles and icons remain pinned while detail content scrolls. The header samples the window's native material only after scrolling begins. Its alpha mask remains opaque through the title's midpoint, then fades smoothly to transparent. Keep the title outside the effect, avoid opaque fills or bottom borders, and disable the fade animation when Reduce Motion is enabled. The shared layout retains its existing window size and gutters in both appearances.

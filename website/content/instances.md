@@ -27,6 +27,8 @@ morrow db list --json
 
 The menu bar offers start and stop controls. Settings shows status, connection addresses, and instance settings. Databases continue running when the menu bar app quits because macOS launchd owns their processes.
 
+The compact menu uses the same row layout for databases, mail, and S3 services. It retains status, start/stop, logs, and connection/inbox/console controls, with tooltips for each icon. Up to six rows are visible before the service list scrolls.
+
 ## Configure a stopped instance
 
 ```sh

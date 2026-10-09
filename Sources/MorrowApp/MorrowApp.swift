@@ -133,9 +133,8 @@ private final class AppearanceTrackingView: NSView {
             if let view = window.contentView { save(view: view, to: directory.appendingPathComponent("settings.png")) }
             let menu = NSHostingView(rootView: DatabasePopover().environment(model).tint(.morrowAccent)
                 .background(Color(nsColor: .windowBackgroundColor)).preferredColorScheme(.light))
-            let instanceRows = min(model.instances.count, 6)
-            let height = CGFloat(model.instances.isEmpty ? 266 : 92 + instanceRows * 58)
-            menu.frame = NSRect(x: 0, y: 0, width: 340, height: height)
+            let serviceCount = model.instances.count + model.mailServices.count + model.objectStorage.count
+            menu.frame = NSRect(x: 0, y: 0, width: MenuLayout.width, height: MenuLayout.height(serviceCount))
             let menuWindow = NSWindow(contentRect: menu.frame, styleMask: [.borderless], backing: .buffered, defer: false)
             menuWindow.contentView = menu
             menuWindow.backgroundColor = .windowBackgroundColor
