@@ -96,7 +96,7 @@ private struct PopoverStorageRow: View {
             IconTile(symbol: "morrow.minio", color: .red, size: 28)
             VStack(alignment: .leading, spacing: 3) {
                 Text(service.name).font(.system(size: 12, weight: .medium))
-                Text("S3 · :\(service.apiPort)").font(.system(size: 10)).foregroundStyle(.tertiary)
+                Text("S3 · :\(String(service.apiPort))").font(.system(size: 10)).foregroundStyle(.tertiary)
             }
             Spacer()
             ServiceStatusView(status: status, compact: true)
@@ -124,7 +124,7 @@ private struct PopoverMailRow: View {
             IconTile(symbol: "envelope.fill", color: .orange, size: 28)
             VStack(alignment: .leading, spacing: 3) {
                 Text(service.name).font(.system(size: 12, weight: .medium))
-                Text("SMTP · :\(service.smtpPort)").font(.system(size: 10)).foregroundStyle(.tertiary)
+                Text("SMTP · :\(String(service.smtpPort))").font(.system(size: 10)).foregroundStyle(.tertiary)
             }
             Spacer()
             ServiceStatusView(status: status, compact: true)

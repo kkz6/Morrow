@@ -19,6 +19,8 @@ morrow storage start local-s3
 
 The API is normally `http://127.0.0.1:9000`; the console is normally `http://127.0.0.1:9001`. Use the displayed endpoints if you selected different ports. Settings and the CLI share the same saved server records. The running indicator requires an owned live process and a successful MinIO readiness response.
 
+Ports display as plain digits in every locale, including the menu bar.
+
 ## Buckets and application settings
 
 Start the server, then use **Create Bucket**. Bucket names use 3–63 lowercase letters, numbers, dots, or hyphens and must satisfy S3 naming rules. The bucket list is fetched when the server becomes available and can be refreshed manually.

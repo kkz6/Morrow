@@ -10,6 +10,8 @@ Open **Settings → Mail → Create Mail Server**. Choose a name, Mailpit versio
 
 The suggested ports begin at **1025** for SMTP and **8025** for the inbox. Each service has its own captured-message database. Multiple services can run on different ports; database and mail reservations share the same port validation.
 
+Port labels use plain digits in every locale: `1025`, without a thousands separator.
+
 ```sh
 morrow mail create local-mail --start
 morrow mail list

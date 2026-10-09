@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fixed locale-based thousands separators in SMTP and S3 menu-bar port labels; ports always display as plain digits.
+
 - Added an in-app Allow Morrow Setup explanation before opening macOS's native helper approval settings.
 - Attributed service jobs to Morrow and added an unprivileged foreground runner for native children, preserving output, environment, exit status, and stop signals. Reliable macOS grouping requires shared Developer ID signing.
 
