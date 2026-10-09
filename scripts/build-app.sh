@@ -19,6 +19,8 @@ cp Resources/Info.plist "$app/Contents/Info.plist"
 /usr/libexec/PlistBuddy -c "Add :DTSDKName string macosx$MORROW_SDK_VERSION" "$app/Contents/Info.plist"
 cp -R "$binary_directory/Morrow_MorrowApp.bundle" "$app/Contents/Resources/"
 cp Resources/ThirdPartyNotices.txt "$app/Contents/Resources/"
+mkdir -p "$app/Contents/Library/LaunchDaemons"
+cp Resources/dev.morrow.setup.plist "$app/Contents/Library/LaunchDaemons/"
 rm -f "$app/Contents/Resources/ZoneBar-LICENSE.txt"
 if [[ ! -f Resources/AppIcon.icns ]]; then
     xcrun swift scripts/create-icon.swift .build/AppIcon.iconset
@@ -32,8 +34,14 @@ for morrow_binary in "$app/Contents/MacOS/MorrowMenuBar" "$app/Contents/MacOS/mo
         exit 1
     fi
 done
-codesign --force --sign - "$app/Contents/MacOS/morrow"
-codesign --force --sign - "$app"
+morrow_signing_identity="${MORROW_SIGNING_IDENTITY:--}"
+if [[ "$morrow_signing_identity" == "-" ]]; then
+    codesign --force --sign - "$app/Contents/MacOS/morrow"
+    codesign --force --sign - "$app"
+else
+    codesign --force --sign "$morrow_signing_identity" --options runtime --timestamp "$app/Contents/MacOS/morrow"
+    codesign --force --sign "$morrow_signing_identity" --options runtime --timestamp "$app"
+fi
 ln -sfn Morrow.app/Contents/MacOS/morrow build/morrow
 echo "Built $(pwd)/$app"
 du -sh "$app"

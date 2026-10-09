@@ -19,6 +19,12 @@ open build/Morrow.app --args --settings
 
 The build produces `build/Morrow.app`, which includes the CLI, and `build/morrow` for use from this checkout. Database servers are managed as native processes and downloaded only when necessary.
 
+## First-launch setup
+
+New workspaces open a setup assistant. Choose launch at login, the optional `morrow` command, and local project domains. Existing workspaces keep their settings and are not forced through onboarding. Reopen the assistant from **General → Open Setup Assistant**.
+
+Choose **Allow Morrow Setup** to review a native in-app explanation, then continue to macOS approval. Local domains require one-time approval for **Morrow** in macOS **System Settings → General → Login Items & Extensions**. The native helper handles only local DNS and standard-port setup; no sudo password is stored. Database and runtime management work without that helper. You can finish later and enable local domains when needed.
+
 ## Create a database
 
 In Settings, open **Databases → New Instance**. Choose the engine and version, enter a name, and click **Create Instance**. The default **Start after creating** option starts it immediately.
@@ -68,7 +74,7 @@ Open **Settings → General → iCloud Sync** and choose a folder inside iCloud 
 
 ## Host local projects
 
-Open **Settings → Sites → Project Directories** to park PHP/static project folders. Use `morrow site link --port 3000` from another web project’s folder to route its development server. Read [Sites and project directories](/docs/sites) for local DNS, suffix selection, and HTTPS setup.
+Use the **+** menu beside **Settings → Sites → Projects**, then **Project Directories** to park PHP/static project folders. Use `morrow site link --port 3000` from another web project’s folder to route its development server. Read [Sites and project directories](/docs/sites) for local DNS, suffix selection, and HTTPS setup.
 
 ## Add local S3 storage
 

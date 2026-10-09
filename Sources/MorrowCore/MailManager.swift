@@ -182,7 +182,7 @@ public struct MailManager: Sendable {
         // a loopback mail catcher, with persistent messages per service.
         let arguments = ["/usr/bin/env", "-i", "HOME=" + FileManager.default.homeDirectoryForCurrentUser.path, "PATH=/usr/bin:/bin", "LC_ALL=C", "MP_DISABLE_VERSION_CHECK=true", service.installation.executable,
                          "--listen", "127.0.0.1:\(service.httpPort)", "--smtp", "127.0.0.1:\(service.smtpPort)", "--database", directory(service).appendingPathComponent("messages.db").path]
-        let description: [String: Any] = ["Label": service.label, "ProgramArguments": arguments, "RunAtLoad": true, "KeepAlive": false, "WorkingDirectory": directory(service).path, "StandardOutPath": logURL(service).path, "StandardErrorPath": logURL(service).path, "ExitTimeOut": 30]
+        let description: [String: Any] = ["Label": service.label, "ProgramArguments": ManagedServiceRunner.arguments(arguments), "AssociatedBundleIdentifiers": ManagedServiceRunner.bundleIdentifiers, "RunAtLoad": true, "KeepAlive": false, "WorkingDirectory": directory(service).path, "StandardOutPath": logURL(service).path, "StandardErrorPath": logURL(service).path, "ExitTimeOut": 30]
         try FileManager.default.createDirectory(at: job(service).deletingLastPathComponent(), withIntermediateDirectories: true)
         let data = try PropertyListSerialization.data(fromPropertyList: description, format: .xml, options: 0)
         try data.write(to: job(service), options: .atomic)

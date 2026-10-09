@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0"><dict>
+    <key>Label</key><string>dev.morrow.setup</string>
+    <key>BundleProgram</key><string>Contents/MacOS/morrow</string>
+    <key>ProgramArguments</key><array><string>morrow</string><string>site</string><string>setup-service</string></array>
+    <key>AssociatedBundleIdentifiers</key><array><string>dev.morrow.app</string></array>
+    <key>RunAtLoad</key><true/>
+    <key>KeepAlive</key><true/>
+    <key>ThrottleInterval</key><integer>10</integer>
+    <key>ProcessType</key><string>Background</string>
+</dict></plist>

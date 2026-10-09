@@ -6,7 +6,7 @@ order: 4.6
 ---
 ## Project directories
 
-Open **Settings → Sites → Project Directories** and add a parent directory. Its immediate child folders become project domains:
+Open **Settings → Sites**, then use the **+** menu beside **Projects → Project Directories** and add a parent directory. Its immediate child folders become project domains:
 
 ```text
 ~/Projects/shop       → shop.test
@@ -98,7 +98,7 @@ A domain without dots is placed under the current development suffix. Explicit l
 
 ## Change the domain suffix
 
-Open **Hosting Settings**, or:
+Open the configuration icon beside **Web server** for **Hosting Settings**, or:
 
 ```sh
 morrow site configure --suffix morrow.test
@@ -110,13 +110,25 @@ Automatically named routes change with the suffix. Explicit custom hostnames rem
 
 ## Clean URLs and system DNS
 
-Services use unprivileged listener ports by default: HTTP 8080, HTTPS 8443, and DNS 5354. Before system setup, Morrow displays URLs with those ports. A hostname also needs working local DNS; an existing Herd resolver may already resolve `.test`, but Morrow does not overwrite it.
+Services use unprivileged listener ports by default: HTTP 8080, HTTPS 8443, and DNS 5354. Before system setup, Morrow displays URLs with those ports. A hostname also needs working local DNS. Setup preserves other resolvers unless you explicitly select replacement.
 
-**Enable Local Domains** requests administrator authorization to install Morrow-owned resolver files and loopback forwarding. Stop another web server using 80/443 before enabling it. If Herd or Valet owns the selected resolver file, remove its configuration through that tool, or use another private suffix.
+The **Local Domains** card shows routing and certificate status. **Set Up** starts hosting if needed, registers the native setup helper for one-time macOS approval for DNS and ports 80/443, and trusts the development CA when a project has HTTPS enabled. If approval is needed, **Approve Morrow** opens the macOS background-permission settings; setup resumes after approval. Once configured, the setup button disappears. Validation, gateway logs, and repair live in its **…** menu.
 
-Current macOS resolver behavior requires special handling for a localhost DNS service on a nonstandard port. Morrow adds the dedicated loopback alias `192.0.2.53`, exposes DNS through port 53 on that alias, and forwards it to its user-owned DNS service. HTTP 80 and HTTPS 443 are forwarded to its private listeners. The rules occupy only the `com.apple/dev.morrow` PF subanchor; the main PF configuration is preserved.
+If a previous resolver remains after removing Herd/Valet, the primary action becomes **Replace Setup**. It explicitly backs up the previous resolver before replacing it. Stop any other web server using 80/443 first; Morrow still refuses to redirect an occupied web-server port. You can also choose another private suffix.
 
-A root-owned one-shot launchd job reapplies Morrow's alias and forwarding after a restart. PHP, DNS, the web server, and the watcher run as your user. Existing resolvers, unrelated web servers, network DNS settings, and project files are preserved. Pending setup is reported rather than counted as complete.
+The CLI requires an explicit replacement option:
+
+```sh
+sudo morrow site setup --http-port 8080 --https-port 8443 --dns-port 5354 --suffixes test --replace-resolvers
+```
+
+Resolver backups are private root-owned JSON files in `/Library/Application Support/Morrow Network Backups`. They retain the original bytes and permissions. Removing Morrow routing restores a saved resolver only if that resolver still contains Morrow's configuration. Backups remain available afterward.
+
+Morrow uses launchd socket activation for standard localhost ports. launchd opens HTTP 80, HTTPS 443, and TCP/UDP DNS 53 on `127.0.0.1`, then gives those sockets to a small gateway running as your Mac user. It forwards only to Morrow's private local listeners. PHP, DNS, Caddy, the gateway, and the directory watcher run without root privileges.
+
+This setup does not install packet-filter rules, a VPN, or a network extension. Private domains and local connections are outside Private Relay's internet relay path. Migrating an older Morrow setup removes its PF anchor, releases only Morrow's PF token, and removes its dedicated DNS alias; other tools' filtering state is preserved. macOS may take a short time to refresh Private Relay's status.
+
+Unrelated resolvers, web servers, network DNS settings, and project files are preserved. Resolver replacement only applies to the namespaces explicitly selected for setup. Pending setup is reported rather than counted as complete.
 
 For CLI setup as an administrator, provide the settings you selected:
 
@@ -144,19 +156,21 @@ morrow site configure --https on
 
 The global setting controls new sites. Caddy's internal CA issues and renews certificates for explicitly configured project hostnames. It does not request public certificates for these development domains.
 
-Enable HTTPS on a site, start hosting, then choose **Trust Local HTTPS Certificate** or run:
+Enable HTTPS on a site, then choose **Set Up** or **Finish Setup** in **Local Domains**. Setup skips certificate changes when the CA is already trusted. Advanced users can still run:
 
 ```sh
 morrow site trust
 ```
 
-**Domain Setup** displays progress, success, or a visible error when trust is requested. Trust is verified after the certificate is added. **Check HTTPS** connects to an enabled project on the local HTTPS listener and verifies its certificate against Morrow's CA, independently of DNS resolution. A successful listener check does not mean an app's business logic is healthy; its HTTP response code is reported.
+**Validate HTTPS** in the Local Domains **…** menu reports its result inside the card. Validation uses native certificate trust evaluation without launching a certificate application, opening a browser, changing the selected page, or adding a page-wide activity/error panel. Only explicit setup or certificate trust changes need system approval. The app no longer elevates through AppleScript or shell scripts.
 
 ```sh
 morrow site check-https
 ```
 
-Before system routing is enabled, use the displayed address such as `https://shop.test:8443`. Trusting a certificate does not install DNS or port forwarding. An existing Herd/Valet resolver conflict is shown by **Enable Local Domains**; resolve that ownership or select another suffix before setup. The default HTTPS switch applies only to new sites; existing projects have their own HTTPS toggles.
+After routing is configured, validation checks the normal project hostname and HTTPS port 443, including system DNS and forwarding. Before setup, it checks the private listener directly and explains the remaining setup step. HTTP redirects such as 302 still establish a working TLS connection; the check does not verify an application's business logic.
+
+Before system routing is enabled, use the displayed address such as `https://shop.test:8443`. The default HTTPS switch applies only to new sites; existing projects have their own HTTPS toggles.
 
 This installs the public root certificate into this user's login keychain trust settings and may prompt for authorization. Private CA keys remain in Morrow's local `web/caddy-data` directory and are not included in iCloud setup sync. Clients using separate trust stores may need to import the public root certificate separately. Turning off HTTPS changes the route back to HTTP; it does not remove the trusted CA.
 
@@ -172,3 +186,11 @@ morrow site open shop.test
 ```
 
 Site and parked-directory configuration is local in this first implementation; it is not yet part of the portable iCloud workspace blueprint.
+
+## Native helper and release signing
+
+The setup daemon is bundled with Morrow and registered through `SMAppService`. macOS retains its approval. It accepts only a private regular request file owned by the console user, validates the listener ports and private suffixes, and exposes no arbitrary command/path execution. Public setup results contain status, never credentials.
+
+The gateway is copied to a root-protected application-support location and runs as the Mac user. It keeps working if the GUI app moves. The helper and gateway are distinct roles: only installation metadata and resolver changes use root privileges.
+
+Customer builds must be Developer ID signed and notarized. Ad-hoc development builds can have additional macOS approval restrictions. See [Contributing](/docs/contributing) for release build inputs.

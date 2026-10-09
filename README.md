@@ -104,7 +104,7 @@ morrow site php 8.4
 morrow site link --port 3000
 ```
 
-Use `morrow site configure --suffix morrow.test` to choose a private namespace. Sites → Enable Local Domains performs the separate administrator DNS/forwarding setup; Sites → Trust Local HTTPS Certificate trusts this Mac's CA. Existing Herd/Valet resolvers and occupied web ports require resolving ownership first. Before system setup, URLs use Morrow's high listener ports. **Check HTTPS** verifies certificate trust and a local TLS connection, and reports setup errors visibly. Project menus can ignore a folder for domain hosting without deleting it.
+Use `morrow site configure --suffix morrow.test` to choose a private namespace. The **Local Domains** card combines DNS/80/443 setup and certificate trust into one action. **Replace Setup** backs up a leftover resolver when switching from another tool. Existing web listeners still block setup. A native socket-activated gateway handles localhost ports without custom packet-filter rules. Its **…** menu validates HTTPS inline, without opening another window; once configured it checks normal DNS and port 443. Project menus can ignore folders without deleting them. Hosting settings use the web-server configuration icon, and the Projects **+** menu holds directory, linking, and refresh controls.
 
 See the [Sites guide](https://kkz6.github.io/Morrow/docs/sites) for npm `predev` integration, project settings, HTTPS toggles, and setup/removal commands.
 

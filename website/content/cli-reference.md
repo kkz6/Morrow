@@ -10,6 +10,7 @@ order: 6
 | --- | --- |
 | `morrow --help` | List commands and options |
 | `morrow --version` | Print the application version |
+| `morrow service-runner -- <executable> [args]` | Internal unprivileged native-service supervisor used for app attribution |
 | `morrow doctor` | Check native discovery, Homebrew, and storage |
 | `morrow settings` | Open the macOS app’s Settings window |
 
@@ -159,21 +160,23 @@ Configuration options: `--smtp-port <port>`, `--http-port <port>`, `--name <name
 | `morrow site stop` | Stop hosting and remove its login jobs |
 | `morrow site refresh` | Reconcile directory changes and routes |
 | `morrow site watch` | Run the enabled workspace watcher in the foreground |
+| `morrow site setup-service` | Internal native setup service; launched only after macOS helper approval |
+| `morrow site gateway [listener-port options]` | Internal localhost gateway; requires sockets supplied by its launchd job |
 | `morrow site php [version] [--install]` | List/select complete PHP-FPM installations, or reuse/install current Homebrew PHP |
 | `morrow site secure <domain>` | Enable local HTTPS |
 | `morrow site unsecure <domain>` | Change the route to HTTP |
 | `morrow site ignore <domain>` | Exclude a project from local hosting, preserving its folder and settings |
 | `morrow site include <domain>` | Restore an ignored project route |
 | `morrow site configure [options]` | Change suffix, listener ports, and new-site HTTPS/login defaults |
-| `morrow site setup [options] [--remove]` | Administrator setup/removal of owned DNS and loopback forwarding |
+| `morrow site setup [options] [--remove]` | Administrator setup/removal of scoped DNS and localhost gateway sockets |
 | `morrow site trust` | Trust and verify Morrow's local CA in this user's login keychain |
-| `morrow site check-https` | Check CA trust and a local project HTTPS listener |
+| `morrow site check-https` | Check native CA trust and normal DNS/HTTPS port 443 after routing setup |
 | `morrow site open <domain>` | Open the project URL |
 | `morrow site logs <domain>` | Print recent routing output |
 
 Configuration options: `--suffix <namespace>`, `--http-port <port>`, `--https-port <port>`, `--dns-port <port>`, `--https on|off`, `--autostart on|off`. Stop hosting before changing listener ports.
 
-System setup options: `--http-port`, `--https-port`, `--dns-port`, `--suffixes <comma-separated-namespaces>`, `--user <uid>` for authorization integrations. Under sudo, the original user's UID is inferred from `SUDO_UID`. System setup never takes over another tool's resolver file.
+System setup options: `--http-port`, `--https-port`, `--dns-port`, `--suffixes <comma-separated-namespaces>`, `--user <uid>` for authorization integrations. Under sudo, the original user's UID is inferred from `SUDO_UID`. Existing resolvers are preserved by default. `--replace-resolvers` explicitly backs them up before replacement; occupied web-server ports and symbolic resolver files still block setup. Removing routing restores a saved resolver when its current contents are still owned by Morrow.
 
 Read [Sites and project directories](/docs/sites) for PHP roots, development-script integration, private namespaces, certificates, and the system authorization step.
 

@@ -88,6 +88,9 @@ struct GeneralOptionsPane: View {
                 }.padding(12)
             }
             SettingsNote(text: "Database startup is configured per instance. Morrow uses macOS launchd so services continue running independently of the menu bar app.")
+            SettingsGroup {
+                SettingsActionRow(title: "Open Setup Assistant…", symbol: "wand.and.stars") { model.onboardingPresented = true }
+            }
         }.onAppear {
             loginEnabled = model.preview ? false : SMAppService.mainApp.status == .enabled
             brewPath = model.preferences.homebrewPath

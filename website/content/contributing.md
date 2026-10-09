@@ -69,3 +69,21 @@ This developer preview includes local databases, PHP/Go/Flutter/Node/Python/Ruby
 ## Dependency status
 
 The Nuxt toolchain currently reports upstream high-severity npm audit advisories involving its development dependencies. Patched Git parser versions are pinned through overrides. The published site contains static HTML, CSS, and client scripts; its development server stays on 127.0.0.1. Recheck advisories when updating dependencies rather than forcing an incompatible Nuxt downgrade.
+
+## Customer distribution
+
+Build the complete app, including the bundled `dev.morrow.setup.plist`, with a Developer ID identity:
+
+```sh
+MORROW_SIGNING_IDENTITY="Developer ID Application: Your Name (TEAMID)" ./scripts/build-app.sh release
+```
+
+The build signs nested executables before the app, enables hardened runtime, and requests a timestamp when an identity is provided. Default local/CI builds remain ad-hoc signed. A customer release still needs Apple's notarization submission and ticket stapling; providing a signing variable does not itself notarize the app.
+
+Setup uses native `SMAppService` approval. Do not reintroduce AppleScript/Python elevation or cache a sudo password. Keep the setup helper's operations limited to validated local DNS and gateway installation.
+
+## Background-item attribution
+
+Generated launchd jobs declare `AssociatedBundleIdentifiers` for Morrow. When the bundled CLI is available, database, mail, web, and S3 workers launch through Morrow's foreground service runner. It preserves their environment/output, forwards stop signals to the owned native child, and exits with that child's status.
+
+Customer executables must share Morrow's Developer Team ID for macOS attribution. macOS owns the final Login Items grouping; ad-hoc previews, old registrations, or standalone unsigned binaries can appear separately. Never modify the system background-task database or claim that separate server processes disappear. Existing services adopt updated job metadata when recreated or restarted; do not stop user databases merely to refresh a settings list.

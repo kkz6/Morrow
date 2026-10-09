@@ -1,5 +1,6 @@
 import Foundation
 import Darwin
+import Security
 
 public struct SiteManager: Sendable {
     public let store: StateStore
@@ -360,7 +361,7 @@ public struct SiteManager: Sendable {
                 else { statuses[site.id] = .needsPHP }
             } else { statuses[site.id] = .serving }
         }
-        return WebStatus(proxy: proxyStatus, dns: dnsStatus, systemConfigured: configured, setupMessage: message, sites: statuses)
+        return WebStatus(proxy: proxyStatus, dns: dnsStatus, systemConfigured: configured, setupMessage: message, sites: statuses, httpsTrusted: certificateTrusted())
     }
     public func runtimeLogURL(_ runtime: RuntimeInstallation) -> URL? {
         guard runtime.engine == .php else { return nil }
@@ -370,36 +371,47 @@ public struct SiteManager: Sendable {
         guard runtime.engine == .php else { return nil }
         return base.appendingPathComponent(phpComponent(runtime) + ".conf")
     }
-    public func setupCommand(cli: URL) throws -> String {
+    public func setupCommand(cli: URL, replaceResolvers: Bool = false) throws -> String {
         let web = try store.load().web
         func shell(_ value: String) -> String { "'" + value.replacingOccurrences(of: "'", with: "'\\''") + "'" }
-        return shell(cli.resolvingSymlinksInPath().path) + " site setup --user \(getuid()) --http-port \(web.httpPort) --https-port \(web.httpsPort) --dns-port \(web.dnsPort) --suffixes " + shell(web.suffixes.joined(separator: ","))
+        return shell(cli.resolvingSymlinksInPath().path) + " site setup --user \(getuid()) --http-port \(web.httpPort) --https-port \(web.httpsPort) --dns-port \(web.dnsPort) --suffixes " + shell(web.suffixes.joined(separator: ",")) + (replaceResolvers ? " --replace-resolvers" : "")
     }
     public func trustCertificate() throws {
+        if certificateTrusted() { return }
         guard FileManager.default.fileExists(atPath: certificateURL.path) else { throw MorrowError.message("Enable HTTPS on a site and start Sites first to create its local certificate authority.") }
         let keychain = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Keychains/login.keychain-db")
         try runner.run("/usr/bin/security", ["add-trusted-cert", "-r", "trustRoot", "-k", keychain.path, certificateURL.path], environment: [:]).checked()
         guard certificateTrusted() else { throw MorrowError.message("The root certificate was added, but trust could not be verified. Open the login keychain and set Morrow Development CA to Always Trust.") }
     }
     public func certificateTrusted() -> Bool {
-        guard FileManager.default.fileExists(atPath: certificateURL.path) else { return false }
-        return (try? runner.run("/usr/bin/security", ["verify-cert", "-c", certificateURL.path, "-p", "basic"], environment: [:]).status) == 0
+        // Native trust evaluation never launches a certificate tool or opens
+        // another application's window. Only explicit trust changes may prompt.
+        guard let pem = try? String(contentsOf: certificateURL, encoding: .utf8),
+              let data = Data(base64Encoded: pem.components(separatedBy: .newlines).filter { !$0.hasPrefix("-----") }.joined()),
+              let certificate = SecCertificateCreateWithData(nil, data as CFData) else { return false }
+        var trust: SecTrust?
+        guard SecTrustCreateWithCertificates(certificate, SecPolicyCreateBasicX509(), &trust) == errSecSuccess, let trust else { return false }
+        SecTrustSetNetworkFetchAllowed(trust, false)
+        return SecTrustEvaluateWithError(trust, nil)
     }
     public func httpsSummary() throws -> String {
         let web = try store.load().web
         let secure = web.sites.filter { $0.https && !$0.ignored && $0.issue == nil }
         guard !secure.isEmpty else { return "Enable HTTPS on a project card first. The default toggle only applies to new projects." }
         guard web.enabled else { return "Start Sites to issue local HTTPS certificates." }
-        guard certificateTrusted() else { return "Local CA is not trusted yet. Choose Trust Local HTTPS Certificate." }
+        guard certificateTrusted() else { return "The certificate is not trusted yet. Choose Finish Setup for local HTTPS." }
         let domain = secure[0].domain
-        let address = "https://\(domain):\(web.httpsPort)/"
-        let response = try runner.run("/usr/bin/curl", ["--silent", "--show-error", "--max-time", "8", "--noproxy", "*", "--resolve", "\(domain):\(web.httpsPort):127.0.0.1", "--cacert", certificateURL.path, "--output", "/dev/null", "--write-out", "%{http_code}", address], environment: [:])
+        let configured = SiteSystemSetup.isConfigured(http: web.httpPort, https: web.httpsPort, dns: web.dnsPort, suffixes: web.suffixes)
+        let address = "https://\(domain)\(configured ? "" : ":\(web.httpsPort)")/"
+        var arguments = ["--silent", "--show-error", "--max-time", "8", "--noproxy", "*", "--cacert", certificateURL.path, "--output", "/dev/null", "--write-out", "%{http_code}"]
+        if !configured { arguments += ["--resolve", "\(domain):\(web.httpsPort):127.0.0.1"] }
+        let response = try runner.run("/usr/bin/curl", arguments + [address], environment: [:])
         guard response.status == 0 else {
-            throw MorrowError.message("The CA is trusted, but HTTPS did not respond for \(domain). Open the site's routing logs. \(String(response.output.suffix(500)))")
+            throw MorrowError.message("HTTPS could not connect to \(domain). \(String(response.errorOutput.suffix(350)))")
         }
-        if !SiteSystemSetup.isConfigured(http: web.httpPort, https: web.httpsPort, dns: web.dnsPort, suffixes: web.suffixes) {
-            return "HTTPS responded for \(domain) (HTTP \(response.output)). Use port \(web.httpsPort) until local-domain routing is enabled."
+        if !configured {
+            return "HTTPS verified for \(domain):\(web.httpsPort). Finish local-domain setup to use port 443."
         }
-        return "Certificate trusted. HTTPS responded for \(domain) (HTTP \(response.output))."
+        return "HTTPS verified for \(domain) on port 443 (HTTP \(response.output))."
     }
 }

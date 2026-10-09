@@ -144,8 +144,9 @@ public struct AppPreferences: Codable, Equatable, Sendable {
     public var nvmDirectory = ""
     public var lastSettingsSection = "instances"
     public var lastRuntime = "php"
+    public var onboardingCompleted = false
     public init() {}
-    enum CodingKeys: String, CodingKey { case showRunningCount, appearance, homebrewPath, iCloudSyncEnabled, autoSetupSyncedServices, syncFolder, nvmDirectory, lastSettingsSection, lastRuntime }
+    enum CodingKeys: String, CodingKey { case showRunningCount, appearance, homebrewPath, iCloudSyncEnabled, autoSetupSyncedServices, syncFolder, nvmDirectory, lastSettingsSection, lastRuntime, onboardingCompleted }
     public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         showRunningCount = try values.decodeIfPresent(Bool.self, forKey: .showRunningCount) ?? true
@@ -157,6 +158,9 @@ public struct AppPreferences: Codable, Equatable, Sendable {
         nvmDirectory = try values.decodeIfPresent(String.self, forKey: .nvmDirectory) ?? ""
         lastSettingsSection = try values.decodeIfPresent(String.self, forKey: .lastSettingsSection) ?? "instances"
         lastRuntime = try values.decodeIfPresent(String.self, forKey: .lastRuntime) ?? "php"
+        // Existing installations keep their workspace; new preferences start
+        // with the assistant enabled through the property default above.
+        onboardingCompleted = try values.decodeIfPresent(Bool.self, forKey: .onboardingCompleted) ?? true
     }
 }
 

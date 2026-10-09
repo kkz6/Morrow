@@ -2,6 +2,23 @@
 
 ## Unreleased
 
+- Added an in-app Allow Morrow Setup explanation before opening macOS's native helper approval settings.
+- Attributed service jobs to Morrow and added an unprivileged foreground runner for native children, preserving output, environment, exit status, and stop signals. Reliable macOS grouping requires shared Developer ID signing.
+
+- Added first-launch onboarding for login behavior, CLI installation, local domains, and native helper approval; existing workspaces retain their setup.
+- Replaced AppleScript elevation in the app with a bundled `SMAppService` setup daemon and a validated owner-only request channel, without storing sudo credentials.
+- Added optional Developer ID/hardened-runtime signing inputs for customer builds; notarization remains a release requirement.
+- Made runtime actions explicit: a compact Install or Set Default button beside the version selector replaces the full-width Use Version row.
+- Fixed localhost gateway log permissions and added a protected standalone gateway copy so it continues after the app moves.
+
+- Replaced PF-based local port forwarding with a socket-activated localhost gateway running as the Mac user, avoiding the custom packet filters that can block iCloud Private Relay.
+- Added migration cleanup for Morrow's previous PF anchor, enable token, and DNS alias while retaining other tools' filtering state and resolver backups.
+
+- Simplified Sites to a compact Local Domains card with one setup action and secondary validation/repair controls in a menu; grouped project actions under a plus menu.
+- Combined hosting startup, local DNS/80/443 routing, and certificate trust into setup, with explicit backup/replacement of previous resolver files and safe restoration on removal.
+- Replaced certificate-tool validation with native trust evaluation and inline status, keeping the settings page and window focus stable.
+- HTTPS validation now checks normal DNS and port 443 after routing is installed; system setup flushes stale DNS caches.
+
 - Cleared pending creation before opening service logs, updated the existing log-viewer expectation for sheet presentation, and clarified automatic setup preferences for nvm.
 
 - Added nvm Node version management, official release discovery, LTS selection, and same-series updates that retain existing Node versions.

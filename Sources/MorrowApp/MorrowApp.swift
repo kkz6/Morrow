@@ -47,6 +47,8 @@ struct MorrowApp: App {
                 if CommandLine.arguments.contains("--settings") {
                     controller.show(SettingsRoot(model: model))
                 }
+                if model.onboardingPresented { controller.show(SettingsRoot(model: model)) }
+                if CommandLine.arguments.contains("--setup-domains") { model.selection = .sites; model.installSiteSystemSetup(repair: true) }
             }
         }
         AppDelegate.onReopen = { controller.show(SettingsRoot(model: model)) }

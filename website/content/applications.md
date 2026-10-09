@@ -6,7 +6,7 @@ order: 4.7
 ---
 ## Select a version
 
-Open **Settings → Runtimes**, choose an application and version, then click **Use Version**. Morrow verifies and reuses an existing binary, or installs a missing version and selects it in the same operation. Node.js uses nvm; the other runtimes use Homebrew for missing versions.
+Open **Settings → Runtimes**, choose an application and version, then click **Install** beside the version selector. For a detected installation the action becomes **Set Default**; a selected default shows a label instead of another button. Morrow verifies and reuses an existing binary, or installs a missing version and selects it in the same operation. Node.js uses nvm; the other runtimes use Homebrew for missing versions.
 
 Supported runtimes in this preview are PHP, Go, Flutter, Node.js, Python, and Ruby. The provider catalog can be extended as more runtimes are added. PHP web hosting and app-port routing live in [Sites](/docs/sites). Automatic ownership of Node/Go development processes, project-specific version files, and additional runtimes are future work.
 

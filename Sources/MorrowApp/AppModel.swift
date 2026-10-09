@@ -24,6 +24,11 @@ final class AppModel {
     var logRequest: ServiceLogRequest?
     var configurationRequest: ConfigurationRequest?
     var httpsMessage = ""
+    var domainActivity: String?
+    var domainFailure = false
+    var domainApprovalNeeded = false
+    var onboardingPresented = false
+    @ObservationIgnored private var nativeSetupRequest: NativeSetupBridge.Request?
     @ObservationIgnored private var toastTask: Task<Void, Never>?
     var statuses: [UUID: InstanceStatus] = [:]
     var channels: [VersionChannel] = []
@@ -70,6 +75,7 @@ final class AppModel {
                 web = state.web; mailServices = state.mailServices; objectStorage = state.objectStorage
                 selection = SettingsSection(rawValue: preferences.lastSettingsSection) ?? .instances
                 if selection == .logs { selection = .instances }
+                onboardingPresented = !preferences.onboardingCompleted
             }
         }
         if preview {
@@ -88,7 +94,7 @@ final class AppModel {
             statuses = [instances[0].id: .running, instances[1].id: .stopped, instances[2].id: .running, instances[3].id: .running, instances[4].id: .stopped]
         }
     }
-    var busy: Bool { activity != nil }
+    var busy: Bool { activity != nil || domainActivity != nil }
     var databaseRunningCount: Int { statuses.values.filter { $0 == .running }.count }
     var runningCount: Int { databaseRunningCount + mailStatuses.values.filter { $0 == .running }.count + storageStatuses.values.filter { $0 == .running }.count }
     var unconfiguredInstallations: [Installation] {
@@ -114,6 +120,7 @@ final class AppModel {
             await self?.loadInventory()
             while !Task.isCancelled {
                 await self?.refresh()
+                await self?.resumeNativeSetup()
                 await self?.syncIfDue()
                 try? await Task.sleep(for: .seconds(4))
             }
@@ -251,35 +258,84 @@ final class AppModel {
         }
     }
     func trustHTTPS() {
-        perform("Trusting local HTTPS…", operation: { manager in try SiteManager(store: manager.store, runner: manager.runner).trustCertificate() }, completion: { [self] in
-            checkHTTPS()
-        })
+        guard !busy, !preview else { return }
+        domainActivity = "Trusting certificate…"; domainFailure = false
+        let sites = sites
+        Task {
+            defer { domainActivity = nil }
+            do {
+                try await Task.detached { try sites.trustCertificate() }.value
+                httpsMessage = try await Task.detached { try sites.httpsSummary() }.value
+                await refresh()
+            } catch { domainFailure = true; httpsMessage = error.localizedDescription }
+        }
     }
     func checkHTTPS() {
         guard !busy, !preview else { return }
-        activity = "Checking HTTPS…"; error = nil
+        domainActivity = "Validating HTTPS…"; domainFailure = false
         let sites = sites
         Task {
-            defer { activity = nil }
-            do { httpsMessage = try await Task.detached { try sites.httpsSummary() }.value; notify(httpsMessage) }
-            catch { httpsMessage = error.localizedDescription; self.error = error.localizedDescription; notify(httpsMessage, error: true) }
+            defer { domainActivity = nil }
+            do { httpsMessage = try await Task.detached { try sites.httpsSummary() }.value }
+            catch { domainFailure = true; httpsMessage = error.localizedDescription }
         }
     }
     var sites: SiteManager { SiteManager(store: manager.store, runner: manager.runner) }
-    func installSiteSystemSetup() {
-        let cli = cliURL
-        perform("Configuring local domains…", operation: { manager in
-            let sites = SiteManager(store: manager.store, runner: manager.runner)
-            let web = try manager.store.load().web
-            if let issue = SiteSystemSetup.setupIssue(suffixes: web.suffixes) { throw MorrowError.message(issue) }
-            let command = try sites.setupCommand(cli: cli)
-            let script = "do shell script " + Self.appleScriptString(command) + " with administrator privileges"
-            try manager.runner.run("/usr/bin/osascript", ["-e", script], environment: [:]).checked()
-            try sites.refreshProjects(force: true)
-        })
+    func installSiteSystemSetup(replaceResolvers: Bool = false, repair: Bool = false) {
+        guard !busy, !preview else { return }
+        domainActivity = "Setting up local domains…"; domainFailure = false
+        let cli = cliURL, manager = manager
+        Task {
+            defer { domainActivity = nil }
+            do {
+                try await Task.detached {
+                    let sites = SiteManager(store: manager.store, runner: manager.runner)
+                    if !(try sites.store.load().web.enabled) { try sites.start(cli: cli) }
+                }.value
+                let web = try manager.store.load().web
+                if repair || !SiteSystemSetup.isConfigured(http: web.httpPort, https: web.httpsPort, dns: web.dnsPort, suffixes: web.suffixes) {
+                    let request = try NativeSetupBridge.submit(web, replaceResolvers: replaceResolvers)
+                    nativeSetupRequest = request
+                    guard try NativeSetupController.register() else {
+                        domainApprovalNeeded = true
+                        httpsMessage = "Allow Morrow's setup helper in System Settings → General → Login Items & Extensions. No sudo password is stored."
+                        NativeSetupController.requestApproval()
+                        return
+                    }
+                    for _ in 0..<40 {
+                        if let response = NativeSetupBridge.response(for: request) {
+                            guard response.success else { throw MorrowError.message(response.message) }
+                            nativeSetupRequest = nil
+                            break
+                        }
+                        try await Task.sleep(for: .seconds(1))
+                    }
+                    guard nativeSetupRequest == nil else { throw MorrowError.message("The setup helper hasn't responded yet. Check Morrow's background permission, then retry.") }
+                }
+                await finishNativeSetup()
+            } catch { await refresh(); domainFailure = true; httpsMessage = error.localizedDescription }
+        }
     }
-    private nonisolated static func appleScriptString(_ value: String) -> String {
-        "\"" + value.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"") + "\""
+    func openSetupApproval() { NativeSetupController.requestApproval() }
+    private func resumeNativeSetup() async {
+        guard domainApprovalNeeded, !busy, NativeSetupController.approved, let request = nativeSetupRequest,
+              let response = NativeSetupBridge.response(for: request) else { return }
+        domainApprovalNeeded = false; nativeSetupRequest = nil
+        if response.success { await finishNativeSetup() }
+        else { domainFailure = true; httpsMessage = response.message }
+    }
+    private func finishNativeSetup() async {
+        domainApprovalNeeded = false
+        let sites = sites
+        do {
+            httpsMessage = try await Task.detached {
+                let web = try sites.store.load().web
+                if web.sites.contains(where: { $0.https && !$0.ignored }) { try sites.trustCertificate(); return try sites.httpsSummary() }
+                return "Local domains ready. HTTP uses 80 and HTTPS uses 443."
+            }.value
+            domainFailure = false
+        } catch { domainFailure = true; httpsMessage = error.localizedDescription }
+        await refresh()
     }
     var mail: MailManager { MailManager(store: manager.store, runner: manager.runner) }
     func showMailLogs(_ service: MailService) { presentLogs(ServiceLogRequest(title: service.name, subtitle: "Mailpit", url: mail.logURL(service))) }

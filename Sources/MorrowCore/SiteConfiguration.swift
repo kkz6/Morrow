@@ -118,7 +118,7 @@ extension SiteManager {
         environment["HOME"] = FileManager.default.homeDirectoryForCurrentUser.path
         environment["PATH"] = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
         environment["LC_ALL"] = "C"
-        let description: [String: Any] = ["Label": label(component, web: web), "ProgramArguments": arguments, "WorkingDirectory": base.path,
+        let description: [String: Any] = ["Label": label(component, web: web), "ProgramArguments": ManagedServiceRunner.arguments(arguments), "AssociatedBundleIdentifiers": ManagedServiceRunner.bundleIdentifiers, "WorkingDirectory": base.path,
             "RunAtLoad": true, "KeepAlive": component == "watch" ? ["SuccessfulExit": false] as Any : false as Any, "StandardOutPath": output.path, "StandardErrorPath": output.path, "ExitTimeOut": 30, "EnvironmentVariables": environment]
         let data = try PropertyListSerialization.data(fromPropertyList: description, format: .xml, options: 0)
         let file = job(component, web: web)

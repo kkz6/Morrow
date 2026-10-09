@@ -217,7 +217,8 @@ public struct DatabaseManager: Sendable {
     public func jobDescription(_ instance: DatabaseInstance) -> [String: Any] {
         [
             "Label": instance.label,
-            "ProgramArguments": NativeProvider(store: store, runner: runner).arguments(instance),
+            "ProgramArguments": ManagedServiceRunner.arguments(NativeProvider(store: store, runner: runner).arguments(instance)),
+            "AssociatedBundleIdentifiers": ManagedServiceRunner.bundleIdentifiers,
             "RunAtLoad": true,
             "KeepAlive": false,
             "WorkingDirectory": store.instanceDirectory(instance).path,

@@ -62,6 +62,7 @@ Morrow — databases and development runtimes.
       --install                          Reuse/install complete Homebrew PHP
   morrow site configure                  Set suffix, ports, HTTPS and login defaults
   morrow site setup [--remove]            Administrator setup for DNS and clean URLs
+      --replace-resolvers                Back up and replace previous resolver files
   morrow site trust                      Trust this Mac's local CA in the login keychain
   morrow site check-https                Verify trust and a local HTTPS listener
   morrow site open|logs <domain>          Open a site or print its routing log
@@ -137,6 +138,10 @@ func main() throws {
     args.removeFirst()
     if ["help", "--help", "-h"].contains(command) { print(help); return }
     if command == "--version" { print("Morrow 0.1.0"); return }
+    if command == "service-runner" {
+        guard args.first == "--" else { throw MorrowError.message("The service runner requires -- and a native executable path.") }
+        exit(try ManagedServiceRunner.run(Array(args.dropFirst())))
+    }
     if command == "settings" {
         guard args.isEmpty else { throw MorrowError.message("Usage: morrow settings") }
         let binary = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath()
@@ -385,12 +390,19 @@ func siteMain(_ args: [String], manager: SiteManager) throws {
     let remaining = Array(args.dropFirst())
     let cli = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath()
     switch action {
+    case "setup-service":
+        guard remaining.isEmpty else { throw MorrowError.message("The setup service has no command arguments.") }
+        try NativeSetupBridge.runService()
+    case "gateway":
+        let options = try Options(remaining, allowedValues: ["--http-port", "--https-port", "--dns-port"])
+        try options.requireCount(0, usage: "morrow site gateway [listener ports]; managed by launchd")
+        try LocalGateway.run(http: options.number("--http-port", default: 8080), https: options.number("--https-port", default: 8443), dns: options.number("--dns-port", default: 5354))
     case "setup":
-        let options = try Options(remaining, allowedValues: ["--http-port", "--https-port", "--dns-port", "--suffixes", "--user"], allowedFlags: ["--remove"])
+        let options = try Options(remaining, allowedValues: ["--http-port", "--https-port", "--dns-port", "--suffixes", "--user"], allowedFlags: ["--remove", "--replace-resolvers"])
         try options.requireCount(0, usage: "sudo morrow site setup [--http-port 8080 --https-port 8443 --dns-port 5354 --suffixes test]")
         if options.flags.contains("--remove") { try SiteSystemSetup.remove(); print("Removed Morrow's owned resolver and forwarding setup."); return }
         guard let uid = UInt32(options.values["--user"] ?? ProcessInfo.processInfo.environment["SUDO_UID"] ?? ""), uid > 0 else { throw MorrowError.message("Run this through sudo, or supply the Mac user's UID with --user.") }
-        try SiteSystemSetup.install(http: options.number("--http-port", default: 8080), https: options.number("--https-port", default: 8443), dns: options.number("--dns-port", default: 5354), suffixes: (options.values["--suffixes"] ?? "test").components(separatedBy: ","), uid: uid)
+        try SiteSystemSetup.install(http: options.number("--http-port", default: 8080), https: options.number("--https-port", default: 8443), dns: options.number("--dns-port", default: 5354), suffixes: (options.values["--suffixes"] ?? "test").components(separatedBy: ","), uid: uid, replaceResolvers: options.flags.contains("--replace-resolvers"))
         print("Local DNS and ports 80/443 configured. Start Sites as your normal user.")
     case "park", "unpark":
         let options = try Options(remaining); try options.requireCount(1, usage: "morrow site \(action) <directory>")

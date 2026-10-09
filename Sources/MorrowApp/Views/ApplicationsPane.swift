@@ -7,6 +7,8 @@ struct ApplicationsPane: View {
     @State private var selection = ""
     @State private var pendingUpdate: RuntimeInstallation?
     @State private var pendingRemoval: RuntimeInstallation?
+    private var selectedInstallation: RuntimeInstallation? { versions.first { $0.id == selection } }
+    private var isSelectedDefault: Bool { selectedInstallation.map { model.toolDefaults[engine.rawValue] == $0.id } ?? false }
     private var versions: [RuntimeInstallation] {
         var seen = Set<String>()
         return (model.inventory.runtimes + model.tools).filter { $0.engine == engine && seen.insert($0.id).inserted }
@@ -19,23 +21,28 @@ struct ApplicationsPane: View {
     }
     var body: some View {
         SettingsPane(section: SettingsSection.applications) {
-            SettingsNote(text: "Select a runtime version. Node uses nvm; the other runtimes reuse native installations or install available Homebrew channels.")
-            SettingsGroup {
+            SettingsNote(text: "Install a runtime or choose an installed version as the default for Morrow commands.")
+            SettingsGroup(header: "Add Runtime") {
                 SettingRow(title: "Application") {
                     SettingsSelect(label: "Application", selection: $engine, options: RuntimeEngine.allCases.map { .init(value: $0, title: $0.title, symbol: $0.symbol) })
                 }
                 SettingsDivider()
                 SettingRow(title: "Version") {
                     if options.isEmpty { Text(model.runtimeChannelsLoading.contains(engine.rawValue) ? "Loading…" : "No versions available").font(.system(size: 12)).foregroundStyle(.secondary) }
-                    else { SettingsSelect(label: "Version", selection: $selection, options: options) }
+                    else {
+                        HStack(spacing: 8) {
+                            SettingsSelect(label: "Version", selection: $selection, options: options)
+                            if isSelectedDefault { Text("Default").font(.system(size: 11)).foregroundStyle(.secondary) }
+                            else {
+                                Button(selectedInstallation == nil ? "Install" : "Set Default") { selectVersion() }.settingsButton(height: 28).disabled(model.busy || selection.isEmpty)
+                            }
+                        }
+                    }
                 }
-                SettingsDivider()
-                SettingsActionRow(title: "Use Version", symbol: "checkmark.circle") { selectVersion() }
-                    .disabled(model.busy || selection.isEmpty)
             }
             if model.runtimeChannelsLoading.contains(engine.rawValue) { HStack(spacing: 8) { ProgressView().controlSize(.small); Text("Finding versions…").font(.system(size: 12)).foregroundStyle(.secondary) } }
             HStack {
-                Text("Your Applications").font(.system(size: 12, weight: .semibold)).foregroundStyle(.secondary)
+                Text("Your Runtimes").font(.system(size: 12, weight: .semibold)).foregroundStyle(.secondary)
                 Spacer()
                 ServiceActionButton(kind: .refresh, title: "Refresh installed versions and channels") { Task { await model.loadInventory(force: true); model.loadRuntimeChannels(engine, force: true) } }.disabled(model.busy || model.inventoryLoading)
                 Button("Check Updates") { model.checkUpdates() }.settingsButton().disabled(model.busy)
@@ -101,7 +108,7 @@ struct ApplicationsPane: View {
             Spacer()
             if model.toolDefaults[item.engine.rawValue] == item.id { Text("Default").font(.system(size: 11)).foregroundStyle(.teal) }
             else {
-                Button("Use") {
+                Button("Set Default") {
                     let cli = model.cliURL
                     model.perform("Selecting \(item.engine.title)…") { manager in try RuntimeManager(store: manager.store, runner: manager.runner).use(item, cli: cli) }
                 }.settingsButton(height: 28).disabled(model.busy)
@@ -121,7 +128,7 @@ struct ApplicationsPane: View {
         guard options.contains(where: { $0.value == selection }) else { return }
         let selectedEngine = engine, version = selection
         let existing = versions.first { $0.id == version }, cli = model.cliURL
-        model.perform("Setting up \(engine.title)…") { manager in
+        model.perform(existing == nil ? "Installing \(engine.title)…" : "Selecting \(engine.title)…", success: "\(engine.title) is ready") { manager in
             let runtimes = RuntimeManager(store: manager.store, runner: manager.runner)
             let item = try existing ?? runtimes.install(selectedEngine, version: version)
             try runtimes.use(item, cli: cli)

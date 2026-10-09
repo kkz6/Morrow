@@ -83,6 +83,7 @@ struct SettingsWindow: View {
         .sheet(item: $model.upgradeRequest) { update in
             DatabaseUpgradeSheet(update: update).environment(model)
         }
+        .sheet(isPresented: $model.onboardingPresented) { OnboardingSheet().environment(model) }
     }
     @ViewBuilder private func detail(_ section: SettingsSection) -> some View {
         switch section {

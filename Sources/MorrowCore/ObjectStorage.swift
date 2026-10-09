@@ -176,7 +176,7 @@ public struct ObjectStorageManager: Sendable {
     private func writeJobs(_ service: ObjectStorageService) throws {
         let keys = try credentials(service)
         let environment = ["MINIO_ROOT_USER": keys.accessKey, "MINIO_ROOT_PASSWORD": keys.secretKey, "MINIO_BROWSER_REDIRECT_URL": service.consoleURL.absoluteString, "MINIO_SERVER_URL": service.endpoint.absoluteString]
-        let description: [String: Any] = ["Label": service.label, "ProgramArguments": [service.executable, "server", "--address", "127.0.0.1:\(service.apiPort)", "--console-address", "127.0.0.1:\(service.consolePort)", directory(service).appendingPathComponent("data").path],
+        let description: [String: Any] = ["Label": service.label, "ProgramArguments": ManagedServiceRunner.arguments([service.executable, "server", "--address", "127.0.0.1:\(service.apiPort)", "--console-address", "127.0.0.1:\(service.consolePort)", directory(service).appendingPathComponent("data").path]), "AssociatedBundleIdentifiers": ManagedServiceRunner.bundleIdentifiers,
             "WorkingDirectory": directory(service).path, "RunAtLoad": true, "KeepAlive": false, "ExitTimeOut": 30,
             "StandardOutPath": logURL(service).path, "StandardErrorPath": logURL(service).path, "EnvironmentVariables": environment]
         let data = try PropertyListSerialization.data(fromPropertyList: description, format: .xml, options: 0)

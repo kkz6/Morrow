@@ -18,7 +18,6 @@ struct SitesPane: View {
                     Text("\(model.web.sites.count) sites · .\(model.web.suffix)").font(.system(size: 11)).foregroundStyle(.secondary)
                 }
                 Spacer()
-                Button("Project Directories…") { directories = true }.settingsButton().disabled(model.busy)
             }
             SettingsGroup {
                 SettingRow(title: "Web server") {
@@ -31,6 +30,7 @@ struct SitesPane: View {
                                 if stop { try sites.stop() } else { try sites.start(cli: cli) }
                             }
                         }.disabled(model.busy)
+                        ServiceActionButton(kind: .configuration, title: "Hosting settings") { settings = true }.disabled(model.busy)
                     }
                 }
                 SettingsDivider()
@@ -48,33 +48,52 @@ struct SitesPane: View {
                         }), options: php.map { .init(value: $0.id, title: $0.version, symbol: "morrow.php") }).disabled(model.busy)
                     }
                 }
-                SettingsDivider()
-                SettingsActionRow(title: "Hosting Settings…", symbol: "gearshape") { settings = true }.disabled(model.busy)
             }
-            SettingsGroup(header: "Domain Setup") {
-                Text(model.webStatus?.setupMessage ?? "Enable Local Domains for URLs without port numbers.")
-                    .font(.system(size: 12)).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading).padding(12)
+            SettingsGroup(header: "Local Domains") {
+                SettingRow(title: "Routing", subtitle: LocalizedStringKey(".\(model.web.suffix) · HTTP 80 · HTTPS 443")) {
+                    HStack(spacing: 8) {
+                        if model.domainActivity != nil { ProgressView().controlSize(.small) }
+                        else if model.webStatus?.systemConfigured == true {
+                            Image(systemName: "checkmark.circle.fill").foregroundStyle(.green).help("Local domains configured")
+                        }
+                        if model.domainApprovalNeeded {
+                            Button("Approve Morrow…") { model.openSetupApproval() }.settingsButton(height: 28)
+                        } else if model.webStatus?.systemConfigured != true || model.webStatus?.httpsTrusted != true && model.web.sites.contains(where: { $0.https && !$0.ignored }) {
+                            Button(setupLabel) { model.installSiteSystemSetup(replaceResolvers: hasPreviousResolver) }.settingsButton(height: 28)
+                        }
+                        Menu {
+                            Button("Validate HTTPS") { model.checkHTTPS() }
+                            Button("Gateway Logs") { model.presentLogs(ServiceLogRequest(title: "Local Gateway", subtitle: "HTTP · HTTPS · DNS", url: URL(fileURLWithPath: "/var/log/dev.morrow.network.log"))) }
+                            if model.webStatus?.httpsTrusted != true { Button("Trust Certificate…") { model.trustHTTPS() } }
+                            Button("Repair Local Domains…") { model.installSiteSystemSetup(replaceResolvers: hasPreviousResolver, repair: true) }
+                        } label: { Image(systemName: "ellipsis").frame(width: 16) }.settingsMenuControl().help("Local domain actions")
+                    }.disabled(model.busy)
+                }
                 SettingsDivider()
-                SettingsActionRow(title: model.webStatus?.systemConfigured == true ? "Local Domains Configured" : "Enable Local Domains…", symbol: "network") { model.installSiteSystemSetup() }
-                    .disabled(model.busy || model.webStatus?.systemConfigured == true)
-                SettingsDivider()
-                SettingsActionRow(title: "Trust Local HTTPS Certificate…", symbol: "lock.shield") {
-                    model.trustHTTPS()
-                }.disabled(model.busy)
-                SettingsDivider()
-                SettingsActionRow(title: "Check HTTPS", symbol: "checkmark.shield") { model.checkHTTPS() }.disabled(model.busy)
-                if !model.httpsMessage.isEmpty { Text(model.httpsMessage).font(.system(size: 12)).foregroundStyle(.secondary).padding(12) }
+                SettingRow(title: "HTTPS", subtitle: model.web.sites.contains(where: { $0.https && !$0.ignored }) ? "Enabled for selected projects" : "Enable HTTPS on a project below") {
+                    Text(model.webStatus?.httpsTrusted == true ? "Trusted" : "Needs setup").font(.system(size: 11)).foregroundStyle(model.webStatus?.httpsTrusted == true ? Color.secondary : Color.orange)
+                }
+                if let message = model.domainActivity ?? (!model.httpsMessage.isEmpty ? model.httpsMessage : hasPreviousResolver ? "Previous .\(model.web.suffix) routing will be backed up before replacement." : nil) {
+                    Text(message).font(.system(size: 11)).foregroundStyle(model.domainFailure ? Color.orange : Color.secondary)
+                        .frame(maxWidth: .infinity, alignment: .leading).lineLimit(3).help(message).textSelection(.enabled).padding(12)
+                }
             }
             HStack {
                 SectionHeader(title: "Projects")
                 Spacer()
-                Button("Link Project…") { adding = true }.settingsButton().disabled(model.busy)
-                Button { model.perform("Refreshing projects…") { try SiteManager(store: $0.store, runner: $0.runner).refreshProjects(force: true) } } label: { Image(systemName: "arrow.clockwise") }.settingsButton().disabled(model.busy)
+                Menu {
+                    Button("Link Project…") { adding = true }
+                    Button("Project Directories…") { directories = true }
+                    Divider()
+                    Button("Refresh Projects") { model.perform("Refreshing projects…") { try SiteManager(store: $0.store, runner: $0.runner).refreshProjects(force: true) } }
+                } label: { Image(systemName: "plus").frame(width: 16) }.settingsMenuControl().help("Add or manage projects").disabled(model.busy)
             }
             if model.web.sites.isEmpty {
                 SettingsCard {
-                    Text("Park a parent directory to discover PHP and static sites automatically, or link a project to an app's local port.")
+                    Text("Add a project directory to discover sites, or link a project's local app port.")
                         .font(.system(size: 12)).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading).padding(18)
+                    SettingsDivider()
+                    SettingsActionRow(title: "Add Project Directory…", symbol: "folder.badge.plus") { directories = true }
                 }
             } else {
                 SettingsInput(placeholder: "Find a project", text: $query, symbol: "magnifyingglass", clearable: true)
@@ -85,17 +104,18 @@ struct SitesPane: View {
                     }
                 }
             }
-            SettingsGroup(header: "Development Commands") {
-                Text("morrow site link --port 3000\nmorrow site secure folder-name.\(model.web.suffix)")
-                    .font(.system(size: 11, design: .monospaced)).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading).padding(12)
-            }
-            SettingsNote(text: "Local hosting runs independently of the app. Directory changes are watched while Sites is enabled. HTTPS uses this Mac's private development CA; trust is a separate step.")
+            SettingsNote(text: "Projects keep running when Morrow closes.")
         }
         .sheet(isPresented: $directories) { ProjectDirectoriesSheet().environment(model) }
         .sheet(isPresented: $settings) { HostingSettingsSheet().environment(model) }
         .sheet(isPresented: $adding) { LinkSiteSheet().environment(model) }
         .sheet(item: $editing) { SiteEditor(site: $0, php: php).environment(model) }
         .task(id: model.inventory.runtimes.map(\.id)) { php = model.inventory.runtimes.filter { $0.engine == .php && $0.phpFPM != nil } }
+    }
+    private var hasPreviousResolver: Bool { SiteSystemSetup.setupIssue(suffixes: model.web.suffixes) != nil }
+    private var setupLabel: String {
+        if model.webStatus?.systemConfigured == true { return "Finish Setup" }
+        return hasPreviousResolver ? "Replace Setup" : "Set Up"
     }
     private func siteRow(_ site: LocalSite) -> some View {
         HStack(spacing: 12) {
@@ -109,7 +129,7 @@ struct SitesPane: View {
             Toggle("HTTPS for \(site.domain)", isOn: Binding(get: { site.https }, set: { value in
                 var changed = site; changed.https = value
                 let saved = changed
-                model.perform("Updating HTTPS…", success: value ? "HTTPS enabled. Trust the local certificate in Domain Setup, then check HTTPS." : "HTTPS disabled for this project") { try SiteManager(store: $0.store, runner: $0.runner).update(saved) }
+                model.perform("Updating HTTPS…", success: value ? "HTTPS enabled. Finish local-domain setup to trust its certificate." : "HTTPS disabled for this project") { try SiteManager(store: $0.store, runner: $0.runner).update(saved) }
             })).labelsHidden().toggleStyle(.switch).controlSize(.small).disabled(model.busy || site.issue != nil)
             ServiceActionButton(kind: .logs, title: "Open site routing logs") { model.showSiteLogs() }
             Menu {
@@ -120,7 +140,6 @@ struct SitesPane: View {
                 Button("Open Site") { NSWorkspace.shared.open(model.sites.url(site, web: model.web)) }
                 Button("Project Settings…") { editing = site }
                 Button("Reveal Project") { NSWorkspace.shared.open(URL(fileURLWithPath: site.path)) }
-                Button("View Routing Log") { model.showSiteLogs() }
                 if site.directoryID == nil { Button("Unlink", role: .destructive) { model.perform("Removing route…") { try SiteManager(store: $0.store, runner: $0.runner).unlink(site.id) } } }
             } label: { Image(systemName: "ellipsis").frame(width: 16) }.settingsMenuControl().disabled(model.busy)
         }.padding(.horizontal, 12).padding(.vertical, 14)

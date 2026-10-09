@@ -65,6 +65,7 @@ public struct WebStatus: Sendable {
     public let systemConfigured: Bool
     public let setupMessage: String
     public let sites: [UUID: SiteStatus]
+    public var httpsTrusted: Bool = false
 }
 
 extension WebWorkspace {
