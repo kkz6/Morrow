@@ -170,6 +170,7 @@ func main() throws {
         print("Data:      \(manager.store.root.path)")
         print("Catalog:   \(try manager.store.load().preferences.binaryCatalogURL.isEmpty ? "Not configured (direct Go downloads available)" : manager.store.load().preferences.binaryCatalogURL)")
         print("Homebrew:  \(installer.allowsHomebrew ? "Compatibility enabled" : "Compatibility off") · \(installer.executable ?? "not installed")")
+        print("Grouping:  \(BackgroundAttribution(launcher: URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath()).message)")
         print("Versions:  \(try installer.installations().count) native installations")
         print("Instances: \(try manager.store.load().instances.count)")
         return

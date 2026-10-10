@@ -33,6 +33,32 @@ public enum SiteSystemSetup {
         }
     }
     private struct ResolverBackup: Codable { let data: Data; let permissions: Int }
+    public static var gatewayNeedsAttribution: Bool {
+        guard let data = try? Data(contentsOf: daemon), let job = try? PropertyListSerialization.propertyList(from: data, format: nil) as? [String: Any], job["Label"] as? String == "dev.morrow.network" else { return false }
+        return job["AssociatedBundleIdentifiers"] as? [String] != ManagedServiceRunner.bundleIdentifiers
+    }
+    /// Change only association metadata. No launchctl operation, port setup,
+    /// resolver write, binary replacement, or service restart is performed.
+    public static func repairGatewayAttribution(uid: UInt32) throws {
+        guard geteuid() == 0, uid > 0,
+              let data = try? Data(contentsOf: root.appendingPathComponent("ownership.json")),
+              let owner = try? JSONDecoder().decode(Ownership.self, from: data), owner.uid == uid else { throw MorrowError.message("This gateway is not owned by the requesting Mac user.") }
+        let fd = Darwin.open(daemon.path, O_RDONLY | O_NOFOLLOW | O_NONBLOCK)
+        guard fd >= 0 else { throw MorrowError.message("Morrow's gateway definition is unavailable.") }
+        let handle = FileHandle(fileDescriptor: fd, closeOnDealloc: true)
+        var info = stat()
+        guard fstat(fd, &info) == 0, info.st_uid == 0, info.st_mode & S_IFMT == S_IFREG, info.st_mode & 0o022 == 0, info.st_size > 0, info.st_size <= 65536,
+              var job = try PropertyListSerialization.propertyList(from: handle.read(upToCount: 65536) ?? Data(), format: nil) as? [String: Any],
+              job["Label"] as? String == "dev.morrow.network",
+              let arguments = job["ProgramArguments"] as? [String], let executable = arguments.first,
+              let launcher = ManagedServiceRunner.launcher() else { throw MorrowError.message("The gateway definition is not a protected Morrow job.") }
+        let helper = BackgroundAttribution.signature(URL(fileURLWithPath: launcher)), gateway = BackgroundAttribution.signature(URL(fileURLWithPath: executable))
+        guard helper.valid, gateway.valid, let team = helper.team, team == gateway.team else { throw MorrowError.message("The gateway and setup helper need valid signatures from the same Apple team. No running service was changed.") }
+        guard job["AssociatedBundleIdentifiers"] as? [String] != ManagedServiceRunner.bundleIdentifiers else { return }
+        job["AssociatedBundleIdentifiers"] = ManagedServiceRunner.bundleIdentifiers
+        try PropertyListSerialization.data(fromPropertyList: job, format: .xml, options: 0).write(to: daemon, options: .atomic)
+        try FileManager.default.setAttributes([.posixPermissions: info.st_mode & 0o777, .ownerAccountID: 0], ofItemAtPath: daemon.path)
+    }
     public static func validateSuffix(_ text: String) throws -> String {
         let value = text.lowercased().trimmingCharacters(in: CharacterSet(charactersIn: ". "))
         guard value.count <= 190, value.range(of: "^[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?(?:\\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)*$", options: .regularExpression) != nil,

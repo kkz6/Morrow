@@ -24,6 +24,10 @@ Homebrew is optional and compatibility is off by default. Compatible existing na
 
 Cleanup archives inactive orphan job files and updates retained job definitions to use Morrow attribution and its launcher. Running orphan processes are preserved and reported. Retained running jobs adopt revised definitions on their next normal restart; cleanup does not stop databases. macOS can retain historical list entries after the files are removed. Customer builds need consistent Developer ID signing for reliable grouping. Morrow never resets the whole background database or edits another app's registrations.
 
+If the app is an unsigned/ad-hoc development build, the remaining live registrations cannot yet be consolidated into one trusted app entry. Morrow registers its app identity but leaves live services intact and reports that signing is deferred. A certificate with its private key must be available when preparing a customer release; the app and launcher must share its Apple Team ID. See [Apple's helper association requirements](https://developer.apple.com/documentation/servicemanagement/updating-helper-executables-from-earlier-versions-of-macos).
+
+For a properly signed build, the app's cleanup also repairs missing gateway association metadata through the approved setup helper. This operation does not restart DNS, HTTP, PHP, databases, or mail. An old helper or unsigned gateway needs an updated signed release before that repair can finish. Historical list entries can remain while macOS refreshes; Morrow does not claim a single row until the system actually groups it.
+
 ```sh
 morrow doctor
 ```

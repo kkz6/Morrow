@@ -14,9 +14,11 @@ order: 6
 | `morrow binary brew on` | Enable optional Homebrew installation/upgrade compatibility |
 | `morrow binary brew off` | Disable Homebrew mutations; existing installations remain usable |
 | `morrow background status` | Show native permission status for owned service jobs |
-| `morrow background clean` | Archive obsolete inactive registrations and update retained definitions |
+| `morrow background clean` | Register the app, archive obsolete inactive registrations, and normalize retained definitions only with valid matching Apple signing teams |
 
 Read [Binary downloads](/docs/binary-downloads) for manifest format and current provider availability. Cleanup does not stop running databases or clear macOS's global background-item history.
+
+`morrow doctor` reports whether the complete app and its launcher are ready for background grouping. Ad-hoc development builds remain supported and report that Apple signing is deferred. The app's cleanup can also repair gateway association through an approved, current signed helper; the CLI performs user-owned registration repair only.
 
 ## General commands
 

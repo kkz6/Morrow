@@ -6,6 +6,7 @@ import SystemConfiguration
 /// It accepts only the console user's private, regular request file and never
 /// executes commands or paths supplied by that file.
 public enum NativeSetupBridge {
+    public enum Action: String, Codable, Sendable { case domains, attribution }
     public struct Request: Codable, Sendable {
         public let id: UUID
         public let uid: UInt32
@@ -15,6 +16,7 @@ public enum NativeSetupBridge {
         public let dns: Int
         public let suffixes: [String]
         public let replaceResolvers: Bool
+        public let action: Action?
     }
     public struct Response: Codable, Sendable {
         public let id: UUID
@@ -30,7 +32,16 @@ public enum NativeSetupBridge {
     }
     public static func submit(_ web: WebWorkspace, replaceResolvers: Bool) throws -> Request {
         try SiteSystemSetup.validatePorts(http: web.httpPort, https: web.httpsPort, dns: web.dnsPort)
-        let request = Request(id: UUID(), uid: getuid(), created: Date(), http: web.httpPort, https: web.httpsPort, dns: web.dnsPort, suffixes: try web.suffixes.map(SiteSystemSetup.validateSuffix), replaceResolvers: replaceResolvers)
+        let request = Request(id: UUID(), uid: getuid(), created: Date(), http: web.httpPort, https: web.httpsPort, dns: web.dnsPort, suffixes: try web.suffixes.map(SiteSystemSetup.validateSuffix), replaceResolvers: replaceResolvers, action: .domains)
+        return try writeRequest(request)
+    }
+    public static func submitAttributionRepair() throws -> Request {
+        guard pendingRequest() == nil else { throw MorrowError.message("A local-domain setup request is pending. It was preserved; finish it before repairing background association.") }
+        // Old helpers ignore the new action field. Zero ports make their old
+        // domain-setup path reject this request before it can modify anything.
+        return try writeRequest(Request(id: UUID(), uid: getuid(), created: Date(), http: 0, https: 0, dns: 0, suffixes: [], replaceResolvers: false, action: .attribution))
+    }
+    private static func writeRequest(_ request: Request) throws -> Request {
         let url = try requestURL(request.uid)
         try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         try JSONEncoder().encode(request).write(to: url, options: .atomic)
@@ -41,7 +52,7 @@ public enum NativeSetupBridge {
         guard let data = try? Data(contentsOf: resultURL(request.uid)), let value = try? JSONDecoder().decode(Response.self, from: data), value.id == request.id, value.uid == request.uid else { return nil }; return value
     }
     public static func pendingRequest() -> Request? {
-        guard let request = try? readRequest(getuid()), request.uid == getuid(), abs(Date().timeIntervalSince(request.created)) < 86_400,
+        guard let request = try? readRequest(getuid()), request.action != .attribution, request.uid == getuid(), abs(Date().timeIntervalSince(request.created)) < 86_400,
               response(for: request) == nil else { return nil }
         return request
     }
@@ -58,8 +69,14 @@ public enum NativeSetupBridge {
                     let response: Response
                     do {
                         guard request.uid == uid, abs(Date().timeIntervalSince(request.created)) < 86_400 else { throw MorrowError.message("This setup request expired. Start setup again in Morrow.") }
-                        try SiteSystemSetup.install(http: request.http, https: request.https, dns: request.dns, suffixes: request.suffixes, uid: uid, replaceResolvers: request.replaceResolvers)
-                        response = Response(id: request.id, uid: uid, success: true, message: "Local domains configured.")
+                        if request.action == .attribution {
+                            guard request.http == 0, request.https == 0, request.dns == 0, request.suffixes.isEmpty, !request.replaceResolvers else { throw MorrowError.message("Invalid background association request.") }
+                            try SiteSystemSetup.repairGatewayAttribution(uid: uid)
+                            response = Response(id: request.id, uid: uid, success: true, message: "Gateway association updated; no services restarted.")
+                        } else {
+                            try SiteSystemSetup.install(http: request.http, https: request.https, dns: request.dns, suffixes: request.suffixes, uid: uid, replaceResolvers: request.replaceResolvers)
+                            response = Response(id: request.id, uid: uid, success: true, message: "Local domains configured.")
+                        }
                     } catch { response = Response(id: request.id, uid: uid, success: false, message: error.localizedDescription) }
                     let result = resultURL(uid)
                     try JSONEncoder().encode(response).write(to: result, options: .atomic)

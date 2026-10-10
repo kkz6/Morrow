@@ -92,8 +92,20 @@ Setup uses native `SMAppService` approval. Do not reintroduce AppleScript/Python
 
 ## Background-item attribution
 
+Register the app with Launch Services before repairing attribution. `BackgroundAttribution` checks the app and launcher signatures and Apple team identifiers. The build rejects a supplied signing identity when those teams differ or are missing. Ad-hoc development builds remain supported, but cleanup must explain their grouping limitation and avoid converting more unsigned native workers into separately named Morrow entries.
+
+To stage an app without replacing the bundle used by current services:
+
+```sh
+MORROW_APP_OUTPUT="$PWD/.build/staged/Morrow.app" ./scripts/build-app.sh release
+```
+
+Staging does not update `build/morrow`. Signing and deployment can be completed later; staging alone does not change macOS's allowed list. Never modify the global background-task database to hide entries.
+
+The setup helper's attribution action changes only the protected gateway plist's association metadata. It validates user ownership and matching helper/gateway signing teams and does not invoke launchctl or local-domain setup. Attribution requests use zero ports so an older helper rejects them before changing any domains. Do not replace a pending domain-setup request with an attribution request.
+
 Read `SMAppService` status at startup, during monitoring, and when the app becomes active. Never use an operation-local boolean as permission state. Approval and working routing are separate: validate routing before reporting setup complete. Do not register helpers merely to refresh permission. `BackgroundRegistrations` may archive inactive orphan Morrow jobs and normalize retained definitions; it preserves running services and other apps' jobs. macOS controls historical list entries and final grouping.
 
-Generated launchd jobs declare `AssociatedBundleIdentifiers` for Morrow. When the bundled CLI is available, database, mail, web, and S3 workers launch through Morrow's foreground service runner. It preserves their environment/output, forwards stop signals to the owned native child, and exits with that child's status.
+Generated launchd jobs declare `AssociatedBundleIdentifiers` for Morrow. When the bundled CLI and app have valid matching Apple signing teams, database, mail, web, and S3 workers launch through Morrow's foreground service runner. Ad-hoc development builds launch native workers directly to avoid adding more ungrouped Morrow rows. The signed runner preserves environment/output, forwards stop signals to the owned native child, and exits with that child's status.
 
 Customer executables must share Morrow's Developer Team ID for macOS attribution. macOS owns the final Login Items grouping; ad-hoc previews, old registrations, or standalone unsigned binaries can appear separately. Never modify the system background-task database or claim that separate server processes disappear. Existing services adopt updated job metadata when recreated or restarted; do not stop user databases merely to refresh a settings list.

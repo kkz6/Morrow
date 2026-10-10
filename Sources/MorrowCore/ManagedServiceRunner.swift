@@ -8,9 +8,10 @@ public enum ManagedServiceRunner {
     public static let bundleIdentifiers = ["dev.morrow.app"]
     public static func arguments(_ original: [String]) -> [String] {
         guard let server = original.first, let launcher = launcher(), server != launcher else { return original }
+        guard BackgroundAttribution(launcher: URL(fileURLWithPath: launcher)).ready else { return original }
         return [launcher, "service-runner", "--"] + original
     }
-    private static func launcher() -> String? {
+    static func launcher() -> String? {
         let app = Bundle.main.bundleURL
         if app.pathExtension == "app" {
             let cli = app.appendingPathComponent("Contents/MacOS/morrow").path

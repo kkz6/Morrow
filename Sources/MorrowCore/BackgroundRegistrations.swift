@@ -41,6 +41,8 @@ public struct BackgroundRegistrations: Sendable {
     public func clean(cli: URL) throws -> String {
         try store.operation {
             guard cli.path.hasSuffix("/Contents/MacOS/morrow") || ["morrow", "morrow-cli"].contains(cli.lastPathComponent), FileManager.default.isExecutableFile(atPath: cli.path) else { throw MorrowError.message("Morrow's service launcher is missing.") }
+            let attribution = BackgroundAttribution(launcher: cli)
+            try attribution.registerApp()
             let state = try store.load(), launchd = LaunchdControl(runner: runner), fm = FileManager.default
             let sites = SiteManager(store: store, runner: runner)
             let webLabels = (["watch", "caddy", "dns"] + state.web.php.map(sites.phpComponent)).map { sites.label($0, web: state.web) }
@@ -61,6 +63,9 @@ public struct BackgroundRegistrations: Sendable {
                     try fm.moveItem(at: file, to: archive.appendingPathComponent("\(removed)-" + file.lastPathComponent))
                     removed += 1
                 } else {
+                    // Relabeling unsigned servers as Morrow creates more
+                    // ungrouped Morrow rows. Wait for a real shared signing team.
+                    guard attribution.ready else { continue }
                     var revised = arguments
                     if arguments.count >= 3, arguments[1] == "service-runner", arguments[2] == "--" { revised[0] = cli.path }
                     else if let binary = arguments.first, !["morrow", "morrow-cli"].contains(URL(fileURLWithPath: binary).lastPathComponent) { revised = [cli.path, "service-runner", "--"] + arguments }
@@ -74,7 +79,7 @@ public struct BackgroundRegistrations: Sendable {
                     updated += 1
                 }
             }
-            return "Archived \(removed) unused registrations; updated \(updated) service entries.\(active > 0 ? " Preserved \(active) active orphan entries." : "") macOS may retain older list entries until it refreshes."
+            return "Archived \(removed) unused registrations; updated \(updated) service entries.\(active > 0 ? " Preserved \(active) active orphan entries." : "") \(attribution.message)"
         }
     }
 }
