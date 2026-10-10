@@ -8,7 +8,7 @@ Morrow is a native macOS menu bar app and CLI. Both use the same databases, deve
 
 ## Build the app and CLI
 
-Install a full version of Xcode and its command line tools. The build script selects the newest full Xcode in `/Applications` and uses its macOS SDK. Homebrew is needed when a chosen database version is missing.
+Install a full version of Xcode and its command line tools. The build script selects the newest full Xcode in `/Applications` and uses its macOS SDK. Homebrew is optional. Missing software uses a configured verified binary catalog; Go can use official archives and Node uses nvm. Read [Binary downloads](/docs/binary-downloads) before creating services on a fresh Mac.
 
 ```sh
 git clone https://github.com/kkz6/Morrow.git
@@ -27,9 +27,11 @@ Choose **Allow Morrow Setup** to review a native in-app explanation, then contin
 
 ## Create a database
 
+**General → Background access** displays the native helper's current permission. Morrow refreshes it when returning from System Settings and while monitoring, so an already allowed helper is not shown as needing approval. Approval and successful routing are separate checks; a helper can be allowed while local domains still need setup.
+
 In Settings, open **Databases → New Instance**. Choose the engine and version, enter a name, and click **Create Instance**. The default **Start after creating** option starts it immediately.
 
-Morrow finds compatible existing binaries, including Homebrew, PATH, Herd, and Postgres.app installations. If the requested version is missing, creation handles its installation automatically. Port conflicts and duplicate names are rejected before downloading or initializing data.
+Morrow finds compatible existing binaries, including Homebrew, PATH, Herd, and Postgres.app installations. If the requested version is missing, creation downloads a compatible catalog distribution. Until a package is published, use an existing installation or explicitly enable Homebrew compatibility. Port conflicts and duplicate names are rejected before downloading or initializing data.
 
 The equivalent terminal command is:
 
@@ -66,7 +68,7 @@ Copy the returned address into your application’s database settings. For Postg
 
 ## Manage development runtimes
 
-Open **Settings → Runtimes** to select PHP, Go, Flutter, Node.js, Python, or Ruby. Existing versions are reused. Node versions use nvm; other missing channels use Homebrew. Installation discovery is cached rather than repeated on each navigation. See [Applications and runtimes](/docs/applications) for Terminal setup and companion commands.
+Open **Settings → Runtimes** to select PHP, Go, Flutter, Node.js, Python, or Ruby. Existing versions are reused. Node versions use nvm; Go uses official archives, and other missing releases use the configured binary catalog. Homebrew compatibility is an explicit opt-in under General. Installation discovery is cached rather than repeated on each navigation. See [Applications and runtimes](/docs/applications) for Terminal setup and companion commands.
 
 ## Set up another Mac
 

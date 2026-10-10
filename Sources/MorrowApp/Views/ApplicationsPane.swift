@@ -65,11 +65,11 @@ struct ApplicationsPane: View {
                         .font(.system(size: 12, design: .monospaced)).textSelection(.enabled)
                 }.frame(maxWidth: .infinity, alignment: .leading).settingsCellPadding()
             }
-            if engine == .flutter { SettingsNote(text: "Homebrew provides the current Flutter release. Selected SDKs are retained separately in Morrow. Target platforms may require Xcode, Android SDK, or other Flutter prerequisites.") }
+            if engine == .flutter { SettingsNote(text: "Flutter SDKs are kept separately by version. Target platforms may require Xcode, Android SDK, or other Flutter prerequisites.") }
             if engine == .node {
                 Text("nvm: " + NodeVersionManager(store: model.manager.store).directory.path).font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary).textSelection(.enabled)
             }
-            SettingsNote(text: "Version selection applies to Morrow commands and its optional PATH setup. Homebrew may update shared dependencies during installation.")
+            SettingsNote(text: "Version selection applies to Morrow commands and its optional PATH setup. Managed distributions stay separate by version; Homebrew compatibility can update shared dependencies when enabled.")
         }
         .onAppear { engine = RuntimeEngine.parse(model.preferences.lastRuntime) ?? .php }
         .task(id: "\(engine.rawValue):\(model.tools.map(\.id).joined()):\(model.inventory.channels[engine.rawValue]?.count ?? 0)") { await loadVersions() }

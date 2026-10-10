@@ -4,6 +4,20 @@ description: All commands for managing the same workspace as the macOS app.
 group: Reference
 order: 6
 ---
+## Binary sources and background permissions
+
+| Command | Purpose |
+| --- | --- |
+| `morrow binary source <https-url\|clear>` | Validate and configure the native distribution catalog, or clear it |
+| `morrow binary list` | List compatible published catalog releases |
+| `morrow binary refresh` | Refresh provider metadata; refresh Homebrew only with opt-in |
+| `morrow binary brew on` | Enable optional Homebrew installation/upgrade compatibility |
+| `morrow binary brew off` | Disable Homebrew mutations; existing installations remain usable |
+| `morrow background status` | Show native permission status for owned service jobs |
+| `morrow background clean` | Archive obsolete inactive registrations and update retained definitions |
+
+Read [Binary downloads](/docs/binary-downloads) for manifest format and current provider availability. Cleanup does not stop running databases or clear macOS's global background-item history.
+
 ## General commands
 
 | Command | Purpose |
@@ -11,7 +25,7 @@ order: 6
 | `morrow --help` | List commands and options |
 | `morrow --version` | Print the application version |
 | `morrow service-runner -- <executable> [args]` | Internal unprivileged native-service supervisor used for app attribution |
-| `morrow doctor` | Check native discovery, Homebrew, and storage |
+| `morrow doctor` | Check binary providers, optional Homebrew compatibility, and storage |
 | `morrow settings` | Open the macOS app’s Settings window |
 
 ## Catalog and software
@@ -88,12 +102,12 @@ Read [Database updates](/docs/updates) for compatibility, shared dependency beha
 | Command | Purpose |
 | --- | --- |
 | `morrow tool catalog` | List supported runtimes |
-| `morrow tool channels <runtime>` | Show official Node/nvm releases or Homebrew channels |
+| `morrow tool channels <runtime>` | Show official Node/nvm, Go, catalog, or optional Homebrew releases |
 | `morrow tool versions [runtime]` | Discover existing binaries |
 | `morrow tool install <runtime> [version-or-channel]` | Reuse or install a runtime; defaults to automatic reuse |
 | `morrow tool use <runtime> <version>` | Select a default and create Morrow-owned command wrappers |
 | `morrow tool list [--json]` | List tracked runtime records; text output marks defaults |
-| `morrow tool updates [--refresh] [--json]` | Check tracked versions; optionally refresh Homebrew metadata |
+| `morrow tool updates [--refresh] [--json]` | Check tracked versions; optionally refresh provider metadata |
 | `morrow tool upgrade <runtime> [version]` | Update a tracked version; omitted version means the default |
 | `morrow tool remove <runtime> <version>` | Forget a registration and clear its default; preserve installed files |
 | `morrow tool exec <runtime> [--command <name>] -- <args>` | Run the selected runtime or an available companion command with Terminal input/output |
@@ -101,7 +115,7 @@ Read [Database updates](/docs/updates) for compatibility, shared dependency beha
 
 Supported runtime names: `php`, `go`, `flutter`, `node`, `python`, `ruby`. Aliases: `nodejs`, `python3`.
 
-For `install` and `use`, numeric release series, existing exact versions, and available formula names are accepted. Node installs use nvm and accept `lts` as well as numeric release series/exact versions. Other installable releases depend on Homebrew. `current` and `latest` choose the current release; they are installation selectors, not aliases for a saved default.
+For `install` and `use`, numeric release series, existing exact versions, and available formula names are accepted. Node installs use nvm and accept `lts` as well as numeric release series/exact versions. Go uses official archives; other missing runtimes require a configured distribution catalog or explicit Homebrew compatibility. `current` and `latest` choose the current release; they are installation selectors, not aliases for a saved default.
 
 ```sh
 morrow tool install go
@@ -162,7 +176,7 @@ Configuration options: `--smtp-port <port>`, `--http-port <port>`, `--name <name
 | `morrow site watch` | Run the enabled workspace watcher in the foreground |
 | `morrow site setup-service` | Internal native setup service; launched only after macOS helper approval |
 | `morrow site gateway [listener-port options]` | Internal localhost gateway; requires sockets supplied by its launchd job |
-| `morrow site php [version] [--install]` | List/select complete PHP-FPM installations, or reuse/install current Homebrew PHP |
+| `morrow site php [version] [--install]` | List/select complete PHP-FPM installations, or reuse/install a complete PHP distribution |
 | `morrow site secure <domain>` | Enable local HTTPS |
 | `morrow site unsecure <domain>` | Change the route to HTTP |
 | `morrow site ignore <domain>` | Exclude a project from local hosting, preserving its folder and settings |

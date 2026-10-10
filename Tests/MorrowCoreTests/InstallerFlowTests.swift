@@ -38,7 +38,10 @@ final class InstallerFlowTests: XCTestCase {
         try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: brew.path)
         let runner = InstallerFixture(prefix: prefix)
         let store = StateStore(root: root.appendingPathComponent("state"))
-        try store.update { $0.preferences.homebrewPath = brew.path }
+        try store.update {
+            $0.preferences.homebrewPath = brew.path
+            $0.preferences.allowHomebrewFallback = true
+        }
         let manager = DatabaseManager(store: store, runner: runner)
         let first = try manager.provision(engine: .mongodb, version: "8.0", name: "first", port: manager.suggestedPort(engine: .mongodb))
         XCTAssertEqual(runner.installCount, 1)

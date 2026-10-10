@@ -52,14 +52,14 @@ struct SitesPane: View {
             SettingsGroup(header: "Local Domains") {
                 SettingRow(title: "Routing", subtitle: LocalizedStringKey(".\(model.web.suffix) · HTTP 80 · HTTPS 443")) {
                     HStack(spacing: 8) {
-                        if model.domainActivity != nil { ProgressView().controlSize(.small) }
+                        if model.domainActivity != nil || model.domainSetupPending { ProgressView().controlSize(.small).help("Finishing local-domain setup") }
                         else if model.webStatus?.systemConfigured == true {
                             Image(systemName: "checkmark.circle.fill").foregroundStyle(.green).help("Local domains configured")
                         }
                         if model.domainApprovalNeeded {
                             Button("Approve Morrow…") { model.openSetupApproval() }.settingsButton(height: 28)
                         } else if model.webStatus?.systemConfigured != true || model.webStatus?.httpsTrusted != true && model.web.sites.contains(where: { $0.https && !$0.ignored }) {
-                            Button(setupLabel) { model.installSiteSystemSetup(replaceResolvers: hasPreviousResolver) }.settingsButton(height: 28)
+                            Button(setupLabel) { model.installSiteSystemSetup(replaceResolvers: hasPreviousResolver) }.settingsButton(height: 28).disabled(model.domainSetupPending)
                         }
                         Menu {
                             Button("Validate HTTPS") { model.checkHTTPS() }

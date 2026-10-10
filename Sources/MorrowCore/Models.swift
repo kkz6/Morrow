@@ -89,7 +89,7 @@ public struct VersionChannel: Codable, Identifiable, Sendable {
     public let formula: String
     public let version: String
     public let deprecated: Bool
-    public var title: String { formula.split(separator: "/").last.map(String.init) ?? formula }
+    public var title: String { formula.hasPrefix("managed:") ? version : formula.split(separator: "/").last.map(String.init) ?? formula }
     public init(engine: DatabaseEngine, formula: String, version: String, deprecated: Bool = false) {
         self.engine = engine; self.formula = formula; self.version = version; self.deprecated = deprecated
     }
@@ -138,6 +138,8 @@ public struct AppPreferences: Codable, Equatable, Sendable {
     public var showRunningCount = true
     public var appearance = "system"
     public var homebrewPath = ""
+    public var allowHomebrewFallback = false
+    public var binaryCatalogURL = ""
     public var iCloudSyncEnabled = false
     public var autoSetupSyncedServices = false
     public var syncFolder = ""
@@ -146,12 +148,14 @@ public struct AppPreferences: Codable, Equatable, Sendable {
     public var lastRuntime = "php"
     public var onboardingCompleted = false
     public init() {}
-    enum CodingKeys: String, CodingKey { case showRunningCount, appearance, homebrewPath, iCloudSyncEnabled, autoSetupSyncedServices, syncFolder, nvmDirectory, lastSettingsSection, lastRuntime, onboardingCompleted }
+    enum CodingKeys: String, CodingKey { case showRunningCount, appearance, homebrewPath, allowHomebrewFallback, binaryCatalogURL, iCloudSyncEnabled, autoSetupSyncedServices, syncFolder, nvmDirectory, lastSettingsSection, lastRuntime, onboardingCompleted }
     public init(from decoder: Decoder) throws {
         let values = try decoder.container(keyedBy: CodingKeys.self)
         showRunningCount = try values.decodeIfPresent(Bool.self, forKey: .showRunningCount) ?? true
         appearance = try values.decodeIfPresent(String.self, forKey: .appearance) ?? "system"
         homebrewPath = try values.decodeIfPresent(String.self, forKey: .homebrewPath) ?? ""
+        allowHomebrewFallback = try values.decodeIfPresent(Bool.self, forKey: .allowHomebrewFallback) ?? false
+        binaryCatalogURL = try values.decodeIfPresent(String.self, forKey: .binaryCatalogURL) ?? ""
         iCloudSyncEnabled = try values.decodeIfPresent(Bool.self, forKey: .iCloudSyncEnabled) ?? false
         autoSetupSyncedServices = try values.decodeIfPresent(Bool.self, forKey: .autoSetupSyncedServices) ?? false
         syncFolder = try values.decodeIfPresent(String.self, forKey: .syncFolder) ?? ""

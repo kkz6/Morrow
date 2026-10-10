@@ -47,7 +47,7 @@ morrow site refresh
 morrow site list
 ```
 
-Morrow installs missing Caddy and dnsmasq binaries using Homebrew and manages separate user-owned launchd jobs. PHP projects use complete PHP-FPM installations; choose a default in Sites or a per-project version in **Project Settings**.
+Morrow reuses existing Caddy and dnsmasq binaries or downloads complete distributions from the configured catalog. Homebrew is used only with explicit compatibility opt-in. Services use separate user-owned launchd jobs. PHP projects use complete PHP-FPM installations; choose a default in Sites or a per-project version in **Project Settings**.
 
 ```sh
 morrow site php
@@ -55,7 +55,7 @@ morrow site php 8.4
 morrow site php --install
 ```
 
-The install option reuses a complete PHP-FPM installation or installs Homebrew's current PHP. A standalone PHP CLI without PHP-FPM is not sufficient for web hosting. This choice is separate from your ordinary CLI runtime default.
+The install option reuses a complete PHP-FPM installation or downloads a complete PHP distribution from the catalog. Homebrew is an optional compatibility source. A standalone PHP CLI without PHP-FPM is not sufficient for web hosting. This choice is separate from your ordinary CLI runtime default.
 
 The directory watcher continues when the menu bar app closes. Changes are checked approximately every three seconds while hosting is enabled. Start-at-login can be changed in **Hosting Settings**. `morrow site watch` also runs the watcher in the foreground while hosting is enabled.
 
@@ -109,6 +109,8 @@ Supported namespaces are `test`, `internal`, `localhost`, and their subdomains, 
 Automatically named routes change with the suffix. Explicit custom hostnames remain as entered; their previous namespace remains managed. New suffixes need system setup again. Changing a suffix creates matching local certificates for HTTPS sites.
 
 ## Clean URLs and system DNS
+
+The app reads the helper's native authorization status, including permission revoked in System Settings. An allowed helper does not trigger another approval prompt. Pending requests are recovered when the app reopens, while routing is verified separately before setup is reported as ready. Review permission and cleanup controls in **General → Background access**.
 
 Services use unprivileged listener ports by default: HTTP 8080, HTTPS 8443, and DNS 5354. Before system setup, Morrow displays URLs with those ports. A hostname also needs working local DNS. Setup preserves other resolvers unless you explicitly select replacement.
 

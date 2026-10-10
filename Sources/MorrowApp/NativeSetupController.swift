@@ -4,7 +4,18 @@ import AppKit
 import MorrowCore
 
 @MainActor enum NativeSetupController {
+    enum Permission: Equatable {
+        case allowed, needsApproval, notRegistered, unavailable
+        var title: String {
+            switch self { case .allowed: return "Allowed"; case .needsApproval: return "Approval needed"; case .notRegistered: return "Not enabled"; case .unavailable: return "Unavailable" }
+        }
+        init(_ status: SMAppService.Status) {
+            switch status { case .enabled: self = .allowed; case .requiresApproval: self = .needsApproval; case .notRegistered: self = .notRegistered; default: self = .unavailable }
+        }
+    }
     private static var service: SMAppService { .daemon(plistName: "dev.morrow.setup.plist") }
+    static var permission: Permission { Permission(service.status) }
+    static var loginPermission: Permission { Permission(SMAppService.mainApp.status) }
     static var approved: Bool { service.status == .enabled }
     static func register() throws -> Bool {
         if service.status != .enabled && service.status != .requiresApproval { try service.register() }
@@ -16,6 +27,7 @@ import MorrowCore
     }
     static func openApprovalSettings() { SMAppService.openSystemSettingsLoginItems() }
     static func requestApproval() {
+        guard permission == .needsApproval else { return }
         let alert = NSAlert()
         alert.messageText = "Allow Morrow Setup"
         alert.informativeText = "Morrow needs permission to configure local project domains and ports 80/443. macOS will keep the approval for its setup helper. Your password is never stored. Continue to macOS's approval settings to allow it."

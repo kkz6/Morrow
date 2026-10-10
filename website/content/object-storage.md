@@ -6,7 +6,7 @@ order: 4.9
 ---
 ## Create a server
 
-Open **Settings → Object Storage → Create S3 Server**. Choose a server name, S3 API port, console port, and startup options. Morrow reuses an existing MinIO executable or installs Homebrew's MinIO formula. The executable is pinned to its resolved installation path.
+Open **Settings → Object Storage → Create S3 Server**. Choose a server name, S3 API port, console port, and startup options. Morrow reuses an existing MinIO executable or downloads a verified `minio` distribution from the configured catalog. Homebrew's formula is used only when compatibility is enabled. The executable is pinned to its resolved installation path.
 
 Both ports are validated before installation and again before startup. Database, mail, and hosting listeners also participate in port reservations. Defaults select free ports beginning at 9000. MinIO and its console listen on `127.0.0.1` and run through your user launchd session, independently of the menu bar app.
 

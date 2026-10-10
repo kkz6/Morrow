@@ -6,18 +6,18 @@ order: 4.5
 ---
 ## Check versions
 
-Open **Settings → Databases → Check Updates**. Morrow refreshes Homebrew metadata and compares each instance's pinned release with its formula's available release. Checks do not apply upgrades.
+Open **Settings → Databases → Check Updates**. Morrow refreshes configured release metadata and compares each instance's pinned release with compatible catalog releases. Homebrew metadata is refreshed only when compatibility is enabled. Checks do not apply upgrades.
 
 ```sh
 morrow db updates --refresh
 morrow db updates my-app --json
 ```
 
-`--refresh` runs `brew update` before reading package metadata. Without it, checks use Homebrew's current metadata. A failed check is reported as a failure, never as “up to date.” External installations such as Herd and Postgres.app are updated through their original installer.
+`--refresh` reloads the catalog and provider caches. It also runs `brew update` when compatibility is enabled. Without it, catalog checks reuse fresh cached metadata. A failed check is reported as a failure, never as “up to date.” External installations such as Herd and Postgres.app are updated through their original installer.
 
 ## Maintenance releases and rebuilds
 
-Morrow compares numeric version components and Homebrew package revisions. For example, `17.11` to `17.12` is a PostgreSQL maintenance update; `17.11` to `17.11_1` is a packaging rebuild. These numbers are examples, not a statement about the latest release.
+Morrow compares numeric version components and packaging revisions for both managed distributions and optional Homebrew packages. For example, `17.11` to `17.12` is a PostgreSQL maintenance update; `17.11` to `17.11_1` is a packaging rebuild. These numbers are examples, not a statement about the latest release.
 
 PostgreSQL 10 and later stay within the same major release. Older PostgreSQL releases and the other supported engines conservatively stay within the same first two version components. Different release series require a new instance and an engine-supported migration. Morrow does not automatically migrate data between series.
 
@@ -29,9 +29,9 @@ Choose **Update…** in an instance's action menu, review the backup and restart
 morrow db upgrade my-app
 ```
 
-Morrow serializes the operation across the app and CLI, stops its managed server, copies the instance directory into `backups`, updates the selected Homebrew formula, verifies the actual binary, and changes that instance's pinned path. An instance that was running is restarted and checked for readiness. A stopped instance stays stopped.
+Morrow serializes the operation across the app and CLI, stops its managed server, copies the instance directory into `backups`, installs a verified managed distribution (or updates an explicitly enabled Homebrew formula), verifies the actual binary, and changes that instance's pinned path. An instance that was running is restarted and checked for readiness. A stopped instance stays stopped.
 
-Other instances retain their pinned paths. Homebrew still manages shared dependencies and can affect software outside Morrow. Morrow disables automatic install cleanup to retain old formula kegs, but a later external `brew cleanup` can remove them. This is not an isolated package environment.
+Other instances retain their pinned paths. Managed distributions keep their previous directories and do not modify Homebrew. When compatibility is enabled, Homebrew manages shared dependencies and can affect software outside Morrow. Morrow disables automatic install cleanup to retain old formula kegs, but a later external `brew cleanup` can remove them. This is not an isolated package environment.
 
 A filesystem backup requires exclusive access to the instance's files. Stop clients before updating. Linked data directories, symlinked files, and external tablespaces are rejected because an instance-directory copy would not cover them. Use the database's own backup and upgrade tools for those configurations. Review engine release notes for extension or application compatibility before updating.
 

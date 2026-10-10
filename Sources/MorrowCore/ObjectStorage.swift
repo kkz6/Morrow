@@ -65,10 +65,7 @@ public struct ObjectStorageManager: Sendable {
                 let prefix = URL(fileURLWithPath: executable).deletingLastPathComponent().deletingLastPathComponent()
                 candidates.insert(prefix.appendingPathComponent("opt/minio/bin/minio").path, at: 0)
             }
-            if !candidates.contains(where: { FileManager.default.isExecutableFile(atPath: $0) }) {
-                try runner.run(brew.requireExecutable(), ["install", "--formula", "minio"], environment: [:]).checked()
-            }
-            guard let path = candidates.first(where: { FileManager.default.isExecutableFile(atPath: $0) }) else { throw MorrowError.message("MinIO was not detected after installation.") }
+            let path = try BinaryInstaller(store: store, runner: runner).auxiliary("minio", preferred: candidates.first(where: { FileManager.default.isExecutableFile(atPath: $0) }))
             let binary = URL(fileURLWithPath: path).resolvingSymlinksInPath().path
             let output = try runner.run(binary, ["--version"], environment: [:]).checked()
             guard output.lowercased().contains("minio version") else { throw MorrowError.message("The executable is not MinIO.") }

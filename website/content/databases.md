@@ -39,7 +39,7 @@ morrow db create valkey local-valkey --start
 morrow db create memcached local-memcached --memory 64 --start
 ```
 
-MongoDB uses its official Homebrew tap when installation is needed. Redis and Valkey use separate persistent data directories with append-only persistence. Memcached is volatile: stopping its process clears cached contents, and UDP is disabled.
+MongoDB can use a complete native catalog distribution; its official Homebrew tap is used only when compatibility is explicitly enabled. Redis and Valkey use separate persistent data directories with append-only persistence. Memcached is volatile: stopping its process clears cached contents, and UDP is disabled.
 
 ## Developer preview coverage
 

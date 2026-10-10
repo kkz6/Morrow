@@ -2,6 +2,11 @@
 
 ## Unreleased
 
+- Settings and onboarding now read native setup/login permission status on launch, while monitoring, and when returning from System Settings. Approval prompts are conditional; allowed access is distinguished from working local routing, and pending setup survives reopening the app.
+- Added scoped background-registration cleanup that archives obsolete inactive Morrow jobs and updates retained service attribution without interrupting running services or resetting macOS's background-item database.
+- Added a shared verified binary catalog, HTTPS/checksum validation, safe native archive extraction, architecture/macOS filtering, separate version directories, direct official Go downloads, and app/CLI catalog configuration.
+- Homebrew installation and upgrades now require explicit compatibility opt-in; existing native/Homebrew binaries remain usable. Databases, runtimes, mail, Sites, S3, update checks, and iCloud restoration share the provider policy. Hosted service distributions still need to be published.
+
 - Added balanced inner padding to settings cells: fourteen-point side gutters and twelve-point top/bottom insets, with natural height for titles, subtitles, and wrapped text. Shared service rows and card content use the same spacing; button styling and window geometry are preserved.
 
 - Slightly tightened shared settings padding: four-point action insets, eleven-point cell gutters, 44-point standard rows, and twelve-point section spacing; service rows share the same padding tokens.

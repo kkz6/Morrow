@@ -74,6 +74,8 @@ This developer preview includes local databases, PHP/Go/Flutter/Node/Python/Ruby
 
 ## Dependency status
 
+`BinaryInstaller` owns shared installation policy. Prefer validated existing copies and `ManagedBinaryStore` distributions; guard every Homebrew mutation with explicit compatibility permission. Catalog downloads require HTTPS, SHA-256, platform filtering, private staging, safe extraction, and actual version validation. Go has an official archive provider and Node uses nvm. Keep distribution libraries/resources relocatable; do not advertise an unpublished package as installable. See [Binary downloads](/docs/binary-downloads) for catalog fields and current availability.
+
 The Nuxt toolchain currently reports upstream high-severity npm audit advisories involving its development dependencies. Patched Git parser versions are pinned through overrides. The published site contains static HTML, CSS, and client scripts; its development server stays on 127.0.0.1. Recheck advisories when updating dependencies rather than forcing an incompatible Nuxt downgrade.
 
 ## Customer distribution
@@ -89,6 +91,8 @@ The build signs nested executables before the app, enables hardened runtime, and
 Setup uses native `SMAppService` approval. Do not reintroduce AppleScript/Python elevation or cache a sudo password. Keep the setup helper's operations limited to validated local DNS and gateway installation.
 
 ## Background-item attribution
+
+Read `SMAppService` status at startup, during monitoring, and when the app becomes active. Never use an operation-local boolean as permission state. Approval and working routing are separate: validate routing before reporting setup complete. Do not register helpers merely to refresh permission. `BackgroundRegistrations` may archive inactive orphan Morrow jobs and normalize retained definitions; it preserves running services and other apps' jobs. macOS controls historical list entries and final grouping.
 
 Generated launchd jobs declare `AssociatedBundleIdentifiers` for Morrow. When the bundled CLI is available, database, mail, web, and S3 workers launch through Morrow's foreground service runner. It preserves their environment/output, forwards stop signals to the owned native child, and exits with that child's status.
 

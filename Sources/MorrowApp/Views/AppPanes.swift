@@ -37,40 +37,79 @@ struct CommandLinePane: View {
 struct GeneralOptionsPane: View {
     var embedded = false
     @Environment(AppModel.self) private var model
-    @State private var loginEnabled = false
     @State private var brewPath = ""
+    @State private var catalogURL = ""
     @State private var nvmPath = ""
     var body: some View {
         SettingsPane(section: SettingsSection.general, embedded: embedded) {
             SettingsGroup {
-                SettingRow(title: "Launch Morrow at login", subtitle: "Keep your database controls close by") {
-                    Toggle("Launch Morrow at login", isOn: Binding(get: { loginEnabled }, set: { value in
-                        if model.preview { loginEnabled = value; return }
+                SettingRow(title: "Launch Morrow at login", subtitle: model.loginPermission == .needsApproval ? "Login permission needs approval in System Settings" : "Keep your database controls close by") {
+                    Toggle("Launch Morrow at login", isOn: Binding(get: { model.loginPermission == .allowed }, set: { value in
+                        if model.preview { model.loginPermission = value ? .allowed : .notRegistered; return }
                         do {
                             if value { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
-                            loginEnabled = value
+                            model.refreshPermissions()
+                            if value, model.loginPermission == .needsApproval { NativeSetupController.openApprovalSettings() }
                         } catch { model.error = error.localizedDescription }
                     })).settingsToggle()
                 }
                 SettingsDivider()
-                SettingRow(title: "Homebrew", subtitle: model.homebrewAvailable ? "Native installer is available" : "Installer not found") {
-                    Image(systemName: model.homebrewAvailable ? "checkmark.circle.fill" : "exclamationmark.circle").foregroundStyle(model.homebrewAvailable ? .green : .orange)
+                SettingRow(title: "Background access", subtitle: LocalizedStringKey(model.blockedBackgroundItems.isEmpty ? "Local domain setup: \(model.setupPermission.title.lowercased())" : "\(model.blockedBackgroundItems.count) service permissions need attention")) {
+                    HStack(spacing: 8) {
+                        Text(model.setupPermission.title).font(.system(size: 11)).foregroundStyle(model.setupPermission == .allowed ? Color.secondary : Color.orange)
+                        Menu {
+                            Button("Review Permissions…") { NativeSetupController.openApprovalSettings() }
+                            Button("Clean Up Old Registrations") { model.cleanupBackgroundItems() }
+                        } label: { Image(systemName: "ellipsis").frame(width: 16) }.settingsMenuControl().help("Background permissions and cleanup").disabled(model.busy)
+                    }
                 }
             }
-            SettingsGroup(header: "Installer Location") {
+            SettingsGroup(header: "Binary Downloads") {
                 VStack(alignment: .leading, spacing: 10) {
-                    Text("Homebrew executable").font(.system(size: 13))
+                    Text("Binary catalog URL").font(.system(size: 13))
                     HStack {
-                        SettingsInput(placeholder: "Automatic (/opt/homebrew/bin/brew)", text: $brewPath)
+                        SettingsInput(placeholder: "https://…/catalog.json (optional)", text: $catalogURL)
                         Button("Save") {
-                            let path = brewPath.trimmingCharacters(in: .whitespacesAndNewlines)
-                            guard path.isEmpty || FileManager.default.isExecutableFile(atPath: path) else { model.error = "Choose an executable Homebrew path."; return }
-                            var preferences = model.preferences; preferences.homebrewPath = path
-                            model.savePreferences(preferences)
-                            Task { await model.refresh() }
-                        }.settingsButton(height: ControlLayout.height).disabled(model.busy)
+                            let url = catalogURL.trimmingCharacters(in: .whitespacesAndNewlines)
+                            model.perform("Saving binary source…", success: "Binary source saved", operation: { manager in
+                                try ManagedBinaryStore(store: manager.store, runner: manager.runner).configure(url: url)
+                            }, completion: {
+                                model.inventory.channels = [:]
+                                model.channels = []
+                                model.loadChannels()
+                                model.loadRuntimeChannels(RuntimeEngine(rawValue: model.preferences.lastRuntime) ?? .php, force: true)
+                            })
+                        }.settingsButton().disabled(model.busy)
                     }
+                    Text("Reuse installed software, or download verified distributions. Go is available directly; other packages need a catalog or optional Homebrew compatibility.").font(.system(size: 12)).foregroundStyle(.secondary)
                 }.settingsCellPadding()
+                SettingsDivider()
+                SettingRow(title: "Homebrew compatibility", subtitle: "Allow Homebrew for packages missing from the catalog") {
+                    Toggle("Homebrew compatibility", isOn: Binding(get: { model.preferences.allowHomebrewFallback }, set: { value in
+                        var preferences = model.preferences; preferences.allowHomebrewFallback = value
+                        model.savePreferences(preferences)
+                        try? BinaryInstaller(store: model.manager.store, runner: model.manager.runner).setHomebrewCompatibility(value)
+                        model.inventory.channels = [:]; model.channels = []
+                        model.loadChannels(); model.loadRuntimeChannels(RuntimeEngine(rawValue: model.preferences.lastRuntime) ?? .php, force: true)
+                    })).settingsToggle()
+                }.disabled(model.busy)
+            }
+            if model.preferences.allowHomebrewFallback {
+                SettingsGroup(header: "Homebrew Location") {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Homebrew executable").font(.system(size: 13))
+                        HStack {
+                            SettingsInput(placeholder: "Automatic (/opt/homebrew/bin/brew)", text: $brewPath)
+                            Button("Save") {
+                                let path = brewPath.trimmingCharacters(in: .whitespacesAndNewlines)
+                                guard path.isEmpty || FileManager.default.isExecutableFile(atPath: path) else { model.error = "Choose an executable Homebrew path."; return }
+                                var preferences = model.preferences; preferences.homebrewPath = path
+                                model.savePreferences(preferences)
+                                Task { await model.refresh() }
+                            }.settingsButton(height: ControlLayout.height).disabled(model.busy)
+                        }
+                    }.settingsCellPadding()
+                }
             }
             SettingsGroup(header: "Node Version Manager") {
                 VStack(alignment: .leading, spacing: 10) {
@@ -92,8 +131,9 @@ struct GeneralOptionsPane: View {
                 SettingsActionRow(title: "Open Setup Assistant…", symbol: "wand.and.stars") { model.onboardingPresented = true }
             }
         }.onAppear {
-            loginEnabled = model.preview ? false : SMAppService.mainApp.status == .enabled
+            model.refreshPermissions()
             brewPath = model.preferences.homebrewPath
+            catalogURL = model.preferences.binaryCatalogURL
             nvmPath = model.preferences.nvmDirectory
         }
     }

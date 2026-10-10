@@ -224,18 +224,17 @@ public struct WorkspaceSync: Sendable {
                 // Reuse compatible binaries, or resolve an available series
                 // before installing. Historical patches may no longer exist.
                 let installed = try databases.installer().installations().first { item in
-                    item.engine == recipe.engine && HomebrewInstaller.matches(item, request: series)
+                    item.engine == recipe.engine && BinaryInstaller.matches(item, request: series)
                 }
                 let formula: String
                 if installed != nil { formula = series }
                 else {
-                    let candidates = [recipe.engine.formulaBase + "@" + series, recipe.engine.formulaBase]
-                    guard let selected = candidates.first(where: { name in
-                        let target = recipe.engine == .mongodb ? "mongodb/brew/" + name : name
-                        guard let package = try? databases.installer().package(target), let next = SoftwareVersion(package.version), let old = SoftwareVersion(recipe.version) else { return false }
+                    let candidates = try databases.installer().channels().filter { $0.engine == recipe.engine }
+                    guard let selected = candidates.first(where: { channel in
+                        guard let next = SoftwareVersion(channel.version), let old = SoftwareVersion(recipe.version) else { return false }
                         return next.isMaintenanceRelease(of: old, engine: recipe.engine)
-                    }) else { throw MorrowError.message("Homebrew does not provide the synced release series \(series).") }
-                    formula = recipe.engine == .mongodb ? "mongodb/brew/" + selected : selected
+                    }) else { throw MorrowError.message("No configured binary source provides the synced release series \(series).") }
+                    formula = selected.formula
                 }
                 let reserved = Set(local.map(\.port))
                 let port = !reserved.contains(recipe.port) && DatabaseManager.portAvailable(recipe.port) ? recipe.port : try databases.suggestedPort(engine: recipe.engine)
@@ -259,7 +258,10 @@ public struct WorkspaceSync: Sendable {
                 let series = SoftwareVersion(recipe.version)?.components.prefix(2)
                 var version = found.first { SoftwareVersion($0.version)?.components.prefix(2) == series }?.version
                 if version == nil {
-                    let available = try databases.installer().package("mailpit").version
+                    let policy = try databases.installer()
+                    let available: String
+                    if let release = try policy.managed.release(package: "mailpit", request: "current") { available = release.version }
+                    else { available = try policy.package("mailpit").version }
                     guard SoftwareVersion(available)?.components.first == SoftwareVersion(recipe.version)?.components.first else { throw MorrowError.message("The synced Mailpit release is unavailable.") }
                     version = available
                 }

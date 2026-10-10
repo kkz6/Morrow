@@ -133,15 +133,14 @@ public struct SiteManager: Sendable {
     public func installPHP() throws {
         let found = try availablePHP()
         if let item = found.first { try selectPHP(item); return }
-        let brew = HomebrewInstaller(runner: runner, configuredPath: try store.load().preferences.homebrewPath)
-        _ = try store.operation { try runner.run(brew.requireExecutable(), ["install", "--formula", "php"], environment: [:]).checked() }
-        guard let item = try availablePHP().first else { throw MorrowError.message("Homebrew completed but PHP-FPM was not detected.") }
+        let installed = try RuntimeManager(store: store, runner: runner).install(.php)
+        guard installed.phpFPM != nil, let item = try availablePHP().first(where: { $0.id == installed.id }) else { throw MorrowError.message("The PHP distribution must include PHP-FPM.") }
         try selectPHP(item)
     }
     public func selectPHP(_ item: RuntimeInstallation) throws { try registerPHP(item, asDefault: true) }
     public func registerPHP(_ item: RuntimeInstallation, asDefault: Bool = false) throws {
         try store.operation {
-            guard item.engine == .php, let binary = Self.fpmExecutable(item) else { throw MorrowError.message("This installation has no PHP-FPM executable. Select a complete Homebrew PHP installation.") }
+            guard item.engine == .php, let binary = Self.fpmExecutable(item) else { throw MorrowError.message("This installation has no PHP-FPM executable. Select a complete PHP distribution.") }
             let reported = try runner.run(binary, ["--version"], environment: [:]).checked()
             guard let version = SoftwareVersion(item.version), reported.contains("PHP " + version.components.map(String.init).joined(separator: ".")) else { throw MorrowError.message("PHP-FPM reports a different version than the selected runtime.") }
             var web = try store.load().web
@@ -219,12 +218,7 @@ public struct SiteManager: Sendable {
         if web.enabled { try writeWatcher(web) }
     }
     private func nativeTool(_ name: String, preferred: String? = nil) throws -> String {
-        let candidates = [preferred, "/opt/homebrew/bin/" + name, "/opt/homebrew/sbin/" + name, "/usr/local/bin/" + name, "/usr/local/sbin/" + name].compactMap { $0 }
-        if let binary = candidates.first(where: { FileManager.default.isExecutableFile(atPath: $0) }) { return URL(fileURLWithPath: binary).resolvingSymlinksInPath().path }
-        let brew = HomebrewInstaller(runner: runner, configuredPath: try store.load().preferences.homebrewPath)
-        try runner.run(brew.requireExecutable(), ["install", "--formula", name], environment: [:]).checked()
-        guard let executable = candidates.first(where: { FileManager.default.isExecutableFile(atPath: $0) }) else { throw MorrowError.message("The installed \(name) executable was not detected.") }
-        return URL(fileURLWithPath: executable).resolvingSymlinksInPath().path
+        try BinaryInstaller(store: store, runner: runner).auxiliary(name, preferred: preferred)
     }
     public func start(cli: URL) throws {
         try store.operation {

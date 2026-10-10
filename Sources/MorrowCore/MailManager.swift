@@ -66,6 +66,7 @@ public struct MailManager: Sendable {
             paths += ((try? FileManager.default.contentsOfDirectory(at: cellar, includingPropertiesForKeys: nil)) ?? []).map { $0.appendingPathComponent("bin/mailpit").path }
         }
         paths += ["/opt/homebrew/bin/mailpit", "/usr/local/bin/mailpit"]
+        paths += ManagedBinaryStore(store: store, runner: runner).installations().filter { $0.release.package == "mailpit" }.map { $0.prefix + "/bin/mailpit" }
         var seen = Set<String>(), found: [MailInstallation] = []
         for path in paths {
             let executable = URL(fileURLWithPath: path).resolvingSymlinksInPath().path
@@ -90,18 +91,13 @@ public struct MailManager: Sendable {
     @discardableResult public func provision(name: String, smtpPort: Int, httpPort: Int, autoStart: Bool = false, version: String = "automatic", id: UUID = UUID()) throws -> MailService {
         try store.operation {
             try preflight(name: name, smtpPort: smtpPort, httpPort: httpPort)
-            guard ["automatic", "current"].contains(version) || SoftwareVersion(version) != nil else { throw MorrowError.message("Choose a detected Mailpit version or the current Homebrew release.") }
+            guard ["automatic", "current"].contains(version) || SoftwareVersion(version) != nil else { throw MorrowError.message("Choose a detected Mailpit version or the current catalog release.") }
             let found = try installations()
             var installation = found.first { version == "automatic" || $0.version == version }
             if installation == nil {
-                let brew = HomebrewInstaller(runner: runner, configuredPath: try store.load().preferences.homebrewPath)
-                let package = try brew.package("mailpit")
-                guard version == "automatic" || version == "current" || version == package.version else { throw MorrowError.message("Homebrew does not provide that Mailpit version.") }
-                installation = found.first { $0.version == package.version }
-                if installation == nil {
-                    try runner.run(brew.requireExecutable(), ["install", "--formula", "mailpit"], environment: [:]).checked()
-                    installation = try installations().first { $0.version == package.version }
-                }
+                let binary = try BinaryInstaller(store: store, runner: runner).auxiliary("mailpit", request: version)
+                installation = try probe(binary)
+                if !["automatic", "current"].contains(version), installation?.version != version { throw MorrowError.message("Mailpit reports another version. No mail service was created.") }
             }
             guard let installation else { throw MorrowError.message("Mailpit was not detected after installation.") }
             try preflight(name: name, smtpPort: smtpPort, httpPort: httpPort)

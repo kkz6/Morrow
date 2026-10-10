@@ -28,9 +28,23 @@ extension DatabaseManager {
             func row(_ message: String) -> DatabaseUpdate { row(nil, message) }
             if needsUpdateRecovery(instance.id) { return row("Interrupted update — recover before continuing.") }
             let formula = instance.installation.formula
+            do {
+                let releases = try installer.managed.releases(package: instance.engine.rawValue)
+                if let old = SoftwareVersion(current), let release = releases.first,
+                   let next = SoftwareVersion(release.version) {
+                    if next > old {
+                        let compatible = next.isMaintenanceRelease(of: old, engine: instance.engine)
+                        let candidate = releases.first { SoftwareVersion($0.version).map { $0 > old && $0.isMaintenanceRelease(of: old, engine: instance.engine) } == true }
+                        if let candidate { return row(candidate.version, formula: candidate.channel, allowed: true, "Maintenance update available") }
+                        return row(release.version, formula: release.channel, allowed: compatible, "New release series — create an instance and migrate your data.")
+                    }
+                    if formula.hasPrefix("managed:") { return row(release.version, formula: release.channel, "Up to date") }
+                } else if formula.hasPrefix("managed:") { return row("This managed release is not currently in the catalog.") }
+            } catch { return row("Catalog check failed: \(error.localizedDescription)") }
             guard HomebrewInstaller.isAllowedFormula(formula, engine: instance.engine) else {
                 return row("External installation — update through its original installer.")
             }
+            guard installer.allowsHomebrew else { return row("Existing installation preserved; Homebrew compatibility is off") }
             if packages[formula] == nil { packages[formula] = Result { try installer.package(formula) } }
             do {
                 let package = try packages[formula]!.get()
@@ -55,8 +69,10 @@ extension DatabaseManager {
                 throw MorrowError.message(update?.message ?? "No compatible update is available.")
             }
             if let expectedVersion, expectedVersion != available { throw MorrowError.message("The available release changed. Check updates again before upgrading.") }
-            let package = try installer().package(formula)
-            guard package.packageVersion == available else { throw MorrowError.message("Release metadata changed. Check updates again.") }
+            let binaryInstaller = try installer()
+            let release = formula.hasPrefix("managed:") ? try binaryInstaller.managed.release(package: original.engine.rawValue, request: formula) : nil
+            let package = formula.hasPrefix("managed:") ? nil : try binaryInstaller.package(formula)
+            guard (release?.version ?? package?.packageVersion) == available else { throw MorrowError.message("Release metadata changed. Check updates again.") }
             // A local copy cannot cover external tablespaces or linked data.
             try validateBackupSource(original)
             let active = [.running, .starting].contains(status(original))
@@ -73,10 +89,18 @@ extension DatabaseManager {
                 try FileManager.default.createDirectory(at: backup.deletingLastPathComponent(), withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
                 try FileManager.default.copyItem(at: store.instanceDirectory(original), to: backup)
                 journal.phase = "backedUp"; try saveJournal(journal)
-                try installer().upgradePackage(package)
-                guard let installed = try installer().installations().first(where: {
-                    $0.engine == original.engine && HomebrewInstaller.matches($0, request: formula) && $0.version == available
-                }) else { throw MorrowError.message("The requested release was not found after Homebrew completed.") }
+                let installed: Installation
+                if let release {
+                    let managed = try binaryInstaller.managed.install(release)
+                    installed = Installation(engine: original.engine, formula: release.channel, version: release.version, prefix: managed.prefix)
+                } else {
+                    guard let package else { throw MorrowError.message("Release unavailable.") }
+                    try binaryInstaller.upgradePackage(package)
+                    guard let found = try binaryInstaller.installations().first(where: {
+                        $0.engine == original.engine && BinaryInstaller.matches($0, request: formula) && $0.version == available
+                    }) else { throw MorrowError.message("The requested release was not found after installation.") }
+                    installed = found
+                }
                 let validated = try NativeInstallationDetector(runner: runner).validate(installed)
                 guard validated.version == available else { throw MorrowError.message("The upgraded binary reports an unexpected version.") }
                 var upgraded = original; upgraded.installation = validated

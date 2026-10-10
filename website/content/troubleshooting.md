@@ -16,7 +16,13 @@ Do not stop another application’s service merely to make Morrow’s default po
 
 ## Homebrew is not found
 
-Install Homebrew or set its executable path in Settings → General. Compatible existing native binaries can still be reused without downloading another copy.
+Homebrew is optional and compatibility is off by default. Compatible existing native binaries can be reused. Configure a verified distribution catalog in **General → Binary Downloads**, use direct Go/nvm providers, or explicitly enable Homebrew compatibility and set its executable path. See [Binary downloads](/docs/binary-downloads).
+
+## Duplicate background entries or stale permission status
+
+**General → Background access** reads macOS permission status. Its menu opens permission settings or cleans obsolete Morrow registrations. `morrow background status` shows job permission status; `morrow background clean` performs the same cleanup.
+
+Cleanup archives inactive orphan job files and updates retained job definitions to use Morrow attribution and its launcher. Running orphan processes are preserved and reported. Retained running jobs adopt revised definitions on their next normal restart; cleanup does not stop databases. macOS can retain historical list entries after the files are removed. Customer builds need consistent Developer ID signing for reliable grouping. Morrow never resets the whole background database or edits another app's registrations.
 
 ```sh
 morrow doctor

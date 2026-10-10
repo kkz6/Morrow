@@ -40,6 +40,11 @@ public enum NativeSetupBridge {
     public static func response(for request: Request) -> Response? {
         guard let data = try? Data(contentsOf: resultURL(request.uid)), let value = try? JSONDecoder().decode(Response.self, from: data), value.id == request.id, value.uid == request.uid else { return nil }; return value
     }
+    public static func pendingRequest() -> Request? {
+        guard let request = try? readRequest(getuid()), request.uid == getuid(), abs(Date().timeIntervalSince(request.created)) < 86_400,
+              response(for: request) == nil else { return nil }
+        return request
+    }
     public static func runService() throws {
         guard geteuid() == 0 else { throw MorrowError.message("The setup service must be launched by macOS after approval.") }
         try prepareResultDirectory()

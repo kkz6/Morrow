@@ -11,7 +11,8 @@ let package = Package(
     ],
     targets: [
         .systemLibrary(name: "CLaunch"),
-        .target(name: "MorrowCore", dependencies: ["CLaunch"]),
+        .systemLibrary(name: "CArchive"),
+        .target(name: "MorrowCore", dependencies: ["CLaunch", "CArchive"]),
         .executableTarget(name: "MorrowCLI", dependencies: ["MorrowCore"]),
         .executableTarget(name: "MorrowApp", dependencies: ["MorrowCore"], resources: [.copy("Assets")]),
         .testTarget(name: "MorrowCoreTests", dependencies: ["MorrowCore"]),

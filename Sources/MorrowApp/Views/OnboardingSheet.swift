@@ -16,7 +16,7 @@ struct OnboardingSheet: View {
                 Image(nsImage: NSImage(named: NSImage.applicationIconName) ?? NSImage()).resizable().frame(width: 44, height: 44)
                 VStack(alignment: .leading, spacing: 3) {
                     Text(step == 0 ? "Welcome to Morrow" : "Local Workspace Setup").font(.system(size: 20, weight: .semibold))
-                    Text(step == 0 ? "Choose how you'd like to get started." : "Approve Morrow once for local domain setup.").font(.system(size: 12)).foregroundStyle(.secondary)
+                    Text(step == 0 ? "Choose how you'd like to get started." : model.setupPermission == .allowed ? "Morrow has permission to configure local domains." : "Allow Morrow to configure local domains.").font(.system(size: 12)).foregroundStyle(.secondary)
                 }
             }
             if step == 0 {
@@ -31,8 +31,8 @@ struct OnboardingSheet: View {
             } else {
                 SettingsGroup {
                     SettingRow(title: "Morrow setup helper", subtitle: "Local DNS and ports 80/443") {
-                        if model.domainActivity != nil { ProgressView().controlSize(.small) }
-                        else { Text(model.domainApprovalNeeded ? "Approval needed" : model.domainFailure ? "Needs attention" : "Ready").font(.system(size: 11)).foregroundStyle(.secondary) }
+                        if model.domainActivity != nil || model.domainSetupPending { ProgressView().controlSize(.small) }
+                        else { Text(model.setupPermission.title).font(.system(size: 11)).foregroundStyle(model.setupPermission == .allowed ? Color.secondary : Color.orange) }
                     }
                     if model.domainApprovalNeeded {
                         SettingsDivider()
@@ -49,10 +49,13 @@ struct OnboardingSheet: View {
                 if step == 0 {
                     Button("Continue") { begin() }.settingsButton().keyboardShortcut(.defaultAction).disabled(model.busy)
                 } else {
-                    Button("Finish") { finish() }.settingsButton().keyboardShortcut(.defaultAction).disabled(model.busy || model.domainApprovalNeeded || model.domainFailure)
+                    Button("Finish") { finish() }.settingsButton().keyboardShortcut(.defaultAction).disabled(model.busy || model.domainFailure || model.webStatus?.systemConfigured != true)
                 }
             }
-        }.padding(24).frame(width: 500).serviceFeedback().interactiveDismissDisabled()
+        }.padding(24).frame(width: 500).serviceFeedback().interactiveDismissDisabled().onAppear {
+            model.refreshPermissions()
+            launchAtLogin = model.loginPermission == .allowed
+        }
     }
     private func begin() {
         do {

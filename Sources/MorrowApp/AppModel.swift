@@ -1,6 +1,7 @@
 import SwiftUI
 import Observation
 import MorrowCore
+import ServiceManagement
 
 struct InstanceCreationRequest: Identifiable {
     let id = UUID()
@@ -26,9 +27,14 @@ final class AppModel {
     var httpsMessage = ""
     var domainActivity: String?
     var domainFailure = false
-    var domainApprovalNeeded = false
+    var setupPermission: NativeSetupController.Permission = .notRegistered
+    var loginPermission: NativeSetupController.Permission = .notRegistered
+    var blockedBackgroundItems: [String] = []
+    var domainApprovalNeeded: Bool { setupPermission == .needsApproval }
     var onboardingPresented = false
-    @ObservationIgnored private var nativeSetupRequest: NativeSetupBridge.Request?
+    private var nativeSetupRequest: NativeSetupBridge.Request?
+    @ObservationIgnored private var nativeSetupAllowedAt: Date?
+    var domainSetupPending: Bool { nativeSetupRequest != nil && setupPermission == .allowed && !domainFailure }
     @ObservationIgnored private var toastTask: Task<Void, Never>?
     var statuses: [UUID: InstanceStatus] = [:]
     var channels: [VersionChannel] = []
@@ -67,6 +73,8 @@ final class AppModel {
     init(manager: DatabaseManager = DatabaseManager(), preview: Bool = false) {
         self.manager = manager; self.preview = preview
         if !preview {
+            refreshPermissions()
+            nativeSetupRequest = NativeSetupBridge.pendingRequest()
             inventory = InventoryStore(store: manager.store).load()
             installations = inventory.databases
             if let state = try? manager.store.load() {
@@ -128,6 +136,7 @@ final class AppModel {
     }
     func refresh() async {
         guard !preview, !refreshing else { return }
+        refreshPermissions()
         refreshing = true
         defer { refreshing = false }
         let manager = manager, readSyncReport = !syncing
@@ -297,7 +306,7 @@ final class AppModel {
                     let request = try NativeSetupBridge.submit(web, replaceResolvers: replaceResolvers)
                     nativeSetupRequest = request
                     guard try NativeSetupController.register() else {
-                        domainApprovalNeeded = true
+                        refreshPermissions()
                         httpsMessage = "Allow Morrow's setup helper in System Settings → General → Login Items & Extensions. No sudo password is stored."
                         NativeSetupController.requestApproval()
                         return
@@ -316,20 +325,49 @@ final class AppModel {
             } catch { await refresh(); domainFailure = true; httpsMessage = error.localizedDescription }
         }
     }
-    func openSetupApproval() { NativeSetupController.requestApproval() }
+    func refreshPermissions() {
+        guard !preview else { return }
+        setupPermission = NativeSetupController.permission
+        loginPermission = NativeSetupController.loginPermission
+        if nativeSetupRequest != nil && setupPermission == .allowed {
+            if nativeSetupAllowedAt == nil { nativeSetupAllowedAt = Date() }
+        } else { nativeSetupAllowedAt = nil }
+        let jobs = BackgroundRegistrations(store: manager.store, runner: manager.runner).permissionFiles()
+        blockedBackgroundItems = jobs.filter { SMAppService.statusForLegacyPlist(at: $0) == .requiresApproval }.map { $0.deletingPathExtension().lastPathComponent }
+    }
+    func openSetupApproval() { refreshPermissions(); NativeSetupController.requestApproval() }
+    func cleanupBackgroundItems() {
+        let cli = cliURL
+        perform("Cleaning background registrations…", operation: { manager in
+            let result = try BackgroundRegistrations(store: manager.store, runner: manager.runner).clean(cli: cli)
+            try result.write(to: manager.store.root.appendingPathComponent("background-cleanup.txt"), atomically: true, encoding: .utf8)
+        }, completion: {
+            self.refreshPermissions()
+            let message = (try? String(contentsOf: self.manager.store.root.appendingPathComponent("background-cleanup.txt"), encoding: .utf8)) ?? "Background registrations updated."
+            self.notify(message)
+        })
+    }
     private func resumeNativeSetup() async {
-        guard domainApprovalNeeded, !busy, NativeSetupController.approved, let request = nativeSetupRequest,
-              let response = NativeSetupBridge.response(for: request) else { return }
-        domainApprovalNeeded = false; nativeSetupRequest = nil
+        refreshPermissions()
+        guard !busy, NativeSetupController.approved, let request = nativeSetupRequest else { return }
+        guard let response = NativeSetupBridge.response(for: request) else {
+            if let began = nativeSetupAllowedAt, Date().timeIntervalSince(began) > 45 {
+                domainFailure = true
+                httpsMessage = "Permission is allowed, but the setup helper has not responded. Retry local-domain setup; no additional approval is needed."
+            }
+            return
+        }
+        nativeSetupRequest = nil
         if response.success { await finishNativeSetup() }
         else { domainFailure = true; httpsMessage = response.message }
     }
     private func finishNativeSetup() async {
-        domainApprovalNeeded = false
+        refreshPermissions()
         let sites = sites
         do {
             httpsMessage = try await Task.detached {
                 let web = try sites.store.load().web
+                guard SiteSystemSetup.isConfigured(http: web.httpPort, https: web.httpsPort, dns: web.dnsPort, suffixes: web.suffixes) else { throw MorrowError.message("Permission is allowed, but local routing still needs setup. Retry Set Up in Sites.") }
                 if web.sites.contains(where: { $0.https && !$0.ignored }) { try sites.trustCertificate(); return try sites.httpsSummary() }
                 return "Local domains ready. HTTP uses 80 and HTTPS uses 443."
             }.value
@@ -343,7 +381,7 @@ final class AppModel {
     var cliURL: URL { Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/morrow") }
     func checkUpdates(refresh: Bool = true) {
         guard !busy, !preview else { return }
-        activity = refresh ? "Refreshing Homebrew and checking updates…" : "Checking updates…"
+        activity = refresh ? "Refreshing binary sources and checking updates…" : "Checking updates…"
         error = nil
         let manager = manager
         Task {

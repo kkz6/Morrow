@@ -7,8 +7,8 @@ public struct DatabaseManager: Sendable {
     public init(store: StateStore = StateStore(), runner: any CommandRunning = CommandRunner()) {
         self.store = store; self.runner = runner
     }
-    public func installer() throws -> HomebrewInstaller {
-        HomebrewInstaller(runner: runner, configuredPath: try store.load().preferences.homebrewPath)
+    public func installer() throws -> BinaryInstaller {
+        BinaryInstaller(store: store, runner: runner)
     }
     public func install(engine: DatabaseEngine, channel: String) throws -> [Installation] {
         try store.operation { try installer().install(engine: engine, channel: channel) }
@@ -64,8 +64,7 @@ public struct DatabaseManager: Sendable {
             if let installation {
                 guard installation.engine == engine else { throw MorrowError.message("The selected binary belongs to another database engine.") }
                 chosen = try NativeInstallationDetector(runner: runner).validate(installation)
-                let expectedVersion = installation.version.components(separatedBy: "_").first ?? installation.version
-                guard HomebrewInstaller.matches(chosen, request: expectedVersion) else { throw MorrowError.message("The selected binary's actual version has changed. Refresh the version list before creating this instance.") }
+                guard SoftwareVersion(chosen.version) == SoftwareVersion(installation.version) else { throw MorrowError.message("The selected binary's actual version has changed. Refresh the version list before creating this instance.") }
             } else {
                 guard let resolved = try installer().install(engine: engine, channel: version).first else { throw MorrowError.message("No compatible server version was found.") }
                 chosen = resolved

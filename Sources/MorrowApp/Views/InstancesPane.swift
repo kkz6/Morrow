@@ -124,7 +124,7 @@ struct InstanceEditor: View {
     private var chosen: Installation? { versions.first { $0.id == installationID } }
     private var versionOptions: [SelectOption<String>] {
         var result = versions.map { SelectOption(value: $0.id, title: $0.version, symbol: "square.stack.3d.up") }
-        result += model.channels.filter { channel in channel.engine == engine && !versions.contains { HomebrewInstaller.matches($0, request: channel.formula) } }
+        result += model.channels.filter { channel in channel.engine == engine && !versions.contains { BinaryInstaller.matches($0, request: channel.formula) } }
             .map { .init(value: $0.formula, title: $0.title, symbol: "square.stack.3d.up") }
         if result.isEmpty { result.append(.init(value: "automatic", title: "Automatic version", symbol: "square.stack.3d.up")) }
         if !installationID.isEmpty && !result.contains(where: { $0.value == installationID }) && HomebrewInstaller.isAllowedFormula(installationID, engine: engine) {
@@ -212,7 +212,7 @@ struct InstanceEditor: View {
         }.padding(20).frame(width: 470)
         .onAppear {
             chooseVersion(resetPort: true)
-            if existing == nil && model.homebrewAvailable { model.loadChannels() }
+            if existing == nil { model.loadChannels() }
         }
         .onChange(of: engine) { _, _ in chooseVersion(resetPort: true) }
         .onChange(of: model.channels.map(\.id)) { _, _ in chooseVersion() }

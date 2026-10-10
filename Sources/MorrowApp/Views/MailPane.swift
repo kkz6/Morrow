@@ -97,7 +97,7 @@ private struct MailEditor: View {
                 SettingsDivider()
                 if existing == nil {
                     SettingRow(title: "Version") {
-                        SettingsSelect(label: "Mailpit version", selection: $version, options: [.init(value: "automatic", title: "Automatic", symbol: "square.stack.3d.up")] + versions.map { .init(value: $0.version, title: $0.version, symbol: "square.stack.3d.up") } + [.init(value: "current", title: "Current Homebrew release", symbol: "square.stack.3d.up")])
+                        SettingsSelect(label: "Mailpit version", selection: $version, options: [.init(value: "automatic", title: "Automatic", symbol: "square.stack.3d.up")] + versions.map { .init(value: $0.version, title: $0.version, symbol: "square.stack.3d.up") } + [.init(value: "current", title: "Current catalog release", symbol: "square.stack.3d.up")])
                     }
                     SettingsDivider()
                 }

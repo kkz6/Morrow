@@ -52,6 +52,7 @@ struct MorrowApp: App {
             }
         }
         AppDelegate.onReopen = { controller.show(SettingsRoot(model: model)) }
+        AppDelegate.onActivate = { Task { model.refreshPermissions(); await model.refresh() } }
     }
     var body: some Scene {
         MenuBarExtra {
@@ -101,6 +102,8 @@ private final class AppearanceTrackingView: NSView {
 @MainActor final class AppDelegate: NSObject, NSApplicationDelegate {
     static var onLaunch: (() -> Void)?
     static var onReopen: (() -> Void)?
+    static var onActivate: (() -> Void)?
+    func applicationDidBecomeActive(_ notification: Notification) { Self.onActivate?() }
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApplication.shared.setActivationPolicy(.accessory)
         Self.onLaunch?()

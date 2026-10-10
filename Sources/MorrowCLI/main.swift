@@ -1,6 +1,7 @@
 import Foundation
 import MorrowCore
 import Darwin
+import ServiceManagement
 
 struct Options {
     var positional: [String] = []
@@ -32,7 +33,13 @@ struct Options {
 let help = """
 Morrow — databases and development runtimes.
 
-  morrow doctor                          Check Homebrew and local paths
+  morrow doctor                          Check binary sources and local paths
+  morrow binary source <https-url|clear> Set a verified distribution catalog
+  morrow binary list                     List compatible managed releases
+  morrow binary refresh                  Refresh release metadata
+  morrow binary brew on|off              Opt in/out of Homebrew compatibility
+  morrow background status               Show service permission status
+  morrow background clean                Archive obsolete owned registrations
   morrow storage create <name>            Create a local MinIO S3 server
       --api-port <port> --console-port <port> --start --autostart
   morrow storage list [--json]            Show S3 servers and endpoints
@@ -59,7 +66,7 @@ Morrow — databases and development runtimes.
   morrow site watch                       Watch directories while running
   morrow site secure|unsecure <domain>   Toggle a site's local HTTPS
   morrow site php [version]               Select an installed PHP-FPM version
-      --install                          Reuse/install complete Homebrew PHP
+      --install                          Reuse/install a complete PHP distribution
   morrow site configure                  Set suffix, ports, HTTPS and login defaults
   morrow site setup [--remove]            Administrator setup for DNS and clean URLs
       --replace-resolvers                Back up and replace previous resolver files
@@ -86,7 +93,7 @@ Morrow — databases and development runtimes.
   morrow sync now [--retry] [--json]      Reconcile settings and missing services
   morrow db catalog                      List supported engines
   morrow db versions [engine]             Show native versions already installed
-  morrow db channels [engine]             Find available Homebrew version channels
+  morrow db channels [engine]             Find configured release channels
   morrow db install <engine> <channel>    Install a channel (17, 8.4, current, …)
   morrow db create <engine> <name>        Create a separate local instance
       --version <version-or-channel>     Choose a version; install only if missing
@@ -100,7 +107,7 @@ Morrow — databases and development runtimes.
   morrow db upgrade <name>               Back up and update a compatible instance
   morrow db recover <name>               Recover an interrupted database update
   morrow tool catalog                    List supported development runtimes
-  morrow tool channels <runtime>          Show nvm/Node or Homebrew releases
+  morrow tool channels <runtime>          Show available runtime releases
   morrow tool versions [runtime]          Discover existing runtime versions
   morrow tool install <runtime> [version] Reuse or install a version
   morrow tool use <runtime> <version>     Select the default for Morrow commands
@@ -161,9 +168,24 @@ func main() throws {
     if command == "doctor" {
         let installer = try manager.installer()
         print("Data:      \(manager.store.root.path)")
-        print("Homebrew:  \(installer.executable ?? "Not found — install from https://brew.sh")")
+        print("Catalog:   \(try manager.store.load().preferences.binaryCatalogURL.isEmpty ? "Not configured (direct Go downloads available)" : manager.store.load().preferences.binaryCatalogURL)")
+        print("Homebrew:  \(installer.allowsHomebrew ? "Compatibility enabled" : "Compatibility off") · \(installer.executable ?? "not installed")")
         print("Versions:  \(try installer.installations().count) native installations")
         print("Instances: \(try manager.store.load().instances.count)")
+        return
+    }
+    if command == "binary" { try binaryMain(args, manager: manager); return }
+    if command == "background" {
+        guard args.count == 1, ["status", "clean"].contains(args[0]) else { throw MorrowError.message("Usage: morrow background status|clean") }
+        let registrations = BackgroundRegistrations(store: manager.store, runner: manager.runner)
+        if args[0] == "clean" { print(try registrations.clean(cli: URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath())) }
+        else {
+            for file in registrations.permissionFiles() {
+                let status = SMAppService.statusForLegacyPlist(at: file)
+                let label = status == .enabled ? "Allowed" : status == .requiresApproval ? "Approval needed" : "No login permission record"
+                print("\(file.deletingPathExtension().lastPathComponent): \(label)")
+            }
+        }
         return
     }
     if command == "storage" { try storageMain(args, manager: ObjectStorageManager(store: manager.store, runner: manager.runner)); return }
@@ -192,7 +214,7 @@ func main() throws {
         let options = try Options(args)
         try options.requireCount(2, usage: "morrow db install <engine> <channel>")
         let selected = try engine(options.positional[0])
-        print("Installing \(selected.title) \(options.positional[1]) through Homebrew…")
+        print("Preparing \(selected.title) \(options.positional[1])…")
         let installations = try manager.install(engine: selected, channel: options.positional[1])
         for installation in installations { print("Installed: \(installation.version) [\(installation.formula)]") }
     case "create":
@@ -275,6 +297,29 @@ func main() throws {
 func printJSON<T: Encodable>(_ value: T) throws {
     let encoder = JSONEncoder(); encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
     print(String(decoding: try encoder.encode(value), as: UTF8.self))
+}
+
+func binaryMain(_ args: [String], manager: DatabaseManager) throws {
+    guard let command = args.first else { throw MorrowError.message("Usage: morrow binary source|list|refresh|brew") }
+    let options = Array(args.dropFirst()), policy = try manager.installer()
+    switch command {
+    case "source":
+        guard options.count == 1 else { throw MorrowError.message("Usage: morrow binary source <https-url|clear>") }
+        try manager.store.operation { try policy.managed.configure(url: options[0] == "clear" ? "" : options[0]) }
+        print("Binary source saved.")
+    case "list":
+        guard options.isEmpty else { throw MorrowError.message("Usage: morrow binary list") }
+        let releases = try policy.managed.releases()
+        for release in releases { print("\(release.package) \(release.version) · \(release.architecture) · macOS \(release.minimumMacOS)+") }
+        if releases.isEmpty { print("No hosted catalog configured. Go uses official downloads; Node uses nvm. Existing installations remain available.") }
+    case "refresh":
+        guard options.isEmpty else { throw MorrowError.message("Usage: morrow binary refresh") }
+        try policy.refreshMetadata(); print("Binary metadata refreshed.")
+    case "brew":
+        guard options.count == 1, ["on", "off"].contains(options[0]) else { throw MorrowError.message("Usage: morrow binary brew on|off") }
+        try policy.setHomebrewCompatibility(options[0] == "on"); print("Homebrew compatibility \(options[0]).")
+    default: throw MorrowError.message("Unknown binary command.")
+    }
 }
 
 func toolsMain(_ args: [String], manager: RuntimeManager) throws {
