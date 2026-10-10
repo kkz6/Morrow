@@ -31,7 +31,7 @@ struct SyncPane: View {
                     Text(folder.path).font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary).textSelection(.enabled)
                     Text("Choose a folder inside iCloud Drive on each Mac. iCloud handles file delivery; Morrow checks for changes while it is open.")
                         .font(.system(size: 12)).foregroundStyle(.secondary)
-                }.frame(maxWidth: .infinity, alignment: .leading).padding(12)
+                }.frame(maxWidth: .infinity, alignment: .leading).settingsCellPadding()
                 SettingsDivider()
                 SettingsActionRow(title: "Choose iCloud Drive Folder…", symbol: "folder") { chooseFolder() }.disabled(model.busy)
                 SettingsDivider()
@@ -43,7 +43,7 @@ struct SyncPane: View {
                     if let date = model.syncReport.lastSyncedAt { Text("Last checked: \(date.formatted(date: .abbreviated, time: .shortened))").font(.system(size: 11)).foregroundStyle(.secondary) }
                     ForEach(Array(model.syncReport.details.enumerated()), id: \.offset) { _, detail in Text(detail).font(.system(size: 12)).foregroundStyle(.secondary) }
                     ForEach(Array(model.syncReport.failures.enumerated()), id: \.offset) { _, failure in Text(failure).font(.system(size: 12)).foregroundStyle(.orange).textSelection(.enabled) }
-                }.frame(maxWidth: .infinity, alignment: .leading).padding(12)
+                }.frame(maxWidth: .infinity, alignment: .leading).settingsCellPadding()
                 SettingsDivider()
                 SettingsActionRow(title: "Sync and Retry Setup", symbol: "arrow.triangle.2.circlepath") { model.syncNow(retry: true) }
                     .disabled(model.busy || !model.preferences.iCloudSyncEnabled)

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added balanced inner padding to settings cells: fourteen-point side gutters and twelve-point top/bottom insets, with natural height for titles, subtitles, and wrapped text. Shared service rows and card content use the same spacing; button styling and window geometry are preserved.
+
 - Slightly tightened shared settings padding: four-point action insets, eleven-point cell gutters, 44-point standard rows, and twelve-point section spacing; service rows share the same padding tokens.
 
 - Matched light-mode settings cells to the About reference's warm gray fill (#F5F4F4), preserving the approved button palette.

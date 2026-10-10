@@ -75,7 +75,7 @@ struct SitesPane: View {
                 }
                 if let message = model.domainActivity ?? (!model.httpsMessage.isEmpty ? model.httpsMessage : hasPreviousResolver ? "Previous .\(model.web.suffix) routing will be backed up before replacement." : nil) {
                     Text(message).font(.system(size: 11)).foregroundStyle(model.domainFailure ? Color.orange : Color.secondary)
-                        .frame(maxWidth: .infinity, alignment: .leading).lineLimit(3).help(message).textSelection(.enabled).padding(12)
+                        .frame(maxWidth: .infinity, alignment: .leading).lineLimit(3).help(message).textSelection(.enabled).settingsCellPadding()
                 }
             }
             HStack {
@@ -142,7 +142,7 @@ struct SitesPane: View {
                 Button("Reveal Project") { NSWorkspace.shared.open(URL(fileURLWithPath: site.path)) }
                 if site.directoryID == nil { Button("Unlink", role: .destructive) { model.perform("Removing route…") { try SiteManager(store: $0.store, runner: $0.runner).unlink(site.id) } } }
             } label: { Image(systemName: "ellipsis").frame(width: 16) }.settingsMenuControl().disabled(model.busy)
-        }.padding(.horizontal, SettingsLayout.cardHorizontalInset).padding(.vertical, SettingsLayout.cardVerticalInset)
+        }.settingsCellPadding()
     }
 }
 
@@ -164,7 +164,7 @@ private struct ProjectDirectoriesSheet: View {
                                 model.perform("Updating directory…") { try SiteManager(store: $0.store, runner: $0.runner).setDirectory(directory.id, enabled: enabled) }
                             })).labelsHidden().settingsToggle()
                             ServiceActionButton(kind: .remove, title: "Unpark directory; preserve its project folders") { let path = directory.path; model.perform("Removing directory…", success: "Directory unparked; project folders preserved") { try SiteManager(store: $0.store, runner: $0.runner).unpark(path) } }
-                        }.padding(12).disabled(model.busy)
+                        }.settingsCellPadding().disabled(model.busy)
                         if index < model.web.directories.count - 1 { SettingsDivider() }
                     }
                     if model.web.directories.isEmpty { Text("No directories parked yet.").font(.system(size: 12)).foregroundStyle(.secondary).padding(16) }

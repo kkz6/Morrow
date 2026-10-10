@@ -51,7 +51,7 @@ struct MailPane: View {
                             ServiceActionButton(kind: .logs, title: "Open Mailpit logs") { model.showMailLogs(service) }
                             Spacer()
                             Button("Remove…", role: .destructive) { removing = service }.settingsButton(height: 28)
-                        }.padding(12).disabled(model.busy)
+                        }.settingsCellPadding().disabled(model.busy)
                     }
                 }
             }

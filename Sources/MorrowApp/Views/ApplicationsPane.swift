@@ -63,7 +63,7 @@ struct ApplicationsPane: View {
                         .font(.system(size: 12)).foregroundStyle(.secondary)
                     Text("morrow tool exec \(engine.rawValue) -- \(engine == .go ? "version" : "--version")")
                         .font(.system(size: 12, design: .monospaced)).textSelection(.enabled)
-                }.frame(maxWidth: .infinity, alignment: .leading).padding(12)
+                }.frame(maxWidth: .infinity, alignment: .leading).settingsCellPadding()
             }
             if engine == .flutter { SettingsNote(text: "Homebrew provides the current Flutter release. Selected SDKs are retained separately in Morrow. Target platforms may require Xcode, Android SDK, or other Flutter prerequisites.") }
             if engine == .node {
@@ -122,7 +122,7 @@ struct ApplicationsPane: View {
                 if model.runtimeUpdates.contains(where: { $0.id == item.id && $0.canUpgrade }) { Button("Update…") { pendingUpdate = item } }
                 Button("Remove from Morrow…", role: .destructive) { pendingRemoval = item }
             } label: { Image(systemName: "ellipsis").frame(width: 16) }.settingsMenuControl().disabled(model.busy)
-        }.padding(.horizontal, SettingsLayout.cardHorizontalInset).padding(.vertical, SettingsLayout.cardVerticalInset)
+        }.settingsCellPadding()
     }
     private func selectVersion() {
         guard options.contains(where: { $0.value == selection }) else { return }

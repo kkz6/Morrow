@@ -45,14 +45,14 @@ struct StoragePane: View {
                         }.disabled(model.busy)
                         ServiceActionButton(kind: .logs, title: "Open MinIO logs") { model.showStorageLogs(service) }
                         ServiceActionButton(kind: .configuration, title: "S3 server settings") { editing = service }
-                    }.padding(12)
+                    }.settingsCellPadding()
                     SettingsDivider()
                     HStack {
                         Text("Buckets").font(.system(size: 12, weight: .medium)); Spacer()
                         if model.bucketsLoading.contains(service.id) { ProgressView().controlSize(.mini) }
                         ServiceActionButton(kind: .refresh, title: "Refresh buckets") { model.loadBuckets(service, force: true) }.disabled(model.storageStatuses[service.id] != .running || model.bucketsLoading.contains(service.id))
                         Button("Create Bucket") { bucketName = ""; bucketService = service; addingBucket = true }.settingsButton(height: 28).disabled(model.storageStatuses[service.id] != .running)
-                    }.padding(12)
+                    }.settingsCellPadding()
                     if model.storageStatuses[service.id] == .running {
                         ForEach(model.buckets[service.id] ?? [], id: \.self) { bucket in
                             HStack {
@@ -61,10 +61,10 @@ struct StoragePane: View {
                                     do { model.copy(try model.storage.configuration(service, bucket: bucket), message: "S3 bucket configuration copied") } catch { model.notify(error.localizedDescription, error: true) }
                                 }
                                 ServiceActionButton(kind: .remove, title: "Delete empty bucket") { bucketService = service; deletingBucket = bucket }
-                            }.padding(.horizontal, 12).padding(.bottom, 12)
+                            }.padding(.horizontal, SettingsLayout.cardHorizontalInset).padding(.bottom, SettingsLayout.cardVerticalInset)
                         }
-                        if model.buckets[service.id]?.isEmpty == true && !model.bucketsLoading.contains(service.id) { Text("No buckets yet. Create one for your application.").font(.system(size: 12)).foregroundStyle(.secondary).padding(.horizontal, 12).padding(.bottom, 12) }
-                    } else { Text("Start the S3 server to view its buckets.").font(.system(size: 12)).foregroundStyle(.secondary).padding(.horizontal, 12).padding(.bottom, 12) }
+                        if model.buckets[service.id]?.isEmpty == true && !model.bucketsLoading.contains(service.id) { Text("No buckets yet. Create one for your application.").font(.system(size: 12)).foregroundStyle(.secondary).padding(.horizontal, SettingsLayout.cardHorizontalInset).padding(.bottom, SettingsLayout.cardVerticalInset) }
+                    } else { Text("Start the S3 server to view its buckets.").font(.system(size: 12)).foregroundStyle(.secondary).padding(.horizontal, SettingsLayout.cardHorizontalInset).padding(.bottom, SettingsLayout.cardVerticalInset) }
                     SettingsDivider()
                     SettingsActionGroup {
                         Button("Open Console") { NSWorkspace.shared.open(service.consoleURL) }.disabled(model.storageStatuses[service.id] != .running)

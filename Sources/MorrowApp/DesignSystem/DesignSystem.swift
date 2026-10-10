@@ -158,6 +158,15 @@ struct SettingsDivider: View {
     }
 }
 
+extension View {
+    /// Content gutters belong to the cell, independently of inset action buttons.
+    /// Apply before minimum heights so multiline content can grow naturally.
+    func settingsCellPadding() -> some View {
+        padding(.horizontal, SettingsLayout.cardHorizontalInset)
+            .padding(.vertical, SettingsLayout.cardVerticalInset)
+    }
+}
+
 // MARK: - Setting Row
 
 /// One row inside a SettingsCard: optional leading icon, title + optional subtitle,
@@ -184,12 +193,13 @@ struct SettingRow<Trailing: View>: View {
                         .foregroundStyle(.secondary)
                 }
             }
+            .fixedSize(horizontal: false, vertical: true)
 
             Spacer(minLength: DS.Spacing.md)
 
             trailing
         }
-        .padding(.horizontal, SettingsLayout.cardHorizontalInset)
+        .settingsCellPadding()
         .frame(minHeight: DS.Size.rowHeight)
     }
 }

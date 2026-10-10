@@ -21,12 +21,12 @@ struct CommandLinePane: View {
                 VStack(alignment: .leading, spacing: 10) {
                     Text("Add your local bin directory to PATH in ~/.zshrc:").font(.system(size: 12)).foregroundStyle(.secondary)
                     Text("export PATH=\"$HOME/.local/bin:$PATH\"").font(.system(size: 12, design: .monospaced)).textSelection(.enabled)
-                }.padding(12)
+                }.settingsCellPadding()
             }
             SettingsGroup(header: "Example") {
                 Text("morrow db create postgresql my-app --start\nmorrow db list\nmorrow db logs my-app")
                     .font(.system(size: 12, design: .monospaced)).textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading).padding(12)
+                    .frame(maxWidth: .infinity, alignment: .leading).settingsCellPadding()
             }
         }.onAppear {
             installed = (try? FileManager.default.destinationOfSymbolicLink(atPath: CLIInstaller.defaultDestination.path)) == source.path
@@ -70,7 +70,7 @@ struct GeneralOptionsPane: View {
                             Task { await model.refresh() }
                         }.settingsButton(height: ControlLayout.height).disabled(model.busy)
                     }
-                }.padding(12)
+                }.settingsCellPadding()
             }
             SettingsGroup(header: "Node Version Manager") {
                 VStack(alignment: .leading, spacing: 10) {
@@ -85,7 +85,7 @@ struct GeneralOptionsPane: View {
                             Task { await model.loadInventory(force: true) }
                         }.settingsButton().disabled(model.busy)
                     }
-                }.padding(12)
+                }.settingsCellPadding()
             }
             SettingsNote(text: "Database startup is configured per instance. Morrow uses macOS launchd so services continue running independently of the menu bar app.")
             SettingsGroup {
