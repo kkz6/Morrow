@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Slightly tightened shared settings padding: four-point action insets, eleven-point cell gutters, 44-point standard rows, and twelve-point section spacing; service rows share the same padding tokens.
+
 - Matched light-mode settings cells to the About reference's warm gray fill (#F5F4F4), preserving the approved button palette.
 
 - Softened shared settings surfaces to gray-white cards, slightly lighter neutral buttons, quiet outlines, and restrained shadows; charcoal equivalents cover dark mode.

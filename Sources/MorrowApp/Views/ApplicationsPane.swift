@@ -122,7 +122,7 @@ struct ApplicationsPane: View {
                 if model.runtimeUpdates.contains(where: { $0.id == item.id && $0.canUpgrade }) { Button("Update…") { pendingUpdate = item } }
                 Button("Remove from Morrow…", role: .destructive) { pendingRemoval = item }
             } label: { Image(systemName: "ellipsis").frame(width: 16) }.settingsMenuControl().disabled(model.busy)
-        }.padding(.horizontal, 12).padding(.vertical, 14)
+        }.padding(.horizontal, SettingsLayout.cardHorizontalInset).padding(.vertical, SettingsLayout.cardVerticalInset)
     }
     private func selectVersion() {
         guard options.contains(where: { $0.value == selection }) else { return }

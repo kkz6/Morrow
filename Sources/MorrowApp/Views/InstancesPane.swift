@@ -101,7 +101,7 @@ struct InstanceRow: View {
                 Divider()
                 Button("Restart") { let id = instance.id; model.perform("Restarting \(instance.name)…") { try $0.restart(id) } }.disabled(!active || model.busy)
             } label: { Image(systemName: "ellipsis").frame(width: 16) }.settingsMenuControl()
-        }.padding(.horizontal, 12).padding(.vertical, 14)
+        }.padding(.horizontal, SettingsLayout.cardHorizontalInset).padding(.vertical, SettingsLayout.cardVerticalInset)
     }
 }
 

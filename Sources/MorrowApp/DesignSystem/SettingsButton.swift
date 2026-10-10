@@ -19,7 +19,7 @@ struct SettingsButtonStyle: ButtonStyle {
         configuration.label
             .font(.system(size: height < 32 ? 12 : 13, weight: .medium))
             .foregroundStyle(foreground(role: configuration.role))
-            .padding(.horizontal, iconOnly ? 0 : 12)
+            .padding(.horizontal, iconOnly ? 0 : SettingsLayout.cardHorizontalInset)
             .frame(minWidth: iconOnly ? height : 64,
                    maxWidth: expands ? .infinity : nil,
                    minHeight: height, maxHeight: height, alignment: alignment)

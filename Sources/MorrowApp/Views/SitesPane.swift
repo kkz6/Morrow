@@ -142,7 +142,7 @@ struct SitesPane: View {
                 Button("Reveal Project") { NSWorkspace.shared.open(URL(fileURLWithPath: site.path)) }
                 if site.directoryID == nil { Button("Unlink", role: .destructive) { model.perform("Removing route…") { try SiteManager(store: $0.store, runner: $0.runner).unlink(site.id) } } }
             } label: { Image(systemName: "ellipsis").frame(width: 16) }.settingsMenuControl().disabled(model.busy)
-        }.padding(.horizontal, 12).padding(.vertical, 14)
+        }.padding(.horizontal, SettingsLayout.cardHorizontalInset).padding(.vertical, SettingsLayout.cardVerticalInset)
     }
 }
 
