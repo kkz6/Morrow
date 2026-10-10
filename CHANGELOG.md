@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Matched light-mode settings cells to the About reference's warm gray fill (#F5F4F4), preserving the approved button palette.
+
 - Softened shared settings surfaces to gray-white cards, slightly lighter neutral buttons, quiet outlines, and restrained shadows; charcoal equivalents cover dark mode.
 - Unified normal, hover, pressed, and disabled control colors across settings buttons, menu controls, inputs, and brand-icon backplates without changing layout or card-edge geometry.
 

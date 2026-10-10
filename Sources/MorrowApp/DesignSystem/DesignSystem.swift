@@ -33,7 +33,9 @@ enum DS {
     enum Surface {
         enum State { case normal, hovered, pressed, disabled }
         static func card(_ scheme: ColorScheme) -> Color {
-            Color(white: scheme == .dark ? 0.18 : 0.955)
+            if scheme == .dark { return Color(white: 0.18) }
+            // Warm gray sampled from the supplied About reference (#F5F4F4).
+            return Color(.sRGB, red: 245.0 / 255.0, green: 244.0 / 255.0, blue: 244.0 / 255.0)
         }
         static func control(_ scheme: ColorScheme, state: State = .normal) -> Color {
             let value: Double
