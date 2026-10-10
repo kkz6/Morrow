@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Softened shared settings surfaces to gray-white cards, slightly lighter neutral buttons, quiet outlines, and restrained shadows; charcoal equivalents cover dark mode.
+- Unified normal, hover, pressed, and disabled control colors across settings buttons, menu controls, inputs, and brand-icon backplates without changing layout or card-edge geometry.
+
 - Made the menu bar popover more compact with a 300-point width, 46-point shared service rows, 24-point controls/icons, tighter header/footer spacing, and a smaller empty state and feedback overlay.
 - Unified menu row layout and separators across databases, mail, and S3, retaining readable labels, tooltips, accessibility names, and all existing actions.
 

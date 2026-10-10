@@ -27,7 +27,7 @@ struct MorrowApp: App {
             model.statuses = Dictionary(uniqueKeysWithValues: model.instances.map { ($0.id, .stopped) })
             model.selection = .instances
         }
-        if snapshot && CommandLine.arguments.contains("--snapshot-dark") { model.preferences.appearance = "dark" }
+        if snapshot { model.preferences.appearance = CommandLine.arguments.contains("--snapshot-dark") ? "dark" : "light" }
         if snapshot, let index = CommandLine.arguments.firstIndex(of: "--snapshot-section"),
            index + 1 < CommandLine.arguments.count,
            let section = SettingsSection(rawValue: CommandLine.arguments[index + 1]) {
@@ -132,7 +132,7 @@ private final class AppearanceTrackingView: NSView {
             }
             if let view = window.contentView { save(view: view, to: directory.appendingPathComponent("settings.png")) }
             let menu = NSHostingView(rootView: DatabasePopover().environment(model).tint(.morrowAccent)
-                .background(Color(nsColor: .windowBackgroundColor)).preferredColorScheme(.light))
+                .background(Color(nsColor: .windowBackgroundColor)).preferredColorScheme(model.colorScheme ?? .light))
             let serviceCount = model.instances.count + model.mailServices.count + model.objectStorage.count
             menu.frame = NSRect(x: 0, y: 0, width: MenuLayout.width, height: MenuLayout.height(serviceCount))
             let menuWindow = NSWindow(contentRect: menu.frame, styleMask: [.borderless], backing: .buffered, defer: false)

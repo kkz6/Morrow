@@ -28,23 +28,51 @@ enum DS {
         static let popoverWidth: CGFloat = MenuLayout.width
     }
 
+    /// Quiet neutral surfaces shared by cards, controls, and inputs. Explicit
+    /// appearance values avoid white-on-white controls and black card blocks.
+    enum Surface {
+        enum State { case normal, hovered, pressed, disabled }
+        static func card(_ scheme: ColorScheme) -> Color {
+            Color(white: scheme == .dark ? 0.18 : 0.955)
+        }
+        static func control(_ scheme: ColorScheme, state: State = .normal) -> Color {
+            let value: Double
+            if scheme == .dark {
+                switch state { case .normal: value = 0.215; case .hovered: value = 0.25; case .pressed: value = 0.16; case .disabled: value = 0.19 }
+            } else {
+                switch state { case .normal: value = 0.975; case .hovered: value = 0.988; case .pressed: value = 0.935; case .disabled: value = 0.96 }
+            }
+            return Color(white: value)
+        }
+        static func input(_ scheme: ColorScheme) -> Color {
+            Color(white: scheme == .dark ? 0.155 : 0.98)
+        }
+        static func border(_ scheme: ColorScheme, enabled: Bool = true) -> Color {
+            scheme == .dark ? Color.white.opacity(enabled ? 0.14 : 0.07) : Color.black.opacity(enabled ? 0.15 : 0.075)
+        }
+        static func shadow(_ scheme: ColorScheme, enabled: Bool = true, pressed: Bool = false) -> Color {
+            .black.opacity(!enabled || pressed ? 0 : scheme == .dark ? 0.10 : 0.045)
+        }
+    }
+
     /// Visible, theme-adaptive border used on every card and input.
-    static let borderColor = Color.gray.opacity(0.30)
+    static let borderColor = Color.primary.opacity(0.14)
     /// Lighter hairline used to separate rows inside a card.
-    static let dividerColor = Color.gray.opacity(0.28)
+    static let dividerColor = Color.primary.opacity(0.10)
 }
 
 // MARK: - Icon Tile
 
 /// SF Symbol on a rounded, tinted square — the colored icons in the sidebar / rows.
 struct IconTile: View {
+    @Environment(\.colorScheme) private var colorScheme
     let symbol: String
     var color: Color = .accentColor
     var size: CGFloat = DS.Size.tile
 
     var body: some View {
         RoundedRectangle(cornerRadius: DS.Radius.tile, style: .continuous)
-            .fill(BrandIcons.image(for: symbol) == nil ? AnyShapeStyle(color.gradient) : AnyShapeStyle(Color(nsColor: .controlBackgroundColor)))
+            .fill(BrandIcons.image(for: symbol) == nil ? AnyShapeStyle(color.gradient) : AnyShapeStyle(DS.Surface.control(colorScheme)))
             .frame(width: size, height: size)
             .overlay {
                 if let image = BrandIcons.image(for: symbol) {
@@ -54,7 +82,7 @@ struct IconTile: View {
                         .font(.system(size: size * 0.5, weight: .semibold)).foregroundStyle(.white)
                 }
             }
-            .shadow(color: color.opacity(0.25), radius: 1, y: 0.5)
+            .shadow(color: color.opacity(0.12), radius: 1, y: 0.5)
     }
 }
 
@@ -89,6 +117,7 @@ struct SettingsNote: View {
 /// Grouped card that lays its children out as rows separated by hairline dividers,
 /// matching the rounded grouped lists in the reference design.
 struct SettingsCard<Content: View>: View {
+    @Environment(\.colorScheme) private var colorScheme
     @ViewBuilder var content: Content
     @State private var cardID = UUID()
     @State private var cardSize = CGSize.zero
@@ -107,13 +136,13 @@ struct SettingsCard<Content: View>: View {
         }
         .background(
             RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
-                .fill(.background)
+                .fill(DS.Surface.card(colorScheme))
         )
         .overlay(
             RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
                 .strokeBorder(DS.borderColor, lineWidth: 1)
         )
-        .shadow(color: .black.opacity(0.035), radius: 2, y: 1)
+        .shadow(color: DS.Surface.shadow(colorScheme), radius: 1, y: 0.5)
     }
 }
 

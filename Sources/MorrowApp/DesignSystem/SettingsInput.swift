@@ -13,6 +13,7 @@ struct SettingsInput: View {
     var clearable = false
     @FocusState private var focused: Bool
     @Environment(\.isEnabled) private var enabled
+    @Environment(\.colorScheme) private var colorScheme
     var body: some View {
         HStack(spacing: 8) {
             if let symbol { Image(systemName: symbol).font(.system(size: 12)).foregroundStyle(.secondary).frame(width: 14) }
@@ -25,8 +26,8 @@ struct SettingsInput: View {
             }
         }
         .padding(.horizontal, ControlLayout.inset).frame(height: ControlLayout.height)
-        .background(Color(nsColor: .textBackgroundColor).opacity(enabled ? 1 : 0.5), in: RoundedRectangle(cornerRadius: ControlLayout.radius))
-        .overlay(RoundedRectangle(cornerRadius: ControlLayout.radius).strokeBorder(focused ? Color.morrowAccent.opacity(0.7) : DS.dividerColor, lineWidth: 1))
+        .background(DS.Surface.input(colorScheme).opacity(enabled ? 1 : 0.5), in: RoundedRectangle(cornerRadius: ControlLayout.radius))
+        .overlay(RoundedRectangle(cornerRadius: ControlLayout.radius).strokeBorder(focused ? Color.morrowAccent.opacity(0.7) : DS.Surface.border(colorScheme, enabled: enabled), lineWidth: focused ? 1 : 0.75))
     }
 }
 

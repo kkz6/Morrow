@@ -82,4 +82,4 @@ Open **Settings → Object Storage → Create S3 Server** to run MinIO and confi
 
 ## Find your preferences and logs
 
-General is a single scrollable page with grouped headings for appearance, menu bar, command line, and iCloud sync. Service cards provide their own logs and configuration actions. The sidebar groups Projects, Services, and App for navigation; it has no separate Logs item.
+General is a single scrollable page with grouped headings for appearance, menu bar, command line, and iCloud sync. Shared cards and controls use subtle neutral surfaces that adapt to light and dark appearance. Service cards provide their own logs and configuration actions. The sidebar groups Projects, Services, and App for navigation; it has no separate Logs item.

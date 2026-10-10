@@ -24,7 +24,8 @@ struct SettingsButtonStyle: ButtonStyle {
                    maxWidth: expands ? .infinity : nil,
                    minHeight: height, maxHeight: height, alignment: alignment)
             .background(surface(pressed: configuration.isPressed), in: corners.shape)
-            .overlay(corners.shape.strokeBorder(Color.primary.opacity(enabled ? 0.13 : 0.07), lineWidth: 0.75))
+            .overlay(corners.shape.strokeBorder(DS.Surface.border(colorScheme, enabled: enabled), lineWidth: 0.75))
+            .shadow(color: DS.Surface.shadow(colorScheme, enabled: enabled, pressed: configuration.isPressed), radius: 1, y: 0.5)
             .contentShape(corners.shape)
             .background {
                 if let card {
@@ -40,11 +41,7 @@ struct SettingsButtonStyle: ButtonStyle {
         return role == .destructive ? .red : .primary
     }
     private func surface(pressed: Bool) -> Color {
-        if colorScheme == .dark {
-            return Color.white.opacity(!enabled ? 0.025 : pressed ? 0.12 : hovering ? 0.085 : 0.055)
-        }
-        if pressed && enabled { return Color.black.opacity(0.035) }
-        return Color.white.opacity(!enabled ? 0.35 : hovering ? 0.95 : 0.75)
+        DS.Surface.control(colorScheme, state: !enabled ? .disabled : pressed ? .pressed : hovering ? .hovered : .normal)
     }
 }
 
@@ -54,10 +51,20 @@ extension View {
     }
     func settingsMenuControl(height: CGFloat = 28) -> some View {
         menuStyle(.borderlessButton).menuIndicator(.hidden)
-            .frame(width: height, height: height)
-            .background(Color.primary.opacity(0.02), in: RoundedRectangle(cornerRadius: 8))
-            .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.primary.opacity(0.13), lineWidth: 0.75))
-            .tint(.primary)
+            .modifier(SettingsMenuControlSurface(height: height)).tint(.primary)
+    }
+}
+
+private struct SettingsMenuControlSurface: ViewModifier {
+    let height: CGFloat
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.isEnabled) private var enabled
+    @State private var hovering = false
+    func body(content: Content) -> some View {
+        content.frame(width: height, height: height)
+            .background(DS.Surface.control(colorScheme, state: !enabled ? .disabled : hovering ? .hovered : .normal), in: RoundedRectangle(cornerRadius: ControlLayout.radius))
+            .overlay(RoundedRectangle(cornerRadius: ControlLayout.radius).strokeBorder(DS.Surface.border(colorScheme, enabled: enabled), lineWidth: 0.75))
+            .onHover { hovering = $0 }
     }
 }
 
@@ -111,14 +118,16 @@ struct MenuIconButtonStyle: ButtonStyle {
 
 struct MenuActionButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var enabled
+    @Environment(\.colorScheme) private var colorScheme
     @State private var hovering = false
     func makeBody(configuration: Configuration) -> some View {
         configuration.label.font(.system(size: 12, weight: .medium))
             .foregroundStyle(enabled ? Color.primary : .secondary)
             .padding(.horizontal, 14).frame(minWidth: 132, minHeight: 28, maxHeight: 28)
-            .background(Color.primary.opacity(configuration.isPressed ? 0.08 : hovering ? 0.05 : 0.025),
+            .background(DS.Surface.control(colorScheme, state: !enabled ? .disabled : configuration.isPressed ? .pressed : hovering ? .hovered : .normal),
                         in: RoundedRectangle(cornerRadius: 6))
-            .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(Color.primary.opacity(0.12), lineWidth: 0.75))
+            .overlay(RoundedRectangle(cornerRadius: 6).strokeBorder(DS.Surface.border(colorScheme, enabled: enabled), lineWidth: 0.75))
+            .shadow(color: DS.Surface.shadow(colorScheme, enabled: enabled, pressed: configuration.isPressed), radius: 1, y: 0.5)
             .contentShape(RoundedRectangle(cornerRadius: 6))
             .onHover { hovering = $0 }
     }
