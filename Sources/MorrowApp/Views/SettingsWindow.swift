@@ -74,7 +74,7 @@ struct SettingsWindow: View {
                 if let error = model.error { ErrorCard(message: error) { model.error = nil }.padding(.horizontal, 16).padding(.bottom, 16) }
             }
         }
-        .serviceFeedback(placement: .settings)
+        .serviceFeedback()
         .feedbackSheet(item: $model.logRequest) { ServiceLogSheet(request: $0).environment(model) }
         .feedbackSheet(item: $model.configurationRequest) { ConfigurationEditorSheet(request: $0).environment(model) }
         .feedbackSheet(item: $model.creationRequest) { version in

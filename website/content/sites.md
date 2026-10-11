@@ -166,7 +166,7 @@ morrow site configure --https on
 
 The global setting controls new sites. Caddy's internal CA issues and renews certificates for explicitly configured project hostnames. It does not request public certificates for these development domains.
 
-After a project's HTTPS switch changes, the app shows a visible notification with the exact address and **Open Site**. It checks that project's TLS connection before reporting **HTTPS ready**; missing certificate trust leads to **Finish Setup**, and a connection failure remains visible until dismissed. Notifications float below the settings header, pause while hovered, and can be closed manually.
+After a project's HTTPS switch changes, the app shows a centered HUD with the exact address and **Open Site**. It checks that project's TLS connection before reporting **HTTPS ready**; missing certificate trust leads to **Finish Setup**, and a connection failure remains visible until dismissed. HUDs appear in the settings window and active sheets, pause while hovered, and can be closed manually. The menu dropdown contains no toast notifications.
 
 Enable HTTPS on a site, then choose **Set Up** or **Finish Setup** in **Local Domains**. Setup skips certificate changes when the CA is already trusted. Advanced users can still run:
 

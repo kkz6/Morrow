@@ -59,9 +59,24 @@ done
 morrow_signing_identity="${MORROW_SIGNING_IDENTITY:--}"
 if [[ "$morrow_signing_identity" == "-" ]]; then
     codesign --force --sign - "$app/Contents/MacOS/morrow"
-    codesign --force --sign - "$app"
 else
     codesign --force --sign "$morrow_signing_identity" --options runtime --timestamp "$app/Contents/MacOS/morrow"
+fi
+# Reflect executable changes in the helper's launchd configuration checksum.
+# Keeping the old plist bytes can leave ServiceManagement using a stale job
+# disposition after the approved executable changes.
+morrow_setup_hash="$(codesign -dv --verbose=4 "$app/Contents/MacOS/morrow" 2>&1 | awk -F= '$1=="CDHash" {print $2}')"
+python3 - "$app/Contents/Library/LaunchDaemons/dev.morrow.helper.setup.plist" "$morrow_setup_hash" <<'PY'
+import plistlib, re, sys
+path, digest=sys.argv[1:]
+if not re.fullmatch(r'[a-fA-F0-9]{40,64}', digest): raise SystemExit('The setup launcher has no valid code digest.')
+with open(path,'rb') as source: info=plistlib.load(source)
+info.setdefault('EnvironmentVariables',{})['MORROW_SETUP_CODE_HASH']=digest
+with open(path,'wb') as destination: plistlib.dump(info,destination)
+PY
+if [[ "$morrow_signing_identity" == "-" ]]; then
+    codesign --force --sign - "$app"
+else
     codesign --force --sign "$morrow_signing_identity" --options runtime --timestamp "$app"
     morrow_app_team="$(codesign -dv --verbose=4 "$app" 2>&1 | awk -F= '$1=="TeamIdentifier" {print $2}')"
     morrow_cli_team="$(codesign -dv --verbose=4 "$app/Contents/MacOS/morrow" 2>&1 | awk -F= '$1=="TeamIdentifier" {print $2}')"

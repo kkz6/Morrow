@@ -2,7 +2,9 @@
 
 ## Unreleased
 
-- Replaced the low-contrast bottom toast with a shared floating notification: an opaque charcoal surface, readable text, status icon, close control, optional action, and placement below the settings header. Success notices last longer and pause on hover; errors stay until dismissed. Reduce Motion, Increased Contrast, and VoiceOver are supported.
+- Centered toast feedback as a compact macOS HUD with native action buttons, removed notifications from the menu dropdown, and bounded menu sizing so overlays cannot expand it across the screen.
+
+- Replaced the low-contrast bottom toast with shared HUD feedback: an opaque charcoal surface, readable text, status icon, close control, and optional action. Success notices last longer and pause on hover; errors stay until dismissed. Reduce Motion, Increased Contrast, and VoiceOver are supported.
 - Project HTTPS confirmations now show the exact URL and Open Site action, verify the selected route before reporting it ready, and distinguish certificate setup from a working connection. Added CLI route renaming and optional per-domain HTTPS validation.
 
 - Migrated the production setup helper to a distinct native identity, retaining the old helper only for scoped unregistration. Native approval-denied errors now lead to the Morrow approval explanation and Login Items settings instead of a generic failure with no prompt.

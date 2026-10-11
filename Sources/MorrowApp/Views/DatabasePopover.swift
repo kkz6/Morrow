@@ -56,7 +56,7 @@ struct DatabasePopover: View {
                     .buttonStyle(MenuIconButtonStyle()).help("Quit Morrow — services stay running").accessibilityLabel("Quit Morrow").disabled(model.busy)
             }.font(.system(size: 12)).foregroundStyle(.secondary)
                 .padding(.horizontal, MenuLayout.horizontalInset).frame(height: MenuLayout.footerHeight)
-        }.frame(width: MenuLayout.width).serviceFeedback(compact: true)
+        }.frame(width: MenuLayout.width).fixedSize(horizontal: false, vertical: true)
             .task { await model.refresh() }
     }
 }

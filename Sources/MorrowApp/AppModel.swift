@@ -410,6 +410,17 @@ final class AppModel {
         blockedBackgroundItems = jobs.filter { SMAppService.statusForLegacyPlist(at: $0) == .requiresApproval }.map { $0.deletingPathExtension().lastPathComponent }
     }
     func openSetupApproval() { refreshPermissions(); NativeSetupController.requestApproval() }
+    func refreshSetupHelper() {
+        Task {
+            do {
+                let allowed = try await NativeSetupController.refreshSignedRegistration(store: manager.store)
+                refreshPermissions()
+                if !allowed {
+                    notify("Allow Morrow's updated setup helper in Login Items.", title: "Setup approval needed", action: ToastAction(title: "Review Permissions", perform: NativeSetupController.openApprovalSettings), information: true)
+                }
+            } catch { notify(error.localizedDescription, error: true, title: "Setup helper needs attention") }
+        }
+    }
     func cleanupBackgroundItems() {
         let cli = cliURL
         perform("Cleaning background registrations…", operation: { manager in
