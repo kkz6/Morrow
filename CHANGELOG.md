@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Migrated the production setup helper to a distinct native identity, retaining the old helper only for scoped unregistration. Native approval-denied errors now lead to the Morrow approval explanation and Login Items settings instead of a generic failure with no prompt.
+
 - Signed app cleanup now refreshes an older native setup-helper registration before repairing gateway association. It retains pending domain setup, requests macOS approval only when needed, and leaves database, mail, PHP, DNS, and web server jobs running. Standard app/CLI CI also uses Xcode 27.
 
 - Added a dedicated Xcode 27 release workflow with Developer ID signing, Apple notarization, ticket stapling, checksum packaging, and temporary-keychain cleanup. Development builds remain available without release credentials.

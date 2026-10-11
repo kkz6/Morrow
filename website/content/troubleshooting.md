@@ -30,6 +30,10 @@ For a properly signed build, the app's cleanup also repairs missing gateway asso
 
 Install the signed app in **Applications**, then use **General → Background access → … → Clean Up Old Registrations**. Cleanup updates user-owned job paths to the signed launcher and re-registers an older setup helper using Apple's native service API. This re-registration affects the setup helper only; running servers keep their PIDs. If macOS asks for approval of the newly signed helper, allow Morrow and run cleanup again. A saved domain setup request is preserved and resumes before gateway-only cleanup proceeds.
 
+macOS may block helper registration with “Operation not permitted” before showing a password dialog. Morrow treats this native approval error as a request to allow its production setup helper and shows **Allow Morrow Setup → Continue** to open Login Items. The production helper has a distinct identity from the earlier unsigned development helper, which cleanup unregisters through the native API. Do not toggle the whole Morrow service group off merely to refresh its display; that can revoke access from running servers.
+
+Keep Morrow open during approval. It resumes the pending cleanup after native permission becomes allowed and any saved domain request finishes. If you close the app first, run cleanup again after reopening it.
+
 ```sh
 morrow doctor
 ```

@@ -42,6 +42,7 @@ cp -R "$binary_directory/Morrow_MorrowApp.bundle" "$app/Contents/Resources/"
 cp Resources/ThirdPartyNotices.txt "$app/Contents/Resources/"
 mkdir -p "$app/Contents/Library/LaunchDaemons"
 cp Resources/dev.morrow.setup.plist "$app/Contents/Library/LaunchDaemons/"
+cp Resources/dev.morrow.helper.setup.plist "$app/Contents/Library/LaunchDaemons/"
 rm -f "$app/Contents/Resources/ZoneBar-LICENSE.txt"
 if [[ ! -f Resources/AppIcon.icns ]]; then
     xcrun swift scripts/create-icon.swift .build/AppIcon.iconset

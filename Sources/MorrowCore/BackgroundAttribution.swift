@@ -9,6 +9,7 @@ public struct BackgroundAttribution: Sendable {
     public let appURL: URL?
     public let appTeam: String?
     public let launcherTeam: String?
+    public let launcherCodeHash: String?
     public let signaturesValid: Bool
     public var ready: Bool { signaturesValid && appTeam != nil && appTeam == launcherTeam }
     public var message: String {
@@ -21,20 +22,22 @@ public struct BackgroundAttribution: Sendable {
         let bundle = launcher.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         guard bundle.pathExtension == "app", Bundle(url: bundle)?.bundleIdentifier == "dev.morrow.app",
               let executable = Bundle(url: bundle)?.executableURL else {
-            appURL = nil; appTeam = nil; launcherTeam = nil; signaturesValid = false; return
+            appURL = nil; appTeam = nil; launcherTeam = nil; launcherCodeHash = nil; signaturesValid = false; return
         }
         appURL = bundle
         let app = Self.signature(executable), cli = Self.signature(launcher)
         appTeam = app.team; launcherTeam = cli.team; signaturesValid = app.valid && cli.valid
+        launcherCodeHash = cli.hash
     }
-    static func signature(_ url: URL) -> (team: String?, valid: Bool) {
+    static func signature(_ url: URL) -> (team: String?, valid: Bool, hash: String?) {
         var code: SecStaticCode?
-        guard SecStaticCodeCreateWithPath(url as CFURL, [], &code) == errSecSuccess, let code else { return (nil, false) }
+        guard SecStaticCodeCreateWithPath(url as CFURL, [], &code) == errSecSuccess, let code else { return (nil, false, nil) }
         var information: CFDictionary?
         guard SecCodeCopySigningInformation(code, SecCSFlags(rawValue: kSecCSSigningInformation), &information) == errSecSuccess,
-              let values = information as? [String: Any] else { return (nil, false) }
+              let values = information as? [String: Any] else { return (nil, false, nil) }
         let team = values[kSecCodeInfoTeamIdentifier as String] as? String
-        return (team?.isEmpty == false ? team : nil, SecStaticCodeCheckValidity(code, [], nil) == errSecSuccess)
+        let hash = (values[kSecCodeInfoUnique as String] as? Data)?.map { String(format: "%02x", $0) }.joined()
+        return (team?.isEmpty == false ? team : nil, SecStaticCodeCheckValidity(code, [], nil) == errSecSuccess, hash)
     }
     public func registerApp() throws {
         guard let appURL else { return }

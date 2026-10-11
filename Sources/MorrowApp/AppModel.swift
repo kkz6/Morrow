@@ -34,6 +34,7 @@ final class AppModel {
     var onboardingPresented = false
     private var nativeSetupRequest: NativeSetupBridge.Request?
     @ObservationIgnored private var nativeSetupAllowedAt: Date?
+    @ObservationIgnored private var backgroundRepairPending = false
     var domainSetupPending: Bool { nativeSetupRequest != nil && setupPermission == .allowed && !domainFailure }
     @ObservationIgnored private var toastTask: Task<Void, Never>?
     var statuses: [UUID: InstanceStatus] = [:]
@@ -131,6 +132,10 @@ final class AppModel {
             while !Task.isCancelled {
                 await self?.refresh()
                 await self?.resumeNativeSetup()
+                if let self, self.backgroundRepairPending, !self.busy, NativeSetupController.approved, NativeSetupBridge.pendingRequest() == nil {
+                    self.backgroundRepairPending = false
+                    self.cleanupBackgroundItems()
+                }
                 await self?.syncIfDue()
                 try? await Task.sleep(for: .seconds(4))
             }
@@ -310,7 +315,7 @@ final class AppModel {
                     guard try NativeSetupController.register() else {
                         refreshPermissions()
                         httpsMessage = "Allow Morrow's setup helper in System Settings → General → Login Items & Extensions. No sudo password is stored."
-                        NativeSetupController.requestApproval()
+                        NativeSetupController.requestApproval(afterRegistrationDenied: true)
                         return
                     }
                     for _ in 0..<40 {
@@ -359,15 +364,17 @@ final class AppModel {
                 let allowed = try await NativeSetupController.refreshSignedRegistration(store: manager.store)
                 refreshPermissions()
                 guard allowed else {
+                    backgroundRepairPending = true
                     let pending = "Service entries now belong to Morrow. Approve its signed setup helper in macOS to finish the gateway association; running servers were preserved."
                     try? pending.write(to: manager.store.root.appendingPathComponent("background-cleanup.txt"), atomically: true, encoding: .utf8)
                     notify(pending)
-                    NativeSetupController.requestApproval()
+                    NativeSetupController.requestApproval(afterRegistrationDenied: true)
                     return
                 }
                 // Preserve an earlier local-domain request and its response.
                 // Monitoring resumes it after this task releases its activity.
                 guard NativeSetupBridge.pendingRequest() == nil else {
+                    backgroundRepairPending = true
                     notify("Morrow's signed helper is ready. The saved domain setup is resuming; clean up again after it finishes.")
                     return
                 }
@@ -382,7 +389,11 @@ final class AppModel {
                     try await Task.sleep(for: .seconds(1))
                 }
                 notify("The setup helper has not responded. Running services were preserved.", error: true)
-            } catch { notify(error.localizedDescription, error: true) }
+            } catch {
+                let failed = "Background helper repair: " + error.localizedDescription
+                try? failed.write(to: manager.store.root.appendingPathComponent("background-cleanup.txt"), atomically: true, encoding: .utf8)
+                notify(failed, error: true)
+            }
         }
     }
     private func resumeNativeSetup() async {

@@ -80,7 +80,7 @@ The Nuxt toolchain currently reports upstream high-severity npm audit advisories
 
 ## Customer distribution
 
-Build the complete app, including the bundled `dev.morrow.setup.plist`, with a Developer ID identity:
+Build the complete app, including the bundled `dev.morrow.helper.setup.plist`, with a Developer ID identity:
 
 ```sh
 MORROW_SIGNING_IDENTITY="Developer ID Application: Your Name (TEAMID)" ./scripts/build-app.sh release
@@ -105,6 +105,10 @@ Staging does not update `build/morrow`. Signing and deployment can be completed 
 The setup helper's attribution action changes only the protected gateway plist's association metadata. It validates user ownership and matching helper/gateway signing teams and does not invoke launchctl or local-domain setup. Attribution requests use zero ports so an older helper rejects them before changing any domains. Do not replace a pending domain-setup request with an attribution request.
 
 Explicit signed-app cleanup re-registers an older native setup helper before submitting gateway repair. The private registration marker records the app path and executable digest, avoiding repeated re-registration when approval is pending. Use the asynchronous unregister completion before registering the replacement. This updates only the setup helper and never re-registers active server jobs. Preserve prior domain requests and responses for normal monitoring to finish.
+
+Use the launcher's signed CodeDirectory digest for the registration marker. Signing timestamps change the file checksum even when executable code is identical; those changes should not replace an already approved helper.
+
+The production helper uses `dev.morrow.helper.setup`. The old development helper plist is retained only for native unregistration, never for new registration. Handle `SMAppServiceErrorDomain` code 1 as an approval requirement: Apple can return it before the status API reflects pending approval. Present the in-app explanation and link to native Login Items approval instead of reporting a generic failure or expecting a password dialog to appear automatically.
 
 Read `SMAppService` status at startup, during monitoring, and when the app becomes active. Never use an operation-local boolean as permission state. Approval and working routing are separate: validate routing before reporting setup complete. Do not register helpers merely to refresh permission. `BackgroundRegistrations` may archive inactive orphan Morrow jobs and normalize retained definitions; it preserves running services and other apps' jobs. macOS controls historical list entries and final grouping.
 
