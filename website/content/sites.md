@@ -166,7 +166,9 @@ morrow site configure --https on
 
 The global setting controls new sites. Caddy's internal CA issues and renews certificates for explicitly configured project hostnames. It does not request public certificates for these development domains.
 
-After a project's HTTPS switch changes, the app shows a centered HUD with the exact address and **Open Site**. It checks that project's TLS connection before reporting **HTTPS ready**; missing certificate trust leads to **Finish Setup**, and a connection failure remains visible until dismissed. HUDs appear in the settings window and active sheets, pause while hovered, and can be closed manually. The menu dropdown contains no toast notifications.
+The project's HTTPS switch and a small padlock beside its domain show that HTTPS is enabled. Enabling or disabling it does not show a success toast or confirmation card. An enabled, active route with a trusted certificate is checked quietly; connection failures show an actionable error card on Sites. A padlock with an amber accent explains missing setup, stopped hosting, ignored hosting, or a failed connection in its tooltip. The menu dropdown contains no toast notifications.
+
+If macOS needs setup-helper approval, General and Sites show a compact reminder above their content with **Review Permissions…**. The reminder follows actual permission status and disappears once access is allowed. An existing helper that is no longer registered offers **Retry Setup**. Neither reminder covers other controls.
 
 Enable HTTPS on a site, then choose **Set Up** or **Finish Setup** in **Local Domains**. Setup skips certificate changes when the CA is already trusted. Advanced users can still run:
 

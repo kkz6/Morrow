@@ -4,6 +4,13 @@ import MorrowCore
 enum SettingsSection: String, Identifiable, SettingsDestination {
     case instances, sites, applications, mail, logs, storage, general, commandLine, sync, menuBar, appearance, about
     var id: String { rawValue }
+    var feedbackSection: SettingsSection {
+        switch self {
+        case .commandLine, .sync, .menuBar, .appearance: return .general
+        case .logs: return .instances
+        default: return self
+        }
+    }
     var title: LocalizedStringKey { LocalizedStringKey(textTitle) }
     var textTitle: String {
         switch self {
@@ -71,10 +78,11 @@ struct SettingsWindow: View {
                     HStack(spacing: 8) { ProgressView().controlSize(.small); Text(activity).font(.system(size: 12)) }
                         .frame(maxWidth: .infinity, alignment: .leading).padding(16)
                 }
-                if let error = model.error { ErrorCard(message: error) { model.error = nil }.padding(.horizontal, 16).padding(.bottom, 16) }
+                if let error = model.error, model.toast?.text != error {
+                    ErrorCard(message: error) { model.error = nil }.padding(.horizontal, 16).padding(.bottom, 16)
+                }
             }
         }
-        .serviceFeedback()
         .feedbackSheet(item: $model.logRequest) { ServiceLogSheet(request: $0).environment(model) }
         .feedbackSheet(item: $model.configurationRequest) { ConfigurationEditorSheet(request: $0).environment(model) }
         .feedbackSheet(item: $model.creationRequest) { version in
@@ -111,7 +119,10 @@ struct SettingsPane<Destination: SettingsDestination, Content: View>: View {
         VStack(alignment: .leading, spacing: SettingsLayout.detailSectionSpacing) {
             // The floating shell draws the title. Retain its exact space so
             // the first content group stays on the existing 53pt top grid.
-            if !embedded { Color.clear.frame(height: SettingsLayout.detailHeaderHeight).accessibilityHidden(true) }
+            if !embedded {
+                Color.clear.frame(height: SettingsLayout.detailHeaderHeight).accessibilityHidden(true)
+                if let section = section as? SettingsSection { SettingsPageFeedback(section: section) }
+            }
             content
         }
         .padding(.horizontal, embedded ? 0 : SettingsLayout.detailHorizontalInset)

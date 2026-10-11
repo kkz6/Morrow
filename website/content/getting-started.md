@@ -68,7 +68,7 @@ Copy the returned address into your application’s database settings. For Postg
 
 ## Manage development runtimes
 
-Open **Settings → Runtimes** to select PHP, Go, Flutter, Node.js, Python, or Ruby. Existing versions are reused. Node versions use nvm; Go uses official archives, and other missing releases use the configured binary catalog. Homebrew compatibility is an explicit opt-in under General. Installation discovery is cached rather than repeated on each navigation. See [Applications and runtimes](/docs/applications) for Terminal setup and companion commands.
+Open **Settings → Runtimes** to select PHP, Go, Flutter, Node.js, Python, or Ruby. Existing versions are reused. Morrow handles downloads automatically: Node versions use nvm, Go uses official archives, and other missing releases use its bundled distribution source. Advanced Homebrew compatibility is an explicit CLI opt-in. Installation discovery is cached rather than repeated on each navigation. See [Applications and runtimes](/docs/applications) for Terminal setup and companion commands.
 
 ## Set up another Mac
 

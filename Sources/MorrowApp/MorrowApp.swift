@@ -28,13 +28,13 @@ struct MorrowApp: App {
             model.selection = .instances
         }
         if snapshot { model.preferences.appearance = CommandLine.arguments.contains("--snapshot-dark") ? "dark" : "light" }
-        if snapshot && CommandLine.arguments.contains("--snapshot-toast") {
-            model.notify("https://karti.dev.test/", title: "HTTPS ready", action: ToastAction(title: "Open Site", perform: {}))
-        }
         if snapshot, let index = CommandLine.arguments.firstIndex(of: "--snapshot-section"),
            index + 1 < CommandLine.arguments.count,
            let section = SettingsSection(rawValue: CommandLine.arguments[index + 1]) {
             model.selection = section
+        }
+        if snapshot && CommandLine.arguments.contains("--snapshot-toast") {
+            model.notify("Allow Morrow's setup helper in Login Items to configure local domains.", title: "Setup approval needed", action: ToastAction(title: "Review Permissions…", perform: {}), information: true)
         }
         let controller = SettingsWindowController(configuration: SettingsWindowConfiguration(
             identifier: NSUserInterfaceItemIdentifier("morrow.settings"), title: "Morrow Settings",

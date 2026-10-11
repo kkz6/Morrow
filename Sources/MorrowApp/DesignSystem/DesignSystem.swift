@@ -32,9 +32,6 @@ enum DS {
     /// appearance values avoid white-on-white controls and black card blocks.
     enum Surface {
         enum State { case normal, hovered, pressed, disabled }
-        static func feedback(_ scheme: ColorScheme) -> Color {
-            Color(white: scheme == .dark ? 0.25 : 0.18)
-        }
         static func card(_ scheme: ColorScheme) -> Color {
             if scheme == .dark { return Color(white: 0.18) }
             // Warm gray sampled from the supplied About reference (#F5F4F4).

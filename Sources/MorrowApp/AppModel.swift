@@ -25,12 +25,20 @@ final class AppModel {
     var logRequest: ServiceLogRequest?
     var configurationRequest: ConfigurationRequest?
     var httpsMessage = ""
+    var siteHTTPSFailures: [UUID: (domain: String, message: String)] = [:]
     var domainActivity: String?
     var domainFailure = false
     var setupPermission: NativeSetupController.Permission = .notRegistered
     var loginPermission: NativeSetupController.Permission = .notRegistered
+    var setupHelperRefreshing = false
     var blockedBackgroundItems: [String] = []
-    var domainApprovalNeeded: Bool { setupPermission == .needsApproval }
+    private var setupPreviouslyRegistered = false
+    private var setupRegistrationDenied = false
+    var setupApprovalRequired: Bool { setupPermission == .needsApproval || setupRegistrationDenied }
+    var setupNeedsAttention: Bool {
+        setupPermission != .allowed && (setupPreviouslyRegistered || setupApprovalRequired || nativeSetupRequest != nil)
+    }
+    var domainApprovalNeeded: Bool { setupApprovalRequired }
     var onboardingPresented = false
     private var nativeSetupRequest: NativeSetupBridge.Request?
     @ObservationIgnored private var nativeSetupAllowedAt: Date?
@@ -38,6 +46,12 @@ final class AppModel {
     var domainSetupPending: Bool { nativeSetupRequest != nil && setupPermission == .allowed && !domainFailure }
     @ObservationIgnored private var toastTask: Task<Void, Never>?
     @ObservationIgnored private var toastHoverSources = Set<UUID>()
+    @ObservationIgnored private var toastVisibleSources = Set<UUID>()
+    @ObservationIgnored private var feedbackSheets: [(id: UUID, section: SettingsSection)] = []
+    private var feedbackContext: FeedbackContext {
+        if let sheet = feedbackSheets.last { return FeedbackContext(section: sheet.section, sheet: sheet.id) }
+        return FeedbackContext(section: selection.feedbackSection)
+    }
     var statuses: [UUID: InstanceStatus] = [:]
     var channels: [VersionChannel] = []
     var web = WebWorkspace()
@@ -133,9 +147,10 @@ final class AppModel {
             if let self {
                 do {
                     if try await NativeSetupController.updateRegisteredHelperIfChanged(store: self.manager.store) == false {
-                        self.notify("Allow Morrow's updated setup helper in Login Items.", title: "Setup approval needed", action: ToastAction(title: "Review Permissions", perform: NativeSetupController.openApprovalSettings), information: true)
+                        self.setupRegistrationDenied = true
+                        self.refreshPermissions()
                     }
-                } catch { self.notify(error.localizedDescription, error: true, title: "Setup helper needs attention") }
+                } catch { self.notify(error.localizedDescription, error: true, title: "Setup helper needs attention", context: FeedbackContext(section: .general)) }
             }
             await self?.refresh()
             await self?.loadInventory()
@@ -196,17 +211,18 @@ final class AppModel {
         guard !busy, !preview else { return }
         activity = title; error = nil
         let manager = manager
+        let context = feedbackContext
         Task {
             do {
                 try await Task.detached { try operation(manager) }.value
                 await refresh()
                 activity = nil
-                if let success { notify(success) }
+                if let success { notify(success, context: context) }
                 completion?()
             } catch {
                 await refresh()
                 self.error = error.localizedDescription
-                notify(error.localizedDescription, error: true)
+                notify(error.localizedDescription, error: true, context: context)
             }
             if activity == title { activity = nil }
         }
@@ -221,18 +237,44 @@ final class AppModel {
             channelActivity = false
         }
     }
-    func notify(_ text: String, error: Bool = false, title: String? = nil, action: ToastAction? = nil, information: Bool = false) {
-        toastTask?.cancel(); toastHoverSources.removeAll()
-        let notice = ToastNotice(text: text, title: title ?? (error ? "Action needs attention" : nil), kind: error ? .error : information ? .information : .success, action: action)
-        toast = notice; scheduleToastDismissal(notice)
+    func notify(_ text: String, error: Bool = false, title: String? = nil, action: ToastAction? = nil, information: Bool = false, context: FeedbackContext? = nil) {
+        toastTask?.cancel(); toastHoverSources.removeAll(); toastVisibleSources.removeAll()
+        var location = context ?? feedbackContext
+        // A task may finish after its sheet has closed. Return its feedback to
+        // the originating page rather than displaying it on another page.
+        if let id = location.sheet, !feedbackSheets.contains(where: { $0.id == id }) { location.sheet = nil }
+        let notice = ToastNotice(text: text, title: title ?? (error ? "Action needs attention" : nil), kind: error ? .error : information ? .information : .success, action: action, section: location.section, sheet: location.sheet)
+        toast = notice
         if let window = NSApplication.shared.keyWindow ?? NSApplication.shared.mainWindow {
             NSAccessibility.post(element: window, notification: .announcementRequested,
                 userInfo: [.announcement: notice.announcement, .priority: NSAccessibilityPriorityLevel.medium.rawValue])
         }
     }
+    func beginFeedbackSheet(_ id: UUID) {
+        guard !feedbackSheets.contains(where: { $0.id == id }) else { return }
+        feedbackSheets.append((id, selection.feedbackSection))
+    }
+    func endFeedbackSheet(_ id: UUID) {
+        feedbackSheets.removeAll { $0.id == id }
+        if toast?.sheet == id {
+            toast?.sheet = nil
+            if let notice = toast { scheduleToastDismissal(notice) }
+        }
+    }
     func dismissToast(_ id: UUID) {
         guard toast?.id == id else { return }
-        toastTask?.cancel(); toastTask = nil; toastHoverSources.removeAll(); toast = nil
+        if error == toast?.text { error = nil }
+        toastTask?.cancel(); toastTask = nil; toastHoverSources.removeAll(); toastVisibleSources.removeAll(); toast = nil
+    }
+    func setToastVisible(_ visible: Bool, id: UUID, source: UUID) {
+        guard let notice = toast, notice.id == id else { return }
+        if visible {
+            toastVisibleSources.insert(source)
+            if toastHoverSources.isEmpty { scheduleToastDismissal(notice) }
+        } else {
+            toastVisibleSources.remove(source); toastHoverSources.remove(source)
+            if toastVisibleSources.isEmpty { toastTask?.cancel() }
+        }
     }
     func setToastHovered(_ hovered: Bool, id: UUID, source: UUID) {
         guard let notice = toast, notice.id == id else { return }
@@ -241,7 +283,7 @@ final class AppModel {
     }
     private func scheduleToastDismissal(_ notice: ToastNotice) {
         toastTask?.cancel()
-        guard !notice.error, !NSWorkspace.shared.isVoiceOverEnabled else { return }
+        guard !toastVisibleSources.isEmpty, toastHoverSources.isEmpty, !notice.error, !NSWorkspace.shared.isVoiceOverEnabled else { return }
         toastTask = Task {
             do { try await Task.sleep(for: .seconds(notice.readingDuration)) } catch { return }
             dismissToast(notice.id)
@@ -271,12 +313,13 @@ final class AppModel {
         guard !preview, !runtimeChannelsLoading.contains(engine.rawValue), force || inventory.channels[engine.rawValue] == nil else { return }
         runtimeChannelsLoading.insert(engine.rawValue)
         let runtimes = runtimes
+        let context = feedbackContext
         Task {
             do {
                 let channels = try await Task.detached { try runtimes.channels(engine) }.value
                 inventory.channels[engine.rawValue] = channels
                 try InventoryStore(store: manager.store).save(inventory)
-            } catch { notify(error.localizedDescription, error: true) }
+            } catch { notify(error.localizedDescription, error: true, context: context) }
             runtimeChannelsLoading.remove(engine.rawValue)
         }
     }
@@ -286,24 +329,26 @@ final class AppModel {
         guard !bucketsLoading.contains(service.id), force || buckets[service.id] == nil else { return }
         bucketsLoading.insert(service.id)
         let storage = storage
+        let context = FeedbackContext(section: .storage, sheet: feedbackContext.sheet)
         Task {
             defer { bucketsLoading.remove(service.id) }
             do { buckets[service.id] = try await Task.detached { try storage.buckets(service) }.value }
-            catch { notify(error.localizedDescription, error: true) }
+            catch { notify(error.localizedDescription, error: true, context: context) }
         }
     }
     var storage: ObjectStorageManager { ObjectStorageManager(store: manager.store, runner: manager.runner) }
     func showConfiguration(_ runtime: RuntimeInstallation) {
         guard !busy, !preview else { return }
         let manager = manager
+        let context = feedbackContext
         activity = "Finding configuration…"
         Task {
             defer { activity = nil }
             do {
                 let files = try await Task.detached { try ConfigurationAccess(store: manager.store, runner: manager.runner).files(runtime) }.value
-                if files.isEmpty { notify("This runtime has no shared configuration file; use its project settings.") }
+                if files.isEmpty { notify("This runtime has no shared configuration file; use its project settings.", context: context) }
                 else { configurationRequest = ConfigurationRequest(title: runtime.engine.title + " " + runtime.version, files: files) }
-            } catch { notify(error.localizedDescription, error: true) }
+            } catch { notify(error.localizedDescription, error: true, context: context) }
         }
     }
     func trustHTTPS() {
@@ -330,38 +375,29 @@ final class AppModel {
         }
     }
     func setSiteHTTPS(_ site: LocalSite, enabled: Bool) {
+        let context = FeedbackContext(section: .sites, sheet: feedbackContext.sheet)
+        siteHTTPSFailures[site.id] = nil
         var changed = site; changed.https = enabled
         let saved = changed
         perform("Updating HTTPS…", operation: { manager in
             try SiteManager(store: manager.store, runner: manager.runner).update(saved)
         }, completion: {
             guard let current = self.web.sites.first(where: { $0.id == site.id }), current.https == enabled else { return }
-            let address = self.sites.url(current, web: self.web)
-            let open = ToastAction(title: "Open Site") { NSWorkspace.shared.open(address) }
-            guard enabled else { self.notify(address.absoluteString, title: "HTTPS disabled", action: open); return }
-            guard !current.ignored else {
-                self.notify("This project is ignored for local hosting. Include it before opening its HTTPS address.", title: "HTTPS preference saved", information: true)
-                return
-            }
-            guard self.web.enabled else {
-                self.notify("Start Sites to use \(address.absoluteString)", title: "HTTPS configured", information: true)
-                return
-            }
-            guard self.webStatus?.httpsTrusted == true else {
-                self.notify("Finish Local Domains setup to use \(address.absoluteString)", title: "HTTPS configured", action: ToastAction(title: "Finish Setup") { self.installSiteSystemSetup() }, information: true)
-                return
-            }
+            // The switch and padlock communicate the saved setting. Verify an
+            // active route quietly; only failures need a separate message.
+            guard enabled, !current.ignored, self.web.enabled, self.webStatus?.httpsTrusted == true else { return }
             let sites = self.sites
             Task {
                 do {
                     _ = try await Task.detached { try sites.verifyHTTPS(current) }.value
                     guard self.web.sites.first(where: { $0.id == current.id })?.https == true,
                           self.web.sites.first(where: { $0.id == current.id })?.domain == current.domain else { return }
-                    self.notify(address.absoluteString, title: "HTTPS ready", action: open)
+                    self.siteHTTPSFailures[current.id] = nil
                 } catch {
                     guard self.web.sites.first(where: { $0.id == current.id })?.https == true,
                           self.web.sites.first(where: { $0.id == current.id })?.domain == current.domain else { return }
-                    self.notify(error.localizedDescription, error: true, title: "HTTPS needs attention", action: open)
+                    self.siteHTTPSFailures[current.id] = (current.domain, error.localizedDescription)
+                    self.notify(error.localizedDescription, error: true, title: "HTTPS needs attention", context: context)
                 }
             }
         })
@@ -383,6 +419,7 @@ final class AppModel {
                     let request = try NativeSetupBridge.submit(web, replaceResolvers: replaceResolvers)
                     nativeSetupRequest = request
                     guard try NativeSetupController.register() else {
+                        setupRegistrationDenied = true
                         refreshPermissions()
                         httpsMessage = "Allow Morrow's setup helper in System Settings → General → Login Items & Extensions. No sudo password is stored."
                         NativeSetupController.requestApproval(afterRegistrationDenied: true)
@@ -405,6 +442,8 @@ final class AppModel {
     func refreshPermissions() {
         guard !preview else { return }
         setupPermission = NativeSetupController.permission
+        setupPreviouslyRegistered = NativeSetupController.hasRegistrationRecord(store: manager.store)
+        if setupPermission == .allowed { setupRegistrationDenied = false }
         loginPermission = NativeSetupController.loginPermission
         if nativeSetupRequest != nil && setupPermission == .allowed {
             if nativeSetupAllowedAt == nil { nativeSetupAllowedAt = Date() }
@@ -412,16 +451,17 @@ final class AppModel {
         let jobs = BackgroundRegistrations(store: manager.store, runner: manager.runner).permissionFiles()
         blockedBackgroundItems = jobs.filter { SMAppService.statusForLegacyPlist(at: $0) == .requiresApproval }.map { $0.deletingPathExtension().lastPathComponent }
     }
-    func openSetupApproval() { refreshPermissions(); NativeSetupController.requestApproval() }
+    func openSetupApproval() { refreshPermissions(); NativeSetupController.requestApproval(afterRegistrationDenied: setupRegistrationDenied) }
     func refreshSetupHelper() {
+        guard !setupHelperRefreshing, !preview else { return }
+        setupHelperRefreshing = true
         Task {
+            defer { setupHelperRefreshing = false }
             do {
                 let allowed = try await NativeSetupController.refreshSignedRegistration(store: manager.store)
+                setupRegistrationDenied = !allowed
                 refreshPermissions()
-                if !allowed {
-                    notify("Allow Morrow's updated setup helper in Login Items.", title: "Setup approval needed", action: ToastAction(title: "Review Permissions", perform: NativeSetupController.openApprovalSettings), information: true)
-                }
-            } catch { notify(error.localizedDescription, error: true, title: "Setup helper needs attention") }
+            } catch { notify(error.localizedDescription, error: true, title: "Setup helper needs attention", context: FeedbackContext(section: .general)) }
         }
     }
     func cleanupBackgroundItems() {

@@ -8,7 +8,7 @@ order: 1.5
 
 Morrow first verifies and reuses a compatible existing installation. Missing software uses complete native distributions kept under `~/Library/Application Support/Morrow/binaries/<package>/<version>-<architecture>-<hash>`. Database creation stays one workflow; no separate Installed Versions screen is needed.
 
-Homebrew compatibility is **off by default**, including when older preferences do not contain the new option. Existing Homebrew installations and their data remain usable. Enable **General → Binary Downloads → Homebrew compatibility** only if you want Homebrew to install or upgrade a package that is not published in the catalog.
+Morrow handles binary downloads automatically during service creation or runtime installation. General does not expose catalog URLs or binary-management controls. Homebrew compatibility is **off by default**, including when older preferences do not contain the new option. Existing Homebrew installations and their data remain usable. Advanced users can explicitly allow Homebrew to install or upgrade unpublished packages with `morrow binary brew on`; use `morrow binary brew off` to disable it again.
 
 | Software | Source for missing versions |
 | --- | --- |
@@ -21,9 +21,9 @@ Release builds can include a default Morrow-hosted catalog, delivered over publi
 
 When the catalog has no Go release compatible with this Mac, Go can still use its official archive provider. A catalog containing only Apple silicon Go does not block that fallback on an Intel Mac.
 
-## Configure a source
+## Advanced source configuration
 
-Open **General → Binary Downloads**, enter an HTTPS catalog URL, and save it. Morrow validates the catalog before replacing the previous setting. Source changes clear cached channel lists. Use the same configuration from Terminal:
+Release builds use Morrow's bundled download source without customer configuration. For development or a custom distribution source, use Terminal. Morrow validates the catalog before replacing the previous setting:
 
 ```sh
 morrow binary source https://downloads.example.com/catalog.json

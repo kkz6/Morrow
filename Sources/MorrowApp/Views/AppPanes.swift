@@ -37,8 +37,6 @@ struct CommandLinePane: View {
 struct GeneralOptionsPane: View {
     var embedded = false
     @Environment(AppModel.self) private var model
-    @State private var brewPath = ""
-    @State private var catalogURL = ""
     @State private var nvmPath = ""
     var body: some View {
         SettingsPane(section: SettingsSection.general, embedded: embedded) {
@@ -64,53 +62,6 @@ struct GeneralOptionsPane: View {
                     }
                 }
             }
-            SettingsGroup(header: "Binary Downloads") {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("Binary catalog URL").font(.system(size: 13))
-                    HStack {
-                        SettingsInput(placeholder: "https://…/catalog.json (optional)", text: $catalogURL)
-                        Button("Save") {
-                            let url = catalogURL.trimmingCharacters(in: .whitespacesAndNewlines)
-                            model.perform("Saving binary source…", success: "Binary source saved", operation: { manager in
-                                try ManagedBinaryStore(store: manager.store, runner: manager.runner).configure(url: url)
-                            }, completion: {
-                                model.inventory.channels = [:]
-                                model.channels = []
-                                model.loadChannels()
-                                model.loadRuntimeChannels(RuntimeEngine(rawValue: model.preferences.lastRuntime) ?? .php, force: true)
-                            })
-                        }.settingsButton().disabled(model.busy)
-                    }
-                    Text("Reuse installed software, or download verified distributions. Go is available directly; other packages need a catalog or optional Homebrew compatibility.").font(.system(size: 12)).foregroundStyle(.secondary)
-                }.settingsCellPadding()
-                SettingsDivider()
-                SettingRow(title: "Homebrew compatibility", subtitle: "Allow Homebrew for packages missing from the catalog") {
-                    Toggle("Homebrew compatibility", isOn: Binding(get: { model.preferences.allowHomebrewFallback }, set: { value in
-                        var preferences = model.preferences; preferences.allowHomebrewFallback = value
-                        model.savePreferences(preferences)
-                        try? BinaryInstaller(store: model.manager.store, runner: model.manager.runner).setHomebrewCompatibility(value)
-                        model.inventory.channels = [:]; model.channels = []
-                        model.loadChannels(); model.loadRuntimeChannels(RuntimeEngine(rawValue: model.preferences.lastRuntime) ?? .php, force: true)
-                    })).settingsToggle()
-                }.disabled(model.busy)
-            }
-            if model.preferences.allowHomebrewFallback {
-                SettingsGroup(header: "Homebrew Location") {
-                    VStack(alignment: .leading, spacing: 10) {
-                        Text("Homebrew executable").font(.system(size: 13))
-                        HStack {
-                            SettingsInput(placeholder: "Automatic (/opt/homebrew/bin/brew)", text: $brewPath)
-                            Button("Save") {
-                                let path = brewPath.trimmingCharacters(in: .whitespacesAndNewlines)
-                                guard path.isEmpty || FileManager.default.isExecutableFile(atPath: path) else { model.error = "Choose an executable Homebrew path."; return }
-                                var preferences = model.preferences; preferences.homebrewPath = path
-                                model.savePreferences(preferences)
-                                Task { await model.refresh() }
-                            }.settingsButton(height: ControlLayout.height).disabled(model.busy)
-                        }
-                    }.settingsCellPadding()
-                }
-            }
             SettingsGroup(header: "Node Version Manager") {
                 VStack(alignment: .leading, spacing: 10) {
                     Text("nvm directory").font(.system(size: 13))
@@ -132,8 +83,6 @@ struct GeneralOptionsPane: View {
             }
         }.onAppear {
             model.refreshPermissions()
-            brewPath = model.preferences.homebrewPath
-            catalogURL = ManagedBinaryStore(store: model.manager.store, runner: model.manager.runner).catalogURL
             nvmPath = model.preferences.nvmDirectory
         }
     }

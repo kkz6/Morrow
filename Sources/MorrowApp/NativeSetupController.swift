@@ -38,6 +38,10 @@ import MorrowCore
         let app: String
         let executableCodeHash: String
     }
+    static func hasRegistrationRecord(store: StateStore) -> Bool {
+        guard let data = try? Data(contentsOf: store.root.appendingPathComponent("setup-registration.json")) else { return false }
+        return (try? JSONDecoder().decode(Registration.self, from: data)) != nil
+    }
     private static func currentRegistration() throws -> Registration {
         let launcher = Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/morrow")
         let attribution = BackgroundAttribution(launcher: launcher)

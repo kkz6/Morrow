@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Removed binary-source and Homebrew-location controls from General; service creation and runtime installation handle sourcing automatically, with advanced overrides retained in the CLI.
+- Removed HTTPS enabled/disabled/ready notifications. Project switches and padlocks show the setting directly, with amber tooltips for attention and quiet connection verification; failures remain actionable.
+
+- Replaced floating HUDs with small contextual cards above the related settings page or active sheet, using the shared cell surface, padding, status icon, and action styles. Async feedback stays with its originating page; visibility timers pause while hidden or hovered. The menu dropdown remains notification-free.
+- Setup permission reminders now stay in General and Sites until native permission is restored, with approval and missing registration handled separately.
+
 - Added Folder Versions for PHP, Node.js, Go, Flutter, Python, and Ruby, with a folder picker in Runtimes and Project Settings, persistent exact selections, closest-parent inheritance, and automatic reuse/installation under the existing provider policy.
 - Morrow's CLI and runtime wrappers now resolve versions from the working folder. PHP hosting shares the folder selection; global defaults and nvm's default alias remain unchanged. Added project use/list/show/clear commands and an optional working folder for tool exec.
 

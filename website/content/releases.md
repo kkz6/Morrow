@@ -58,7 +58,7 @@ python3 scripts/publish-binary.py \
 
 `--public-read` sets the ACL only on the archive and catalog objects being published. It does not make the entire bucket public or change unrelated objects. Omit it when public access is already configured separately. The publisher delegates authentication to AWS CLI's profile and never reads or prints access keys.
 
-After publishing, set the repository's `MORROW_BINARY_CATALOG_URL` variable to the printed catalog URL and build a signed release. On an existing Mac, save the URL through **General → Binary Downloads** or `morrow binary source <url>`. New catalog patch versions become available through Morrow's existing update checks; previous archives remain immutable.
+After publishing, set the repository's `MORROW_BINARY_CATALOG_URL` variable to the printed catalog URL and build a signed release. Customer releases use this source automatically. For an existing development Mac, set an override with `morrow binary source <url>`. New catalog patch versions become available through Morrow's existing update checks; previous archives remain immutable.
 
 The first hosted distribution is Go for Apple silicon. Other services need their own portable packages before they can be installed on a clean Mac without optional Homebrew compatibility. Existing services and data continue using their current binaries during this transition.
 

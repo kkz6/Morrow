@@ -56,9 +56,7 @@ struct SitesPane: View {
                         else if model.webStatus?.systemConfigured == true {
                             Image(systemName: "checkmark.circle.fill").foregroundStyle(.green).help("Local domains configured")
                         }
-                        if model.domainApprovalNeeded {
-                            Button("Approve Morrow…") { model.openSetupApproval() }.settingsButton(height: 28)
-                        } else if model.webStatus?.systemConfigured != true || model.webStatus?.httpsTrusted != true && model.web.sites.contains(where: { $0.https && !$0.ignored }) {
+                        if !model.setupNeedsAttention && (model.webStatus?.systemConfigured != true || model.webStatus?.httpsTrusted != true && model.web.sites.contains(where: { $0.https && !$0.ignored })) {
                             Button(setupLabel) { model.installSiteSystemSetup(replaceResolvers: hasPreviousResolver) }.settingsButton(height: 28).disabled(model.domainSetupPending)
                         }
                         Menu {
@@ -119,9 +117,17 @@ struct SitesPane: View {
     }
     private func siteRow(_ site: LocalSite) -> some View {
         HStack(spacing: 12) {
-            IconTile(symbol: site.mode == .proxy ? "arrow.triangle.branch" : site.https ? "lock.fill" : "globe", color: .blue, size: 30)
+            IconTile(symbol: site.mode == .proxy ? "arrow.triangle.branch" : "globe", color: .blue, size: 30)
             VStack(alignment: .leading, spacing: 3) {
-                Text(site.domain).font(.system(size: 13, weight: .semibold))
+                HStack(spacing: 5) {
+                    Text(site.domain).font(.system(size: 13, weight: .semibold))
+                    if site.https {
+                        Image(systemName: "lock.fill").font(.system(size: 10))
+                            .foregroundStyle(httpsIssue(site) == nil ? Color.secondary : Color.orange)
+                            .help(httpsIssue(site) ?? "HTTPS enabled")
+                            .accessibilityLabel(httpsIssue(site) ?? "HTTPS enabled")
+                    }
+                }
                 Text(site.mode == .proxy ? "127.0.0.1:\(site.proxyPort.map(String.init) ?? "—")" : site.documentRoot).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
                 Text(site.ignored ? "Ignored for .\(model.web.suffix) hosting" : site.issue ?? model.webStatus?.sites[site.id]?.rawValue ?? "Stopped").font(.system(size: 11)).foregroundStyle(site.issue == nil ? Color.secondary : Color.orange).lineLimit(2)
             }
@@ -141,6 +147,13 @@ struct SitesPane: View {
                 if site.directoryID == nil { Button("Unlink", role: .destructive) { model.perform("Removing route…") { try SiteManager(store: $0.store, runner: $0.runner).unlink(site.id) } } }
             } label: { Image(systemName: "ellipsis").frame(width: 16) }.settingsMenuControl().disabled(model.busy)
         }.settingsCellPadding()
+    }
+    private func httpsIssue(_ site: LocalSite) -> String? {
+        if site.ignored { return "HTTPS is enabled; this project is ignored for local hosting." }
+        if let failure = model.siteHTTPSFailures[site.id], failure.domain == site.domain { return failure.message }
+        if !model.web.enabled { return "HTTPS is enabled; start local hosting to use it." }
+        if model.webStatus?.httpsTrusted != true { return "HTTPS is enabled; finish Local Domains setup to trust its certificate." }
+        return nil
     }
 }
 
