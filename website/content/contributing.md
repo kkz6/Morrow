@@ -26,7 +26,11 @@ About centers a modest app identity above a Resources group with documentation, 
 
 Settings titles and icons remain pinned while detail content scrolls. The header samples the window's native material only after scrolling begins. Its alpha mask remains opaque through the title's midpoint, then fades smoothly to transparent. Keep the title outside the effect, avoid opaque fills or bottom borders, and disable the fade animation when Reduce Motion is enabled. The shared layout retains its existing window size and gutters in both appearances.
 
-Service lifecycle actions use `ServiceActionButton`: start uses a play icon, stop uses a red stop icon, and secondary icons have tooltips and accessible labels. Use `ServiceStatusView` for plain live status and `serviceFeedback()` for theme-aware toast feedback, including in sheets. Use the shared `ServiceLogViewer` and configuration editor rather than another sidebar page or bespoke file opener. Runtime and database tiles resolve bundled brand marks through `BrandIcons`.
+Service lifecycle actions use `ServiceActionButton`: start uses a play icon, stop uses a red stop icon, and secondary icons have tooltips and accessible labels. Use `ServiceStatusView` for plain live status and `serviceFeedback()` for toast feedback in sheets and the menu. The settings shell uses `serviceFeedback(placement: .settings)` to place notices below its fixed header. Use the shared `ServiceLogViewer` and configuration editor rather than another sidebar page or bespoke file opener. Runtime and database tiles resolve bundled brand marks through `BrandIcons`.
+
+`ToastView` owns one opaque charcoal surface, readable text, status icon, dismissal target, and optional action. Settings and sheets show it at the upper trailing corner; the menu uses its compact variant above the footer. Success notices remain for at least six seconds, actionable notices for at least eight, and hovering pauses dismissal. Error notices and VoiceOver notices remain until dismissed. Announce each notice once from the model, respect Reduce Motion, and keep all presentation inside the design system. A toast action must not dismiss a newer notice created by that action.
+
+Present application sheets through `feedbackSheet(item:)` or `feedbackSheet(isPresented:)` so notification placement is supplied by the design system once. Do not add another feedback overlay inside the sheet content.
 
 General is one scrollable grouped page. Sidebar navigation groups Projects, Services, and App. Installation inventory and release catalogs are saved in a private cache; use explicit refresh for rescans, with a daily installation refresh at startup. Never cache running status as the source of truth: status still checks owned processes and native readiness.
 
@@ -107,6 +111,8 @@ The setup helper's attribution action changes only the protected gateway plist's
 Explicit signed-app cleanup re-registers an older native setup helper before submitting gateway repair. The private registration marker records the app path and executable digest, avoiding repeated re-registration when approval is pending. Use the asynchronous unregister completion before registering the replacement. This updates only the setup helper and never re-registers active server jobs. Preserve prior domain requests and responses for normal monitoring to finish.
 
 Use the launcher's signed CodeDirectory digest for the registration marker. Signing timestamps change the file checksum even when executable code is identical; those changes should not replace an already approved helper.
+
+On app startup, refresh a previously enabled helper only when that recorded executable digest or app path changed. Preserve a pending domain request, and do not register a helper for users who have never enabled setup. This keeps signed CLI updates from leaving an approved helper pinned to an obsolete executable requirement.
 
 The production helper uses `dev.morrow.helper.setup`. The old development helper plist is retained only for native unregistration, never for new registration. Handle `SMAppServiceErrorDomain` code 1 as an approval requirement: Apple can return it before the status API reflects pending approval. Present the in-app explanation and link to native Login Items approval instead of reporting a generic failure or expecting a password dialog to appear automatically.
 

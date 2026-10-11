@@ -172,6 +172,7 @@ Configuration options: `--smtp-port <port>`, `--http-port <port>`, `--name <name
 | `morrow site link [path] [--port <port>] [--domain <name>] [--https]` | Link a project or an app port; omitted path means the working directory |
 | `morrow site unlink <domain>` | Remove an explicit link |
 | `morrow site list [--json]` | List routes; text includes status, JSON includes route records |
+| `morrow site rename <domain> <new-domain>` | Change a route's hostname, retaining project identity, folder, runtime, and HTTPS setting |
 | `morrow site start` | Start user-owned Caddy, DNS, PHP-FPM, and watcher jobs |
 | `morrow site stop` | Stop hosting and remove its login jobs |
 | `morrow site refresh` | Reconcile directory changes and routes |
@@ -186,7 +187,7 @@ Configuration options: `--smtp-port <port>`, `--http-port <port>`, `--name <name
 | `morrow site configure [options]` | Change suffix, listener ports, and new-site HTTPS/login defaults |
 | `morrow site setup [options] [--remove]` | Administrator setup/removal of scoped DNS and localhost gateway sockets |
 | `morrow site trust` | Trust and verify Morrow's local CA in this user's login keychain |
-| `morrow site check-https` | Check native CA trust and normal DNS/HTTPS port 443 after routing setup |
+| `morrow site check-https [domain]` | Check native CA trust and TLS for a selected route; with no domain, check the first enabled HTTPS route |
 | `morrow site open <domain>` | Open the project URL |
 | `morrow site logs <domain>` | Print recent routing output |
 

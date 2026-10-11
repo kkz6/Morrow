@@ -75,8 +75,8 @@ struct StoragePane: View {
             }
             SettingsNote(text: "S3 and its console listen on loopback. Server data and generated credentials stay on this Mac. Removing a server archives its data; deleting a bucket requires it to be empty.")
         }
-        .sheet(isPresented: $creating) { ObjectStorageEditor().environment(model) }
-        .sheet(item: $editing) { ObjectStorageEditor(existing: $0).environment(model) }
+        .feedbackSheet(isPresented: $creating) { ObjectStorageEditor().environment(model) }
+        .feedbackSheet(item: $editing) { ObjectStorageEditor(existing: $0).environment(model) }
         .alert("Create Bucket", isPresented: $addingBucket) {
             TextField("Bucket name", text: $bucketName)
             Button("Create") { guard let service = bucketService else { return }; let name = bucketName
@@ -140,7 +140,7 @@ private struct ObjectStorageEditor: View {
                     }, completion: { dismiss() })
                 }.settingsButton().keyboardShortcut(.defaultAction).disabled(model.busy || running)
             }
-        }.padding(20).frame(width: 480).serviceFeedback().onAppear {
+        }.padding(20).frame(width: 480).onAppear {
             if let existing { name = existing.name; api = String(existing.apiPort); console = String(existing.consolePort); autoStart = existing.autoStart }
             else if let ports = try? model.storage.suggestedPorts() { api = String(ports.0); console = String(ports.1) }
         }

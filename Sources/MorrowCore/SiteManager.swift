@@ -394,7 +394,16 @@ public struct SiteManager: Sendable {
         guard !secure.isEmpty else { return "Enable HTTPS on a project card first. The default toggle only applies to new projects." }
         guard web.enabled else { return "Start Sites to issue local HTTPS certificates." }
         guard certificateTrusted() else { return "The certificate is not trusted yet. Choose Finish Setup for local HTTPS." }
-        let domain = secure[0].domain
+        return try verifyHTTPS(secure[0])
+    }
+    public func verifyHTTPS(_ site: LocalSite) throws -> String {
+        let web = try store.load().web
+        guard let current = web.sites.first(where: { $0.id == site.id && $0.domain == site.domain }), current.https, !current.ignored, current.issue == nil else {
+            throw MorrowError.message("Enable HTTPS on an active project route before checking it.")
+        }
+        guard web.enabled else { throw MorrowError.message("Start Sites before checking HTTPS for \(current.domain).") }
+        guard certificateTrusted() else { throw MorrowError.message("Finish Local Domains setup to trust the certificate for \(current.domain).") }
+        let domain = current.domain
         let configured = SiteSystemSetup.isConfigured(http: web.httpPort, https: web.httpsPort, dns: web.dnsPort, suffixes: web.suffixes)
         let address = "https://\(domain)\(configured ? "" : ":\(web.httpsPort)")/"
         var arguments = ["--silent", "--show-error", "--max-time", "8", "--noproxy", "*", "--cacert", certificateURL.path, "--output", "/dev/null", "--write-out", "%{http_code}"]

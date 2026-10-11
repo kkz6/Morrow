@@ -106,10 +106,10 @@ struct SitesPane: View {
             }
             SettingsNote(text: "Projects keep running when Morrow closes.")
         }
-        .sheet(isPresented: $directories) { ProjectDirectoriesSheet().environment(model) }
-        .sheet(isPresented: $settings) { HostingSettingsSheet().environment(model) }
-        .sheet(isPresented: $adding) { LinkSiteSheet().environment(model) }
-        .sheet(item: $editing) { SiteEditor(site: $0, php: php).environment(model) }
+        .feedbackSheet(isPresented: $directories) { ProjectDirectoriesSheet().environment(model) }
+        .feedbackSheet(isPresented: $settings) { HostingSettingsSheet().environment(model) }
+        .feedbackSheet(isPresented: $adding) { LinkSiteSheet().environment(model) }
+        .feedbackSheet(item: $editing) { SiteEditor(site: $0, php: php).environment(model) }
         .task(id: model.inventory.runtimes.map(\.id)) { php = model.inventory.runtimes.filter { $0.engine == .php && $0.phpFPM != nil } }
     }
     private var hasPreviousResolver: Bool { SiteSystemSetup.setupIssue(suffixes: model.web.suffixes) != nil }
@@ -127,9 +127,7 @@ struct SitesPane: View {
             }
             Spacer()
             Toggle("HTTPS for \(site.domain)", isOn: Binding(get: { site.https }, set: { value in
-                var changed = site; changed.https = value
-                let saved = changed
-                model.perform("Updating HTTPS…", success: value ? "HTTPS enabled. Finish local-domain setup to trust its certificate." : "HTTPS disabled for this project") { try SiteManager(store: $0.store, runner: $0.runner).update(saved) }
+                model.setSiteHTTPS(site, enabled: value)
             })).labelsHidden().toggleStyle(.switch).controlSize(.small).disabled(model.busy || site.issue != nil)
             ServiceActionButton(kind: .logs, title: "Open site routing logs") { model.showSiteLogs() }
             Menu {

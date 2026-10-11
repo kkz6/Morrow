@@ -57,8 +57,8 @@ struct MailPane: View {
             }
             SettingsNote(text: "SMTP and the inbox listen on 127.0.0.1. Use no authentication and no TLS in your app's development mail settings. Captured messages remain in this Mac's local inbox.")
         }
-        .sheet(isPresented: $creating) { MailEditor().environment(model) }
-        .sheet(item: $editing) { MailEditor(existing: $0).environment(model) }
+        .feedbackSheet(isPresented: $creating) { MailEditor().environment(model) }
+        .feedbackSheet(item: $editing) { MailEditor(existing: $0).environment(model) }
         .confirmationDialog("Remove mail server?", isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } }), titleVisibility: .visible) {
             if let service = removing {
                 Button("Remove and Preserve Messages") { model.perform("Removing mail server…") { try MailManager(store: $0.store, runner: $0.runner).remove(service.id) }; removing = nil }

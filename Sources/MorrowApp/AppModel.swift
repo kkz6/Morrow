@@ -37,6 +37,7 @@ final class AppModel {
     @ObservationIgnored private var backgroundRepairPending = false
     var domainSetupPending: Bool { nativeSetupRequest != nil && setupPermission == .allowed && !domainFailure }
     @ObservationIgnored private var toastTask: Task<Void, Never>?
+    @ObservationIgnored private var toastHoverSources = Set<UUID>()
     var statuses: [UUID: InstanceStatus] = [:]
     var channels: [VersionChannel] = []
     var web = WebWorkspace()
@@ -127,6 +128,13 @@ final class AppModel {
         do { try BackgroundAttribution(launcher: cliURL).registerApp() }
         catch { notify(error.localizedDescription, error: true) }
         monitor = Task { [weak self] in
+            if let self {
+                do {
+                    if try await NativeSetupController.updateRegisteredHelperIfChanged(store: self.manager.store) == false {
+                        self.notify("Allow Morrow's updated setup helper in Login Items.", title: "Setup approval needed", action: ToastAction(title: "Review Permissions", perform: NativeSetupController.openApprovalSettings), information: true)
+                    }
+                } catch { self.notify(error.localizedDescription, error: true, title: "Setup helper needs attention") }
+            }
             await self?.refresh()
             await self?.loadInventory()
             while !Task.isCancelled {
@@ -210,9 +218,31 @@ final class AppModel {
             channelActivity = false
         }
     }
-    func notify(_ text: String, error: Bool = false) {
-        toastTask?.cancel(); toast = ToastNotice(text: text, error: error)
-        toastTask = Task { do { try await Task.sleep(for: .seconds(error ? 8 : 3)) } catch { return }; toast = nil }
+    func notify(_ text: String, error: Bool = false, title: String? = nil, action: ToastAction? = nil, information: Bool = false) {
+        toastTask?.cancel(); toastHoverSources.removeAll()
+        let notice = ToastNotice(text: text, title: title ?? (error ? "Action needs attention" : nil), kind: error ? .error : information ? .information : .success, action: action)
+        toast = notice; scheduleToastDismissal(notice)
+        if let window = NSApplication.shared.keyWindow ?? NSApplication.shared.mainWindow {
+            NSAccessibility.post(element: window, notification: .announcementRequested,
+                userInfo: [.announcement: notice.announcement, .priority: NSAccessibilityPriorityLevel.medium.rawValue])
+        }
+    }
+    func dismissToast(_ id: UUID) {
+        guard toast?.id == id else { return }
+        toastTask?.cancel(); toastTask = nil; toastHoverSources.removeAll(); toast = nil
+    }
+    func setToastHovered(_ hovered: Bool, id: UUID, source: UUID) {
+        guard let notice = toast, notice.id == id else { return }
+        if hovered { toastHoverSources.insert(source); toastTask?.cancel() }
+        else if toastHoverSources.remove(source) != nil && toastHoverSources.isEmpty { scheduleToastDismissal(notice) }
+    }
+    private func scheduleToastDismissal(_ notice: ToastNotice) {
+        toastTask?.cancel()
+        guard !notice.error, !NSWorkspace.shared.isVoiceOverEnabled else { return }
+        toastTask = Task {
+            do { try await Task.sleep(for: .seconds(notice.readingDuration)) } catch { return }
+            dismissToast(notice.id)
+        }
     }
     func copy(_ value: String, message: String = "Copied") { NSPasteboard.general.clearContents(); NSPasteboard.general.setString(value, forType: .string); notify(message) }
     func loadInventory(force: Bool = false) async {
@@ -295,6 +325,43 @@ final class AppModel {
             do { httpsMessage = try await Task.detached { try sites.httpsSummary() }.value }
             catch { domainFailure = true; httpsMessage = error.localizedDescription }
         }
+    }
+    func setSiteHTTPS(_ site: LocalSite, enabled: Bool) {
+        var changed = site; changed.https = enabled
+        let saved = changed
+        perform("Updating HTTPS…", operation: { manager in
+            try SiteManager(store: manager.store, runner: manager.runner).update(saved)
+        }, completion: {
+            guard let current = self.web.sites.first(where: { $0.id == site.id }), current.https == enabled else { return }
+            let address = self.sites.url(current, web: self.web)
+            let open = ToastAction(title: "Open Site") { NSWorkspace.shared.open(address) }
+            guard enabled else { self.notify(address.absoluteString, title: "HTTPS disabled", action: open); return }
+            guard !current.ignored else {
+                self.notify("This project is ignored for local hosting. Include it before opening its HTTPS address.", title: "HTTPS preference saved", information: true)
+                return
+            }
+            guard self.web.enabled else {
+                self.notify("Start Sites to use \(address.absoluteString)", title: "HTTPS configured", information: true)
+                return
+            }
+            guard self.webStatus?.httpsTrusted == true else {
+                self.notify("Finish Local Domains setup to use \(address.absoluteString)", title: "HTTPS configured", action: ToastAction(title: "Finish Setup") { self.installSiteSystemSetup() }, information: true)
+                return
+            }
+            let sites = self.sites
+            Task {
+                do {
+                    _ = try await Task.detached { try sites.verifyHTTPS(current) }.value
+                    guard self.web.sites.first(where: { $0.id == current.id })?.https == true,
+                          self.web.sites.first(where: { $0.id == current.id })?.domain == current.domain else { return }
+                    self.notify(address.absoluteString, title: "HTTPS ready", action: open)
+                } catch {
+                    guard self.web.sites.first(where: { $0.id == current.id })?.https == true,
+                          self.web.sites.first(where: { $0.id == current.id })?.domain == current.domain else { return }
+                    self.notify(error.localizedDescription, error: true, title: "HTTPS needs attention", action: open)
+                }
+            }
+        })
     }
     var sites: SiteManager { SiteManager(store: manager.store, runner: manager.runner) }
     func installSiteSystemSetup(replaceResolvers: Bool = false, repair: Bool = false) {

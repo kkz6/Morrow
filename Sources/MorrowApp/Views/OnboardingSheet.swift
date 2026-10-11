@@ -52,7 +52,7 @@ struct OnboardingSheet: View {
                     Button("Finish") { finish() }.settingsButton().keyboardShortcut(.defaultAction).disabled(model.busy || model.domainFailure || model.webStatus?.systemConfigured != true)
                 }
             }
-        }.padding(24).frame(width: 500).serviceFeedback().interactiveDismissDisabled().onAppear {
+        }.padding(24).frame(width: 500).interactiveDismissDisabled().onAppear {
             model.refreshPermissions()
             launchAtLogin = model.loginPermission == .allowed
         }

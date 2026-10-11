@@ -74,16 +74,16 @@ struct SettingsWindow: View {
                 if let error = model.error { ErrorCard(message: error) { model.error = nil }.padding(.horizontal, 16).padding(.bottom, 16) }
             }
         }
-        .serviceFeedback()
-        .sheet(item: $model.logRequest) { ServiceLogSheet(request: $0).environment(model) }
-        .sheet(item: $model.configurationRequest) { ConfigurationEditorSheet(request: $0).environment(model) }
-        .sheet(item: $model.creationRequest) { version in
+        .serviceFeedback(placement: .settings)
+        .feedbackSheet(item: $model.logRequest) { ServiceLogSheet(request: $0).environment(model) }
+        .feedbackSheet(item: $model.configurationRequest) { ConfigurationEditorSheet(request: $0).environment(model) }
+        .feedbackSheet(item: $model.creationRequest) { version in
             InstanceEditor(installation: version.installation, engine: version.engine, version: version.version).environment(model)
         }
-        .sheet(item: $model.upgradeRequest) { update in
+        .feedbackSheet(item: $model.upgradeRequest) { update in
             DatabaseUpgradeSheet(update: update).environment(model)
         }
-        .sheet(isPresented: $model.onboardingPresented) { OnboardingSheet().environment(model) }
+        .feedbackSheet(isPresented: $model.onboardingPresented) { OnboardingSheet().environment(model) }
     }
     @ViewBuilder private func detail(_ section: SettingsSection) -> some View {
         switch section {

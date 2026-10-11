@@ -38,36 +38,3 @@ struct ServiceStatusView: View {
         switch status { case .running: return .green; case .starting: return .orange; case .failed, .missingBinary: return .red; default: return .secondary }
     }
 }
-
-struct ToastNotice: Identifiable {
-    let id = UUID()
-    let text: String
-    var error = false
-}
-struct ToastView: View {
-    let notice: ToastNotice
-    var compact = false
-    var body: some View {
-        HStack(spacing: 8) {
-            Image(systemName: notice.error ? "exclamationmark.circle" : "checkmark.circle").foregroundStyle(notice.error ? Color.orange : Color.teal)
-            Text(notice.text).font(.system(size: compact ? 11 : 12)).lineLimit(3)
-        }.padding(.horizontal, compact ? 10 : 14).padding(.vertical, compact ? 7 : 10)
-            .background(.regularMaterial, in: RoundedRectangle(cornerRadius: DS.Radius.actionEdge))
-            .overlay(RoundedRectangle(cornerRadius: DS.Radius.actionEdge).strokeBorder(DS.borderColor, lineWidth: 0.5))
-            .padding(compact ? 8 : 14).accessibilityElement(children: .combine)
-    }
-}
-
-private struct ServiceFeedbackModifier: ViewModifier {
-    var compact = false
-    @Environment(AppModel.self) private var model
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    func body(content: Content) -> some View {
-        content.overlay(alignment: .bottom) {
-            if let notice = model.toast { ToastView(notice: notice, compact: compact).allowsHitTesting(false).transition(.opacity) }
-        }.animation(reduceMotion ? nil : .easeInOut(duration: 0.18), value: model.toast?.id)
-    }
-}
-extension View {
-    func serviceFeedback(compact: Bool = false) -> some View { modifier(ServiceFeedbackModifier(compact: compact)) }
-}

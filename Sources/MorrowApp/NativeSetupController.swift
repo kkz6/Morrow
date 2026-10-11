@@ -34,21 +34,33 @@ import MorrowCore
         let error = error as NSError
         return service.status == .requiresApproval || (error.domain == "SMAppServiceErrorDomain" && error.code == 1)
     }
-    /// Explicit cleanup migrates an older helper registration to this signed
-    /// bundle. Only the setup helper is re-registered; server jobs are untouched.
-    static func refreshSignedRegistration(store: StateStore) async throws -> Bool {
+    private struct Registration: Codable, Equatable {
+        let app: String
+        let executableCodeHash: String
+    }
+    private static func currentRegistration() throws -> Registration {
         let launcher = Bundle.main.bundleURL.appendingPathComponent("Contents/MacOS/morrow")
         let attribution = BackgroundAttribution(launcher: launcher)
         guard attribution.ready, let codeHash = attribution.launcherCodeHash else {
             throw MorrowError.message("Install the signed Morrow app before updating its setup helper.")
         }
-        struct Registration: Codable, Equatable {
-            let app: String
-            let executableCodeHash: String
-        }
+        return Registration(app: Bundle.main.bundleURL.path, executableCodeHash: codeHash)
+    }
+    /// Refresh an existing approved helper after a real executable update.
+    /// This does not register a helper for users who have never enabled setup.
+    static func updateRegisteredHelperIfChanged(store: StateStore) async throws -> Bool? {
+        guard service.status == .enabled, NativeSetupBridge.pendingRequest() == nil,
+              let data = try? Data(contentsOf: store.root.appendingPathComponent("setup-registration.json")),
+              let previous = try? JSONDecoder().decode(Registration.self, from: data) else { return nil }
+        guard try currentRegistration() != previous else { return nil }
+        return try await refreshSignedRegistration(store: store)
+    }
+    /// Explicit cleanup migrates an older helper registration to this signed
+    /// bundle. Only the setup helper is re-registered; server jobs are untouched.
+    static func refreshSignedRegistration(store: StateStore) async throws -> Bool {
         // CodeDirectory hashes exclude signing timestamps, so signing identical
         // executable code again does not needlessly replace an approved helper.
-        let current = Registration(app: Bundle.main.bundleURL.path, executableCodeHash: codeHash)
+        let current = try currentRegistration()
         let marker = store.root.appendingPathComponent("setup-registration.json")
         let previous = (try? Data(contentsOf: marker)).flatMap { try? JSONDecoder().decode(Registration.self, from: $0) }
         if previous == current, service.status == .enabled || service.status == .requiresApproval { return service.status == .enabled }

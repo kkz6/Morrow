@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Replaced the low-contrast bottom toast with a shared floating notification: an opaque charcoal surface, readable text, status icon, close control, optional action, and placement below the settings header. Success notices last longer and pause on hover; errors stay until dismissed. Reduce Motion, Increased Contrast, and VoiceOver are supported.
+- Project HTTPS confirmations now show the exact URL and Open Site action, verify the selected route before reporting it ready, and distinguish certificate setup from a working connection. Added CLI route renaming and optional per-domain HTTPS validation.
+
 - Migrated the production setup helper to a distinct native identity, retaining the old helper only for scoped unregistration. Native approval-denied errors now lead to the Morrow approval explanation and Login Items settings instead of a generic failure with no prompt.
 
 - Signed app cleanup now refreshes an older native setup-helper registration before repairing gateway association. It retains pending domain setup, requests macOS approval only when needed, and leaves database, mail, PHP, DNS, and web server jobs running. Standard app/CLI CI also uses Xcode 27.

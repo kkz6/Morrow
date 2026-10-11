@@ -61,6 +61,7 @@ Morrow — databases and development runtimes.
       --domain <name> --https             Optional custom name and HTTPS
   morrow site unlink <domain>             Remove an explicit project link
   morrow site list [--json]               Show project routes and actual status
+  morrow site rename <domain> <new-name>  Change a route's hostname; preserve folder
   morrow site start|stop                  Control Caddy, DNS and PHP-FPM
   morrow site refresh                     Refresh parked projects and routes
   morrow site watch                       Watch directories while running
@@ -71,7 +72,7 @@ Morrow — databases and development runtimes.
   morrow site setup [--remove]            Administrator setup for DNS and clean URLs
       --replace-resolvers                Back up and replace previous resolver files
   morrow site trust                      Trust this Mac's local CA in the login keychain
-  morrow site check-https                Verify trust and a local HTTPS listener
+  morrow site check-https [domain]       Verify trust and the selected HTTPS route
   morrow site open|logs <domain>          Open a site or print its routing log
   morrow mail create <name>               Create a local SMTP testing server
       --smtp-port <port>                 Default: next free port from 1025
@@ -474,13 +475,23 @@ func siteMain(_ args: [String], manager: SiteManager) throws {
         let web = try manager.store.load().web, status = try manager.status()
         if options.flags.contains("--json") { try printJSON(web.sites) }
         else { for site in web.sites { print("\(site.domain) · \(site.mode.rawValue) · \(status.sites[site.id]?.rawValue ?? "Unknown") · \(manager.url(site, web: web).absoluteString)\(site.issue.map { "\n  " + $0 } ?? "")") } }
-    case "start", "stop", "refresh", "watch", "trust", "check-https":
+    case "rename":
+        let options = try Options(remaining); try options.requireCount(2, usage: "morrow site rename <domain> <new-domain>")
+        var site = try manager.resolve(options.positional[0]); site.domain = options.positional[1]
+        try manager.update(site)
+        let saved = try manager.resolve(site.id.uuidString)
+        print("Project address updated: \(manager.url(saved).absoluteString)")
+    case "check-https":
+        let options = try Options(remaining)
+        guard options.positional.count <= 1 else { throw MorrowError.message("Usage: morrow site check-https [domain]") }
+        if let domain = options.positional.first { print(try manager.verifyHTTPS(manager.resolve(domain))) }
+        else { print(try manager.httpsSummary()) }
+    case "start", "stop", "refresh", "watch", "trust":
         guard remaining.isEmpty else { throw MorrowError.message("Usage: morrow site \(action)") }
         switch action {
         case "start": try manager.start(cli: cli); print("Local hosting started. Use Sites → Enable Local Domains for clean URLs.")
         case "stop": try manager.stop(); print("Local hosting stopped.")
         case "trust": try manager.trustCertificate(); print("Trusted Morrow's local CA for this user.")
-        case "check-https": print(try manager.httpsSummary())
         case "refresh": try manager.refreshProjects(force: true); print("Projects refreshed.")
         default:
             while try manager.store.load().web.enabled {

@@ -48,7 +48,7 @@ struct InstancesPane: View {
             }
             SettingsNote(text: "Each instance has its own port and data directory. Your databases keep running when you close Morrow.")
         }
-        .sheet(item: $editing) { InstanceEditor(existing: $0).environment(model) }
+        .feedbackSheet(item: $editing) { InstanceEditor(existing: $0).environment(model) }
     }
 }
 

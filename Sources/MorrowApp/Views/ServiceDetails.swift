@@ -62,7 +62,7 @@ struct ServiceLogSheet: View {
                 Button("Done") { dismiss() }.settingsButton().keyboardShortcut(.cancelAction)
             }
             ServiceLogViewer(url: request.url)
-        }.padding(20).frame(width: 620).serviceFeedback()
+        }.padding(20).frame(width: 620)
     }
 }
 struct ConfigurationEditorSheet: View {
@@ -96,7 +96,7 @@ struct ConfigurationEditorSheet: View {
                     catch { issue = error.localizedDescription }
                 }.settingsButton().disabled(file?.editable != true || text == original)
             }
-        }.padding(20).frame(width: 620).serviceFeedback()
+        }.padding(20).frame(width: 620)
         .onAppear { selected = request.files.first?.id ?? "" }
         .onChange(of: selected) { _, _ in
             reload()

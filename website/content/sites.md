@@ -148,6 +148,14 @@ Stop Sites before changing listener ports, then rerun system setup with matching
 
 ## HTTPS on or off
 
+Use the exact hostname displayed on the project card. Automatic folder names are normalized to DNS labels: a folder named `karti.dev` initially receives `karti-dev.test`. To use the dotted address instead, edit **Project Settings → Domain**, or rename that route from Terminal:
+
+```sh
+morrow site rename karti-dev.test karti.dev.test
+```
+
+Renaming preserves the project ID, folder, document root, runtime, and HTTPS preference. The chosen name becomes a custom domain and is retained during directory discovery. Certificates are issued for configured hostnames; an unconfigured spelling can fail the TLS handshake even when another spelling of the project's hostname works.
+
 Toggle HTTPS per project, or:
 
 ```sh
@@ -157,6 +165,8 @@ morrow site configure --https on
 ```
 
 The global setting controls new sites. Caddy's internal CA issues and renews certificates for explicitly configured project hostnames. It does not request public certificates for these development domains.
+
+After a project's HTTPS switch changes, the app shows a visible notification with the exact address and **Open Site**. It checks that project's TLS connection before reporting **HTTPS ready**; missing certificate trust leads to **Finish Setup**, and a connection failure remains visible until dismissed. Notifications float below the settings header, pause while hovered, and can be closed manually.
 
 Enable HTTPS on a site, then choose **Set Up** or **Finish Setup** in **Local Domains**. Setup skips certificate changes when the CA is already trusted. Advanced users can still run:
 
@@ -168,6 +178,7 @@ morrow site trust
 
 ```sh
 morrow site check-https
+morrow site check-https shop.test
 ```
 
 After routing is configured, validation checks the normal project hostname and HTTPS port 443, including system DNS and forwarding. Before setup, it checks the private listener directly and explains the remaining setup step. HTTP redirects such as 302 still establish a working TLS connection; the check does not verify an application's business logic.
