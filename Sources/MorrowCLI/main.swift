@@ -65,6 +65,7 @@ Morrow — databases and development runtimes.
   morrow site start|stop                  Control Caddy, DNS and PHP-FPM
   morrow site refresh                     Refresh parked projects and routes
   morrow site watch                       Watch directories while running
+  morrow site reload-watcher             Update the directory monitor; keep servers running
   morrow site secure|unsecure <domain>   Toggle a site's local HTTPS
   morrow site php [version]               Select an installed PHP-FPM version
       --install                          Reuse/install a complete PHP distribution
@@ -116,8 +117,14 @@ Morrow — databases and development runtimes.
   morrow tool updates [--refresh]         Check tracked runtime updates
   morrow tool upgrade <runtime> [version] Install an update; move selected default
   morrow tool remove <runtime> <version>  Forget a version; preserve shared files
-  morrow tool exec <runtime> -- <args>    Run the selected runtime interactively
+  morrow tool exec <runtime> -- <args>    Run the folder-selected runtime interactively
+      --path <folder>                     Choose its working folder
   morrow tool shell                      Print Morrow's runtime PATH setup
+  morrow project use <runtime> <version> Select a version for the current folder
+      --path <folder>                     Choose another project folder
+  morrow project list [--json]           List saved folder versions
+  morrow project show [folder]           Show effective inherited folder versions
+  morrow project clear <runtime|all>     Remove folder overrides; preserve files
   morrow db list [--json]                 List instances and current status
   morrow db start|stop|restart <name>     Control a native process
   morrow db configure <name>             Change a stopped instance
@@ -195,6 +202,7 @@ func main() throws {
     if command == "mail" { try mailMain(args, manager: MailManager(store: manager.store, runner: manager.runner)); return }
     if command == "sync" { try syncMain(args, manager: WorkspaceSync(store: manager.store, runner: manager.runner)); return }
     if command == "tool" { try toolsMain(args, manager: RuntimeManager(store: manager.store, runner: manager.runner)); return }
+    if command == "project" { try projectMain(args, manager: RuntimeManager(store: manager.store, runner: manager.runner)); return }
     guard command == "db", let subcommand = args.first else { throw MorrowError.message("Unknown command. Run morrow --help.") }
     args.removeFirst()
     switch subcommand {
@@ -374,15 +382,59 @@ func toolsMain(_ args: [String], manager: RuntimeManager) throws {
         let item = try manager.resolve(selected, version: options.positional.count == 2 ? options.positional[1] : nil)
         let upgraded = try manager.upgrade(item, cli: cli); print("Updated \(selected.title): \(upgraded.version).")
     case "exec":
-        guard let separator = remaining.firstIndex(of: "--") else { throw MorrowError.message("Usage: morrow tool exec <runtime> [--command <name>] -- <args>") }
-        let options = try Options(Array(remaining[..<separator]), allowedValues: ["--command"])
-        try options.requireCount(1, usage: "morrow tool exec <runtime> [--command <name>] -- <args>")
-        exit(try manager.launch(runtime(options.positional[0]), arguments: Array(remaining.dropFirst(separator + 1)), command: options.values["--command"]))
+        guard let separator = remaining.firstIndex(of: "--") else { throw MorrowError.message("Usage: morrow tool exec <runtime> [--command <name>] [--path <folder>] -- <args>") }
+        let options = try Options(Array(remaining[..<separator]), allowedValues: ["--command", "--path"])
+        try options.requireCount(1, usage: "morrow tool exec <runtime> [--command <name>] [--path <folder>] -- <args>")
+        exit(try manager.launch(runtime(options.positional[0]), arguments: Array(remaining.dropFirst(separator + 1)), command: options.values["--command"], directory: options.values["--path"]))
     case "shell":
         guard remaining.isEmpty else { throw MorrowError.message("Usage: morrow tool shell") }
         let path = manager.shimDirectory.path.replacingOccurrences(of: "'", with: "'\\''")
         print("export PATH='\(path)':\"$PATH\"")
     default: throw MorrowError.message("Unknown runtime command. Run morrow --help.")
+    }
+}
+
+func projectMain(_ args: [String], manager: RuntimeManager) throws {
+    guard let action = args.first else { throw MorrowError.message("Usage: morrow project use|list|show|clear") }
+    let remaining = Array(args.dropFirst()), projects = ProjectRuntimeStore(store: manager.store)
+    func engine(_ value: String) throws -> RuntimeEngine {
+        guard let engine = RuntimeEngine.parse(value) else { throw MorrowError.message("Choose php, node, go, flutter, python, or ruby.") }; return engine
+    }
+    switch action {
+    case "use":
+        let options = try Options(remaining, allowedValues: ["--path"])
+        try options.requireCount(2, usage: "morrow project use <runtime> <version> [--path <folder>]")
+        let path = options.values["--path"] ?? FileManager.default.currentDirectoryPath
+        let item = try manager.useForProject(engine(options.positional[0]), version: options.positional[1], directory: path, cli: URL(fileURLWithPath: CommandLine.arguments[0]))
+        print("\(item.engine.title) \(item.version) selected for \(try ProjectRuntimeStore.directory(path)) and its subfolders.")
+    case "list":
+        let options = try Options(remaining, allowedFlags: ["--json"])
+        try options.requireCount(0, usage: "morrow project list [--json]")
+        let selections = try projects.load()
+        if options.flags.contains("--json") { try printJSON(selections) }
+        else {
+            if selections.isEmpty { print("No folder versions selected. Use morrow project use <runtime> <version>.") }
+            for project in selections {
+                let versions = project.runtimes.values.sorted { $0.engine.rawValue < $1.engine.rawValue }.map { "\($0.engine.title) \($0.version)" }.joined(separator: " · ")
+                print("\(project.path)\n  \(versions)")
+            }
+        }
+    case "show":
+        let options = try Options(remaining)
+        guard options.positional.count <= 1 else { throw MorrowError.message("Usage: morrow project show [folder]") }
+        let path = try ProjectRuntimeStore.directory(options.positional.first ?? FileManager.default.currentDirectoryPath, allowRoot: true)
+        let selections = try projects.load(), state = try manager.store.load()
+        print(path)
+        for engine in RuntimeEngine.allCases {
+            if let item = ProjectRuntimeStore.selection(engine, directory: path, projects: selections) { print("\(engine.title) \(item.version) · Folder selection") }
+            else if let id = state.toolDefaults[engine.rawValue], let item = state.tools.first(where: { $0.id == id }) { print("\(engine.title) \(item.version) · Global default") }
+        }
+    case "clear":
+        let options = try Options(remaining, allowedValues: ["--path"])
+        try options.requireCount(1, usage: "morrow project clear <runtime|all> [--path <folder>]")
+        try manager.clearProject(options.positional[0] == "all" ? nil : engine(options.positional[0]), directory: options.values["--path"] ?? FileManager.default.currentDirectoryPath)
+        print("Folder override removed. Parent folder choices or defaults now apply; project files were preserved.")
+    default: throw MorrowError.message("Unknown project command. Use morrow project use|list|show|clear.")
     }
 }
 
@@ -486,13 +538,14 @@ func siteMain(_ args: [String], manager: SiteManager) throws {
         guard options.positional.count <= 1 else { throw MorrowError.message("Usage: morrow site check-https [domain]") }
         if let domain = options.positional.first { print(try manager.verifyHTTPS(manager.resolve(domain))) }
         else { print(try manager.httpsSummary()) }
-    case "start", "stop", "refresh", "watch", "trust":
+    case "start", "stop", "refresh", "watch", "trust", "reload-watcher":
         guard remaining.isEmpty else { throw MorrowError.message("Usage: morrow site \(action)") }
         switch action {
         case "start": try manager.start(cli: cli); print("Local hosting started. Use Sites → Enable Local Domains for clean URLs.")
         case "stop": try manager.stop(); print("Local hosting stopped.")
         case "trust": try manager.trustCertificate(); print("Trusted Morrow's local CA for this user.")
         case "refresh": try manager.refreshProjects(force: true); print("Projects refreshed.")
+        case "reload-watcher": try manager.updateDirectoryWatcher(cli: cli); print("Directory monitor updated. Web servers and databases stayed running.")
         default:
             while try manager.store.load().web.enabled {
                 do { try manager.refreshProjects() } catch { FileHandle.standardError.write(Data((error.localizedDescription + "\n").utf8)) }

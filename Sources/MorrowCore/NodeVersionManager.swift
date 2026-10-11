@@ -50,15 +50,23 @@ public struct NodeVersionManager: Sendable {
         }
         return directory.appendingPathComponent("nvm.sh").path
     }
-    @discardableResult public func install(_ requested: String) throws -> RuntimeInstallation {
+    @discardableResult public func install(_ requested: String, preserveDefault: Bool = false) throws -> RuntimeInstallation {
         let version = requested.replacingOccurrences(of: "nvm@", with: "").replacingOccurrences(of: "node@", with: "")
         guard ["automatic", "current", "latest", "lts"].contains(version) || SoftwareVersion(version) != nil else { throw MorrowError.message("Use an exact Node version, a release series, current, or lts.") }
         let selector = ["automatic", "current", "latest"].contains(version) ? "node" : version
         let manager = try script()
+        let defaultAlias = directory.appendingPathComponent("alias/default")
+        let hadDefault = FileManager.default.fileExists(atPath: defaultAlias.path) || (try? FileManager.default.destinationOfSymbolicLink(atPath: defaultAlias.path)) != nil
         let source = "export NVM_DIR=\"$1\"; . \"$2\" --no-use || exit $?; if [ \"$3\" = lts ]; then nvm install --lts >&2 || exit $?; else nvm install \"$3\" >&2 || exit $?; fi; nvm which current"
         let output = try runner.run("/bin/bash", ["--noprofile", "--norc", "-c", source, "morrow-nvm", directory.path, manager, selector], environment: ["NVM_NO_COLORS": "1", "NVM_NO_PROGRESS": "1"]).checked()
         let path = output.components(separatedBy: .newlines).last { $0.hasPrefix(directory.path + "/versions/node/") } ?? ""
         guard let item = installations().first(where: { $0.executable == path }) else { throw MorrowError.message("nvm completed but the installed Node executable was not detected.") }
+        if preserveDefault, !hadDefault,
+           let created = try? String(contentsOf: defaultAlias, encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines),
+           [item.version, "v" + item.version, version].contains(created),
+           (try? defaultAlias.resourceValues(forKeys: [.isSymbolicLinkKey]).isSymbolicLink) == false {
+            try FileManager.default.removeItem(at: defaultAlias)
+        }
         return item
     }
     public func selectDefault(_ item: RuntimeInstallation) throws {

@@ -17,9 +17,12 @@ const binaryCommands = [...binarySwitch.matchAll(/^    case ([^:]+):/gm)].flatMa
 for (const command of new Set(binaryCommands)) if (!reference.includes(`morrow binary ${command}`)) failures.push(`CLI reference is missing: morrow binary ${command}`)
 for (const command of ['status', 'clean']) if (!reference.includes(`morrow background ${command}`)) failures.push(`CLI reference is missing: morrow background ${command}`)
 for (const command of new Set(commands)) if (!reference.includes(`morrow db ${command}`)) failures.push(`CLI reference is missing: morrow db ${command}`)
-const toolSwitch = cli.slice(cli.indexOf('func toolsMain'), cli.indexOf('func mailMain'))
+const toolSwitch = cli.slice(cli.indexOf('func toolsMain'), cli.indexOf('func projectMain'))
 const toolCommands = [...toolSwitch.matchAll(/^    case ([^:]+):/gm)].flatMap(match => [...match[1].matchAll(/"([a-z-]+)"/g)].map(item => item[1]))
 for (const command of new Set(toolCommands)) if (!reference.includes(`morrow tool ${command}`)) failures.push(`CLI reference is missing: morrow tool ${command}`)
+const projectSwitch = cli.slice(cli.indexOf('func projectMain'), cli.indexOf('func mailMain'))
+const projectCommands = [...projectSwitch.matchAll(/^    case ([^:]+):/gm)].flatMap(match => [...match[1].matchAll(/"([a-z-]+)"/g)].map(item => item[1]))
+for (const command of new Set(projectCommands)) if (!reference.includes(`morrow project ${command}`)) failures.push(`CLI reference is missing: morrow project ${command}`)
 const mailSwitch = cli.slice(cli.indexOf('func mailMain'), cli.indexOf('func siteMain'))
 const mailCommands = [...mailSwitch.matchAll(/^    case ([^:]+):/gm)].flatMap(match => [...match[1].matchAll(/"([a-z-]+)"/g)].map(item => item[1]))
 for (const command of new Set(mailCommands)) if (!reference.includes(`morrow mail ${command}`)) failures.push(`CLI reference is missing: morrow mail ${command}`)
@@ -34,4 +37,4 @@ const syncCommands = [...syncSwitch.matchAll(/^    case ([^:]+):/gm)].flatMap(ma
 for (const command of new Set(syncCommands)) if (!reference.includes(`morrow sync ${command}`)) failures.push(`CLI reference is missing: morrow sync ${command}`)
 try { await access(new URL('../.output/public/index.html', import.meta.url)) } catch { failures.push('Missing homepage') }
 if (failures.length) { console.error(failures.join('\n')); process.exit(1) }
-console.log(`Checked ${docs.length} prerendered docs pages, local documentation links, and ${new Set(commands).size + new Set(toolCommands).size + new Set(syncCommands).size + new Set(mailCommands).size + new Set(siteCommands).size + new Set(storageCommands).size + new Set(binaryCommands).size + 2} CLI commands`)
+console.log(`Checked ${docs.length} prerendered docs pages, local documentation links, and ${new Set(commands).size + new Set(toolCommands).size + new Set(projectCommands).size + new Set(syncCommands).size + new Set(mailCommands).size + new Set(siteCommands).size + new Set(storageCommands).size + new Set(binaryCommands).size + 2} CLI commands`)

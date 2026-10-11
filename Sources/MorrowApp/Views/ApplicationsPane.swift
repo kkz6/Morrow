@@ -57,6 +57,7 @@ struct ApplicationsPane: View {
                     }
                 }
             }
+            ProjectVersionsSection(preferredEngine: engine)
             SettingsGroup(header: "Terminal Setup") {
                 VStack(alignment: .leading, spacing: 8) {
                     Text("Run morrow tool shell and add its output to your shell configuration to use selected versions in Terminal.")

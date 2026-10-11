@@ -112,7 +112,7 @@ Read [Database updates](/docs/updates) for compatibility, shared dependency beha
 | `morrow tool updates [--refresh] [--json]` | Check tracked versions; optionally refresh provider metadata |
 | `morrow tool upgrade <runtime> [version]` | Update a tracked version; omitted version means the default |
 | `morrow tool remove <runtime> <version>` | Forget a registration and clear its default; preserve installed files |
-| `morrow tool exec <runtime> [--command <name>] -- <args>` | Run the selected runtime or an available companion command with Terminal input/output |
+| `morrow tool exec <runtime> [--command <name>] [--path <folder>] -- <args>` | Run the folder-selected runtime or companion; otherwise use the global default |
 | `morrow tool shell` | Print the PATH setup for Morrow's runtime commands |
 
 Supported runtime names: `php`, `go`, `flutter`, `node`, `python`, `ruby`. Aliases: `nodejs`, `python3`.
@@ -129,6 +129,17 @@ morrow tool shell
 ```
 
 The version in this example is illustrative. Use `tool versions` and `tool channels` for your machine's available versions. Read [Applications and runtimes](/docs/applications) for Flutter retention and shell behavior.
+
+## Folder runtime versions
+
+| Command | Purpose |
+| --- | --- |
+| `morrow project use <runtime> <version> [--path <folder>]` | Reuse/install and select a runtime for the current or specified folder and subfolders |
+| `morrow project list [--json]` | List saved folder choices |
+| `morrow project show [folder]` | Show inherited folder choices and global defaults |
+| `morrow project clear <runtime\|all> [--path <folder>]` | Clear explicit folder choices; preserve installed binaries and project files |
+
+PHP folder selection also updates the project's PHP-FPM hosting. Folder choices pin the resolved exact version and do not change global defaults. A closer folder overrides its parent separately for each runtime. A missing selected executable is an error rather than a silent fallback. See [Folder Versions](/docs/project-versions).
 
 ## iCloud workspace sync
 
@@ -177,6 +188,7 @@ Configuration options: `--smtp-port <port>`, `--http-port <port>`, `--name <name
 | `morrow site stop` | Stop hosting and remove its login jobs |
 | `morrow site refresh` | Reconcile directory changes and routes |
 | `morrow site watch` | Run the enabled workspace watcher in the foreground |
+| `morrow site reload-watcher` | Adopt the current CLI for directory monitoring without restarting hosting servers |
 | `morrow site setup-service` | Internal native setup service; launched only after macOS helper approval |
 | `morrow site gateway [listener-port options]` | Internal localhost gateway; requires sockets supplied by its launchd job |
 | `morrow site php [version] [--install]` | List/select complete PHP-FPM installations, or reuse/install a complete PHP distribution |

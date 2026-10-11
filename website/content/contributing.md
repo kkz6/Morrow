@@ -74,7 +74,9 @@ The repository’s `AGENTS.md` records this requirement for future coding sessio
 
 ## Current scope
 
-This developer preview includes local databases, PHP/Go/Flutter/Node/Python/Ruby runtimes, nvm Node management, Mailpit, PHP/static/app-port hosting, and MinIO S3 buckets. Authenticated database configuration, backup/export and S3 backup delivery, remote server management, RabbitMQ, and project-specific runtime selection are future work.
+This developer preview includes local databases, PHP/Go/Flutter/Node/Python/Ruby runtimes, folder runtime selections, nvm Node management, Mailpit, PHP/static/app-port hosting, and MinIO S3 buckets. Authenticated database configuration, backup/export and S3 backup delivery, remote server management, and RabbitMQ are future work.
+
+Folder choices live in a separate private `project-runtimes.json` document so older running workers cannot discard them when saving the workspace. Shared validation, closest-ancestor resolution, installation, and PHP hosting projection belong in MorrowCore. The app uses cached inventory for selectors. Project selection writes command wrappers without changing global defaults or nvm's default alias. Preserve explicit PHP route choices when adopting folder selections, and reject forgetting a runtime still referenced by a folder. Deployment can restart the directory watcher to adopt the new resolver while leaving databases, mail, DNS, Caddy, and existing PHP pools running.
 
 ## Dependency status
 

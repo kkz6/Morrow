@@ -46,6 +46,7 @@ final class AppModel {
     var mailStatuses: [UUID: InstanceStatus] = [:]
     var tools: [RuntimeInstallation] = []
     var toolDefaults: [String: String] = [:]
+    var projectRuntimes: [ProjectRuntimeSelection] = []
     var databaseUpdates: [DatabaseUpdate] = []
     var runtimeUpdates: [RuntimeUpdate] = []
     var upgradeRequest: DatabaseUpdate?
@@ -83,6 +84,7 @@ final class AppModel {
                 preferences = state.preferences
                 instances = state.instances; tools = state.tools; toolDefaults = state.toolDefaults
                 web = state.web; mailServices = state.mailServices; objectStorage = state.objectStorage
+                projectRuntimes = (try? ProjectRuntimeStore(store: manager.store).load()) ?? []
                 selection = SettingsSection(rawValue: preferences.lastSettingsSection) ?? .instances
                 if selection == .logs { selection = .instances }
                 onboardingPresented = !preferences.onboardingCompleted
@@ -177,6 +179,7 @@ final class AppModel {
             mailStatuses = snapshot.5
             tools = snapshot.0.tools
             toolDefaults = snapshot.0.toolDefaults
+            projectRuntimes = try ProjectRuntimeStore(store: manager.store).load()
             let previousInventory = inventory
             for item in snapshot.1 where !inventory.databases.contains(where: { $0.id == item.id }) { inventory.databases.append(item) }
             for item in snapshot.0.web.php where !inventory.runtimes.contains(where: { $0.id == item.id }) { inventory.runtimes.append(item) }

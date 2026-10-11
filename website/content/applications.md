@@ -8,7 +8,7 @@ order: 4.7
 
 Open **Settings → Runtimes**, choose an application and version, then click **Install** beside the version selector. For a detected installation the action becomes **Set Default**; a selected default shows a label instead of another button. Morrow verifies and reuses an existing binary, or installs a missing version and selects it in the same operation. Node.js uses nvm; Go has a direct official archive provider. Other missing runtimes use the configured verified catalog, with Homebrew only when compatibility is explicitly enabled. See [Binary downloads](/docs/binary-downloads).
 
-Supported runtimes in this preview are PHP, Go, Flutter, Node.js, Python, and Ruby. The provider catalog can be extended as more runtimes are added. PHP web hosting and app-port routing live in [Sites](/docs/sites). Automatic ownership of Node/Go development processes, project-specific version files, and additional runtimes are future work.
+Supported runtimes in this preview are PHP, Go, Flutter, Node.js, Python, and Ruby. The provider catalog can be extended as more runtimes are added. PHP web hosting and app-port routing live in [Sites](/docs/sites). [Folder Versions](/docs/project-versions) selects a runtime per project. Automatic ownership of Node/Go development processes, portable project version files, and additional runtimes are future work.
 
 Morrow reads its managed distribution receipts, nvm version directories, existing Homebrew formula kegs, PATH installations, and Herd's PHP binaries. Installed versions and downloaded channel lists are cached on disk. Navigation uses that cache; the refresh icon explicitly rescans installations and available versions. A missing or day-old installation inventory is refreshed when the app starts. Service readiness continues to use live process checks. Flutter discovery reads SDK version metadata without running Flutter's first-use bootstrap. If SDK metadata is absent, run `flutter --version` once using that installation and refresh the pane.
 
@@ -55,7 +55,7 @@ morrow tool exec python -- --version
 morrow tool exec ruby -- --version
 ```
 
-The command inherits Terminal input and output, passes arguments directly to the selected executable, and returns its exit status. Companion commands can be selected explicitly:
+The command inherits Terminal input and output, passes arguments directly to the selected executable, and returns its exit status. It chooses the nearest saved folder version for the current directory, then the global default. `--path <folder>` chooses another working directory. Companion commands can be selected explicitly:
 
 ```sh
 morrow tool exec node --command npm -- --version
@@ -70,7 +70,7 @@ Only commands belonging to the selected runtime are accepted. Missing companion 
 morrow tool shell
 ```
 
-Add the printed `export PATH=...` line to your shell configuration, then open a new terminal. Morrow's wrappers use its saved defaults for `php`, `go`, `flutter`, `dart`, `node`, `npm`, `python`, `ruby`, and available companion tools. The app and CLI share these defaults.
+Add the printed `export PATH=...` line to your shell configuration, then open a new terminal. Morrow's wrappers select saved folder versions according to the working directory, falling back to its global defaults for `php`, `go`, `flutter`, `dart`, `node`, `npm`, `python`, `ruby`, and available companion tools. The app and CLI share these selections.
 
 Morrow does not edit your shell files or run `brew link`. Commands already installed elsewhere remain available when Morrow's bin directory is not first on PATH. Wrappers refuse to overwrite unrecognized commands in Morrow's bin directory. Re-select versions after moving the app or CLI so wrappers use its current location.
 

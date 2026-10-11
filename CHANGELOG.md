@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added Folder Versions for PHP, Node.js, Go, Flutter, Python, and Ruby, with a folder picker in Runtimes and Project Settings, persistent exact selections, closest-parent inheritance, and automatic reuse/installation under the existing provider policy.
+- Morrow's CLI and runtime wrappers now resolve versions from the working folder. PHP hosting shares the folder selection; global defaults and nvm's default alias remain unchanged. Added project use/list/show/clear commands and an optional working folder for tool exec.
+
 - Centered toast feedback as a compact macOS HUD with native action buttons, removed notifications from the menu dropdown, and bounded menu sizing so overlays cannot expand it across the screen.
 
 - Replaced the low-contrast bottom toast with shared HUD feedback: an opaque charcoal surface, readable text, status icon, close control, and optional action. Success notices last longer and pause on hover; errors stay until dismissed. Reduce Motion, Increased Contrast, and VoiceOver are supported.

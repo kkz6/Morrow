@@ -68,6 +68,11 @@ public struct SiteManager: Sendable {
             var site = try existing ?? detected(url, domain: name, web: web)
             site = LocalSite(id: site.id, domain: name, path: url.path, documentRoot: site.documentRoot, mode: port == nil ? site.mode : .proxy,
                              proxyPort: port ?? site.proxyPort, https: https ?? site.https, phpID: phpID ?? site.phpID, directoryID: nil, issue: port == nil ? site.issue : nil, automaticDomain: domain == nil)
+            if site.mode == .php, let selected = try ProjectRuntimeStore(store: store).selection(.php, directory: url.path) {
+                guard Self.fpmExecutable(selected) != nil else { throw MorrowError.message("The folder's PHP \(selected.version) has no PHP-FPM executable for hosting.") }
+                site.phpID = selected.id
+                if !web.php.contains(where: { $0.id == selected.id }) { web.php.append(selected) }
+            }
             web.sites.removeAll { $0.domain == name }; web.sites.append(site)
             try saveAndApply(web)
             return site
@@ -94,6 +99,11 @@ public struct SiteManager: Sendable {
             guard let index = web.sites.firstIndex(where: { $0.id == proposed.id }) else { throw MorrowError.message("This site was removed.") }
             var site = proposed
             site.domain = try Self.validateDomain(site.domain, web: web)
+            if site.mode == .php, let selected = try ProjectRuntimeStore(store: store).selection(.php, directory: site.path) {
+                guard Self.fpmExecutable(selected) != nil else { throw MorrowError.message("The folder's PHP \(selected.version) has no PHP-FPM executable.") }
+                site.phpID = selected.id
+                if !web.php.contains(where: { $0.id == selected.id }) { web.php.append(selected) }
+            }
             guard !web.sites.contains(where: { $0.id != site.id && $0.domain == site.domain && $0.issue == nil }) else { throw MorrowError.message("That hostname belongs to another project.") }
             let root = try folder(site.documentRoot)
             guard root.path == site.path || root.path.hasPrefix(site.path + "/") else { throw MorrowError.message("The document root must stay inside the project folder.") }
@@ -160,6 +170,33 @@ public struct SiteManager: Sendable {
             else if next.enabled { try recoverServices(next) }
         }
     }
+    // Called under the shared long-operation lock by RuntimeManager.
+    func applyProjectVersions(_ projects: [ProjectRuntimeSelection], previous: [ProjectRuntimeSelection]) throws {
+        let original = try store.load().web
+        var web = original
+        for index in web.sites.indices where web.sites[index].mode == .php {
+            let site = web.sites[index]
+            let selected = ProjectRuntimeStore.selection(.php, directory: site.path, projects: projects)
+            if let selected {
+                guard Self.fpmExecutable(selected) != nil else { throw MorrowError.message("PHP \(selected.version) has no PHP-FPM executable for \(site.domain). Select a complete PHP distribution.") }
+                if !web.php.contains(where: { $0.id == selected.id }) { web.php.append(selected) }
+                web.sites[index].phpID = selected.id
+            } else if let old = ProjectRuntimeStore.selection(.php, directory: site.path, projects: previous), site.phpID == old.id {
+                web.sites[index].phpID = nil
+            }
+        }
+        if web != original { try saveAndApply(web) }
+    }
+    public func updateDirectoryWatcher(cli: URL) throws {
+        try store.operation {
+            var web = try store.load().web
+            guard web.enabled else { return }
+            web.cliPath = cli.resolvingSymlinksInPath().path
+            try store.update { $0.web.cliPath = web.cliPath }
+            try launchd.unload(label("watch", web: web))
+            try writeWatcher(web)
+        }
+    }
     private func detected(_ path: URL, domain: String, web: WebWorkspace, directory: UUID? = nil) throws -> LocalSite {
         let fm = FileManager.default
         let laravel = fm.fileExists(atPath: path.appendingPathComponent("artisan").path)
@@ -173,6 +210,7 @@ public struct SiteManager: Sendable {
     }
     private func discovered(_ previous: WebWorkspace) throws -> WebWorkspace {
         var web = previous
+        let projects = try ProjectRuntimeStore(store: store).load()
         var next = previous.sites.filter { $0.directoryID == nil }
         var names = Set(next.map(\.domain))
         for directory in previous.directories where !directory.enabled {
@@ -191,6 +229,10 @@ public struct SiteManager: Sendable {
                 let generated = try Self.domain(for: child.path, suffix: web.suffix)
                 let existing = previous.sites.first { $0.directoryID == directory.id && $0.path == canonical.path }
                 var site = try existing ?? detected(canonical, domain: generated, web: web, directory: directory.id)
+                if let selected = ProjectRuntimeStore.selection(.php, directory: canonical.path, projects: projects) {
+                    site.phpID = selected.id
+                    if Self.fpmExecutable(selected) != nil, !web.php.contains(where: { $0.id == selected.id }) { web.php.append(selected) }
+                }
                 if site.automaticDomain { site.domain = generated }
                 if site.issue == "Cannot read the parked directory." || site.issue == "Project directory is disabled." {
                     site.issue = site.mode == .proxy && site.proxyPort == nil ? "Link the development server port with morrow site link --port <port>." : nil

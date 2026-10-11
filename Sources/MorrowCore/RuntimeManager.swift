@@ -136,7 +136,7 @@ public struct RuntimeManager: Sendable {
     @discardableResult public func install(_ engine: RuntimeEngine, version: String = "automatic") throws -> RuntimeInstallation {
         try store.operation { try installUnlocked(engine, version: version) }
     }
-    private func installUnlocked(_ engine: RuntimeEngine, version: String) throws -> RuntimeInstallation {
+    private func installUnlocked(_ engine: RuntimeEngine, version: String, preserveNodeDefault: Bool = false) throws -> RuntimeInstallation {
         let found = try installations().filter { $0.engine == engine }
         if version == "automatic", let existing = found.first {
             let valid = try validate(existing); try register(valid); return valid
@@ -148,7 +148,7 @@ public struct RuntimeManager: Sendable {
         if engine == .node {
             let requested = version.replacingOccurrences(of: "nvm@", with: "")
             if let existing = found.first(where: { $0.version == requested }) { let valid = try validate(existing); try register(valid); return valid }
-            let installed = try NodeVersionManager(store: store, runner: runner).install(version)
+            let installed = try NodeVersionManager(store: store, runner: runner).install(version, preserveDefault: preserveNodeDefault)
             let valid = try validate(installed); try register(valid); return valid
         }
         let policy = BinaryInstaller(store: store, runner: runner)
@@ -194,15 +194,59 @@ public struct RuntimeManager: Sendable {
             try store.update { $0.toolDefaults[valid.engine.rawValue] = valid.id }
         }
     }
-    public func resolve(_ engine: RuntimeEngine, version: String? = nil) throws -> RuntimeInstallation {
-        let all = try installations().filter { $0.engine == engine }
-        if let version, let item = all.first(where: { $0.id == version || matches($0, request: version) }) { return try validate(item) }
-        if version != nil { throw MorrowError.message("That runtime version was not found.") }
+    public func resolve(_ engine: RuntimeEngine, version: String? = nil, directory: String? = nil) throws -> RuntimeInstallation {
+        if let version {
+            guard let item = try installations().first(where: { $0.engine == engine && matches($0, request: version) }) else { throw MorrowError.message("That runtime version was not found.") }
+            return try validate(item)
+        }
+        if let directory, let selected = try ProjectRuntimeStore(store: store).selection(engine, directory: directory) {
+            do { return try validate(selected) }
+            catch { throw MorrowError.message("This folder selects \(engine.title) \(selected.version), but that installation is unavailable or changed. Select its version again; the global default was not substituted. \(error.localizedDescription)") }
+        }
         let state = try store.load()
         guard let id = state.toolDefaults[engine.rawValue], let selected = state.tools.first(where: { $0.id == id }) else {
             throw MorrowError.message("No default \(engine.title) version. Run morrow tool use \(engine.rawValue) <version>.")
         }
         return try validate(selected)
+    }
+    @discardableResult public func useForProject(_ engine: RuntimeEngine, version: String, directory: String, cli: URL) throws -> RuntimeInstallation {
+        let path = try ProjectRuntimeStore.directory(directory)
+        return try store.operation {
+            guard FileManager.default.isExecutableFile(atPath: cli.path) else { throw MorrowError.message("Morrow's command launcher is missing.") }
+            let projects = ProjectRuntimeStore(store: store)
+            let before = try projects.load()
+            let item = try installUnlocked(engine, version: version, preserveNodeDefault: true)
+            try writeShims(item, cli: cli.resolvingSymlinksInPath())
+            var after = before
+            if let index = after.firstIndex(where: { $0.path == path }) { after[index].runtimes[engine.rawValue] = item }
+            else { after.append(ProjectRuntimeSelection(path: path, runtimes: [engine.rawValue: item])) }
+            try saveProjectChoices(after, previous: before, changesPHP: engine == .php)
+            return item
+        }
+    }
+    public func clearProject(_ engine: RuntimeEngine?, directory: String) throws {
+        let path = URL(fileURLWithPath: directory, isDirectory: true).standardizedFileURL.resolvingSymlinksInPath().path
+        try store.operation {
+            let before = try ProjectRuntimeStore(store: store).load()
+            var after = before
+            if let engine, let index = after.firstIndex(where: { $0.path == path }) {
+                after[index].runtimes.removeValue(forKey: engine.rawValue)
+                if after[index].runtimes.isEmpty { after.remove(at: index) }
+            } else if engine == nil { after.removeAll { $0.path == path } }
+            try saveProjectChoices(after, previous: before, changesPHP: engine == nil || engine == .php)
+        }
+    }
+    private func saveProjectChoices(_ projects: [ProjectRuntimeSelection], previous: [ProjectRuntimeSelection], changesPHP: Bool) throws {
+        let sites = SiteManager(store: store, runner: runner)
+        if changesPHP { try sites.applyProjectVersions(projects, previous: previous) }
+        do { try ProjectRuntimeStore(store: store).save(projects) }
+        catch {
+            if changesPHP {
+                do { try sites.applyProjectVersions(previous, previous: projects) }
+                catch let restoreError { throw MorrowError.message("Folder settings could not be saved, and PHP routing could not be restored. Review Sites. \(error.localizedDescription) \(restoreError.localizedDescription)") }
+            }
+            throw error
+        }
     }
     public func updates(refresh: Bool = false) throws -> [RuntimeUpdate] {
         let installer = try installer()
@@ -294,20 +338,25 @@ public struct RuntimeManager: Sendable {
     /// Remove a selection from Morrow, leaving shared packages on the machine.
     public func forget(_ item: RuntimeInstallation) throws {
         try store.operation {
+            if let project = try ProjectRuntimeStore(store: store).load().first(where: { $0.runtimes.values.contains(where: { $0.id == item.id }) }) {
+                throw MorrowError.message("\(item.engine.title) \(item.version) is selected by \(project.path). Clear that folder's version before removing it from Morrow.")
+            }
             try store.update { state in
                 state.tools.removeAll { $0.id == item.id }
                 if state.toolDefaults[item.engine.rawValue] == item.id { state.toolDefaults.removeValue(forKey: item.engine.rawValue) }
             }
         }
     }
-    public func launch(_ engine: RuntimeEngine, arguments: [String], command: String? = nil) throws -> Int32 {
-        let item = try resolve(engine)
+    public func launch(_ engine: RuntimeEngine, arguments: [String], command: String? = nil, directory: String? = nil) throws -> Int32 {
+        let folder = try ProjectRuntimeStore.directory(directory ?? FileManager.default.currentDirectoryPath, allowRoot: true)
+        let item = try resolve(engine, directory: folder)
         let name = command ?? engine.binary
         guard let executable = item.command(name), FileManager.default.isExecutableFile(atPath: executable) else { throw MorrowError.message("The selected release does not include \(name).") }
         let process = Process()
         process.executableURL = URL(fileURLWithPath: executable); process.arguments = arguments
+        process.currentDirectoryURL = URL(fileURLWithPath: folder, isDirectory: true)
         var environment = ProcessInfo.processInfo.environment
-        environment["PATH"] = item.binDirectory + ":" + (environment["PATH"] ?? "/usr/bin:/bin")
+        environment["PATH"] = shimDirectory.path + ":" + item.binDirectory + ":" + (environment["PATH"] ?? "/usr/bin:/bin")
         if engine == .go {
             environment.removeValue(forKey: "GOROOT")
             if FileManager.default.fileExists(atPath: item.prefix + "/libexec/pkg") { environment["GOROOT"] = item.prefix + "/libexec" }

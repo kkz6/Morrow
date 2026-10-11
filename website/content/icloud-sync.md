@@ -14,6 +14,8 @@ This developer preview uses a user-accessible iCloud Drive folder, with coordina
 
 ## What travels between Macs
 
+Folder version selections are local to each Mac because their absolute project paths may differ. Registered runtime packages still participate in the runtime installation recipes; assigning those runtimes to local folders is a separate step. Morrow does not publish project folders or their version-selection file through this sync feature.
+
 The workspace blueprint contains:
 
 - Mailpit server names, version choices, SMTP/inbox ports, and launch-at-login choices.

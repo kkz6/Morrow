@@ -280,7 +280,7 @@ private struct SiteEditor: View {
     @State private var mode = SiteMode.php
     @State private var port = ""
     @State private var secure = false
-    @State private var phpID = ""
+    @State private var folderVersions = false
     @State private var issue: String?
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
@@ -301,10 +301,11 @@ private struct SiteEditor: View {
                 } else {
                     SettingRow(title: "Document root") { SettingsInput(placeholder: "public", text: $root).frame(width: 230) }
                 }
-                if mode == .php {
-                    SettingsDivider()
-                    SettingRow(title: "PHP version") {
-                        SettingsSelect(label: "Project PHP version", selection: $phpID, options: [.init(value: "", title: "Sites default", symbol: "gearshape")] + php.map { .init(value: $0.id, title: $0.version, symbol: "morrow.php") })
+                SettingsDivider()
+                SettingRow(title: "Folder versions") {
+                    HStack(spacing: 8) {
+                        Text(folderSummary).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(2)
+                        Button("Choose…") { folderVersions = true }.settingsButton(height: 28)
                     }
                 }
                 SettingsDivider()
@@ -314,20 +315,26 @@ private struct SiteEditor: View {
             HStack {
                 Spacer(); Button("Cancel") { dismiss() }.settingsButton().keyboardShortcut(.cancelAction).disabled(model.busy)
                 Button("Save") {
-                    var proposed = site; proposed.domain = domain; proposed.mode = mode; proposed.https = secure; proposed.phpID = phpID.isEmpty ? nil : phpID
+                    var proposed = model.web.sites.first(where: { $0.id == site.id }) ?? site
+                    proposed.domain = domain; proposed.mode = mode; proposed.https = secure
                     if mode == .proxy { guard let port = Int(port) else { issue = "Enter the application's numeric port."; return }; proposed.proxyPort = port }
                     proposed.documentRoot = root.hasPrefix("/") ? root : URL(fileURLWithPath: site.path).appendingPathComponent(root.isEmpty ? "." : root).standardizedFileURL.path
                     let saved = proposed
-                    let runtime = php.first { $0.id == saved.phpID }
                     model.perform("Saving project route…", operation: { manager in
                         let sites = SiteManager(store: manager.store, runner: manager.runner)
-                        if let runtime { try sites.registerPHP(runtime) }
                         try sites.update(saved)
                     }, completion: { dismiss() })
                 }.settingsButton().keyboardShortcut(.defaultAction).disabled(model.busy)
             }
         }.padding(20).frame(width: 490).onAppear {
-            domain = site.domain; root = site.documentRoot; mode = site.mode; port = site.proxyPort.map(String.init) ?? ""; secure = site.https; phpID = site.phpID ?? ""
+            domain = site.domain; root = site.documentRoot; mode = site.mode; port = site.proxyPort.map(String.init) ?? ""; secure = site.https
         }
+        .feedbackSheet(isPresented: $folderVersions) { ProjectVersionEditor(path: site.path, initialEngine: mode == .proxy ? .node : .php).environment(model) }
+    }
+    private var folderSummary: String {
+        let selected = RuntimeEngine.allCases.compactMap { engine in
+            ProjectRuntimeStore.selection(engine, directory: site.path, projects: model.projectRuntimes).map { "\($0.engine.title) \($0.version)" }
+        }
+        return selected.isEmpty ? "Default versions" : selected.joined(separator: " · ")
     }
 }

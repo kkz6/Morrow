@@ -187,6 +187,12 @@ Before system routing is enabled, use the displayed address such as `https://sho
 
 This installs the public root certificate into this user's login keychain trust settings and may prompt for authorization. Private CA keys remain in Morrow's local `web/caddy-data` directory and are not included in iCloud setup sync. Clients using separate trust stores may need to import the public root certificate separately. Turning off HTTPS changes the route back to HTTP; it does not remove the trusted CA.
 
+## Project PHP and Node versions
+
+Open **Project Settings → Folder versions → Choose** to select PHP, Node.js, or another runtime for the project folder. The same editor is available under **Runtimes → Folder Versions**. PHP hosting uses that folder's selected PHP-FPM pool; Terminal commands use the same folder selection through Morrow's wrappers or `morrow tool exec`. Node selection chooses the development runtime; start the Node app separately and link its port to a local domain.
+
+Parent folder choices apply to subfolders, with closer choices taking precedence per runtime. Existing explicit PHP route choices are retained as folder selections where the folder has one consistent PHP version. See [Folder Versions](/docs/project-versions) for installation policy and shell setup.
+
 ## Logs and actual status
 
 Sites reports live launchd PIDs and listener readiness. PHP projects also need their owned PHP-FPM process and socket; proxy projects need a listening upstream port. These checks indicate routing/runtime readiness, not an application-specific database or business-logic health check.
