@@ -19,6 +19,8 @@ Homebrew compatibility is **off by default**, including when older preferences d
 
 Release builds can include a default Morrow-hosted catalog, delivered over public HTTPS from object storage. A saved custom source takes precedence. The initial hosted package is the official Go distribution for Apple silicon; other packages still need complete portable distributions. Without a published package, Morrow explains that it is unavailable instead of installing another release or silently invoking Homebrew. See [Release signing and hosting](/docs/releases) for the publishing workflow.
 
+When the catalog has no Go release compatible with this Mac, Go can still use its official archive provider. A catalog containing only Apple silicon Go does not block that fallback on an Intel Mac.
+
 ## Configure a source
 
 Open **General → Binary Downloads**, enter an HTTPS catalog URL, and save it. Morrow validates the catalog before replacing the previous setting. Source changes clear cached channel lists. Use the same configuration from Terminal:

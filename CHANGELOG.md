@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Signed app cleanup now refreshes an older native setup-helper registration before repairing gateway association. It retains pending domain setup, requests macOS approval only when needed, and leaves database, mail, PHP, DNS, and web server jobs running. Standard app/CLI CI also uses Xcode 27.
+
 - Added a dedicated Xcode 27 release workflow with Developer ID signing, Apple notarization, ticket stapling, checksum packaging, and temporary-keychain cleanup. Development builds remain available without release credentials.
 - Added a bundled default binary catalog shared by the app and its CLI, with custom-source overrides and effective-source reporting.
 - Added a Contabo/S3 publishing tool using a local AWS CLI profile, immutable archive keys, public checksum verification, and conditional catalog updates. Customer downloads require no storage credentials or Homebrew; the first hosted distribution is Go for Apple silicon.

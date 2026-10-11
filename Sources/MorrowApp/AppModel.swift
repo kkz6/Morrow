@@ -352,16 +352,32 @@ final class AppModel {
         })
     }
     private func repairGatewayAttribution(message: String) {
-        guard setupPermission == .allowed else { notify("Service definitions updated. Allow the setup helper to repair the gateway's app association; running services were preserved."); return }
         activity = "Updating background association…"
         Task {
             defer { activity = nil }
             do {
+                let allowed = try await NativeSetupController.refreshSignedRegistration(store: manager.store)
+                refreshPermissions()
+                guard allowed else {
+                    let pending = "Service entries now belong to Morrow. Approve its signed setup helper in macOS to finish the gateway association; running servers were preserved."
+                    try? pending.write(to: manager.store.root.appendingPathComponent("background-cleanup.txt"), atomically: true, encoding: .utf8)
+                    notify(pending)
+                    NativeSetupController.requestApproval()
+                    return
+                }
+                // Preserve an earlier local-domain request and its response.
+                // Monitoring resumes it after this task releases its activity.
+                guard NativeSetupBridge.pendingRequest() == nil else {
+                    notify("Morrow's signed helper is ready. The saved domain setup is resuming; clean up again after it finishes.")
+                    return
+                }
                 let request = try NativeSetupBridge.submitAttributionRepair()
                 for _ in 0..<30 {
                     if let response = NativeSetupBridge.response(for: request) {
                         guard response.success else { throw MorrowError.message("The setup helper needs updating for background-association repair. Running services were preserved.") }
-                        notify(message); return
+                        let completed = message + " " + response.message
+                        try? completed.write(to: manager.store.root.appendingPathComponent("background-cleanup.txt"), atomically: true, encoding: .utf8)
+                        notify(completed); return
                     }
                     try await Task.sleep(for: .seconds(1))
                 }

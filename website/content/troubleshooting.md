@@ -28,6 +28,8 @@ If the app is an unsigned/ad-hoc development build, the remaining live registrat
 
 For a properly signed build, the app's cleanup also repairs missing gateway association metadata through the approved setup helper. This operation does not restart DNS, HTTP, PHP, databases, or mail. An old helper or unsigned gateway needs an updated signed release before that repair can finish. Historical list entries can remain while macOS refreshes; Morrow does not claim a single row until the system actually groups it.
 
+Install the signed app in **Applications**, then use **General → Background access → … → Clean Up Old Registrations**. Cleanup updates user-owned job paths to the signed launcher and re-registers an older setup helper using Apple's native service API. This re-registration affects the setup helper only; running servers keep their PIDs. If macOS asks for approval of the newly signed helper, allow Morrow and run cleanup again. A saved domain setup request is preserved and resumes before gateway-only cleanup proceeds.
+
 ```sh
 morrow doctor
 ```

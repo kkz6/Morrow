@@ -49,6 +49,7 @@ struct MorrowApp: App {
                 }
                 if model.onboardingPresented { controller.show(SettingsRoot(model: model)) }
                 if CommandLine.arguments.contains("--setup-domains") { model.selection = .sites; model.installSiteSystemSetup(repair: true) }
+                if CommandLine.arguments.contains("--repair-background") { model.cleanupBackgroundItems() }
             }
         }
         AppDelegate.onReopen = { controller.show(SettingsRoot(model: model)) }

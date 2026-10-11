@@ -92,7 +92,7 @@ public struct ManagedBinaryStore: Sendable {
         }
         // Go publishes complete macOS archives and authoritative SHA-256 hashes.
         // No guessed database download URLs or Homebrew bottles are used.
-        if package == "go", !values.contains(where: { $0.package == "go" }) { values += try goReleases() }
+        if package == "go", !values.contains(where: { $0.package == "go" && compatible($0) }) { values += try goReleases() }
         var seen = Set<String>()
         return values.filter { (package == nil || $0.package == package) && compatible($0) }
             .sorted {
