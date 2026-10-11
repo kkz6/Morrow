@@ -19,3 +19,7 @@ npm run check
 Keep all user data and credentials outside the repository. Use an isolated
 `MORROW_HOME` for native integration checks and stop its managed jobs before
 removing test files.
+
+Customer releases use `.github/workflows/release.yml` on main. See
+`website/content/releases.md` for signing secrets, notarization, and Contabo
+publishing. Keep all private keys and storage profiles outside version control.

@@ -133,7 +133,7 @@ struct GeneralOptionsPane: View {
         }.onAppear {
             model.refreshPermissions()
             brewPath = model.preferences.homebrewPath
-            catalogURL = model.preferences.binaryCatalogURL
+            catalogURL = ManagedBinaryStore(store: model.manager.store, runner: model.manager.runner).catalogURL
             nvmPath = model.preferences.nvmDirectory
         }
     }

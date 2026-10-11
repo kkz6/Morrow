@@ -20,6 +20,23 @@ rm -f "$app/Contents/MacOS/Morrow"
 cp "$binary_directory/MorrowMenuBar" "$app/Contents/MacOS/MorrowMenuBar"
 cp "$binary_directory/morrow-cli" "$app/Contents/MacOS/morrow"
 cp Resources/Info.plist "$app/Contents/Info.plist"
+python3 - "$app/Contents/Info.plist" <<'PY'
+import os, plistlib, re, sys
+from urllib.parse import urlparse
+path=sys.argv[1]
+with open(path,'rb') as source: info=plistlib.load(source)
+version=os.environ.get('MORROW_RELEASE_VERSION','')
+if version:
+    if not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+',version): raise SystemExit('Invalid release version.')
+    info['CFBundleShortVersionString']=version
+    info['CFBundleVersion']=os.environ.get('GITHUB_RUN_NUMBER',info['CFBundleVersion'])
+catalog=os.environ.get('MORROW_DEFAULT_BINARY_CATALOG_URL','')
+if catalog:
+    url=urlparse(catalog)
+    if url.scheme != 'https' or not url.hostname or url.username or url.password or url.fragment or url.query: raise SystemExit('Use a stable HTTPS catalog URL without credentials or query parameters.')
+    info['MorrowBinaryCatalogURL']=catalog
+with open(path,'wb') as destination: plistlib.dump(info,destination)
+PY
 /usr/libexec/PlistBuddy -c "Add :DTSDKName string macosx$MORROW_SDK_VERSION" "$app/Contents/Info.plist"
 cp -R "$binary_directory/Morrow_MorrowApp.bundle" "$app/Contents/Resources/"
 cp Resources/ThirdPartyNotices.txt "$app/Contents/Resources/"
@@ -49,6 +66,10 @@ else
     morrow_cli_team="$(codesign -dv --verbose=4 "$app/Contents/MacOS/morrow" 2>&1 | awk -F= '$1=="TeamIdentifier" {print $2}')"
     if [[ -z "$morrow_app_team" || "$morrow_app_team" == "not set" || "$morrow_app_team" != "$morrow_cli_team" ]]; then
         echo "Background grouping requires the app and launcher to share a valid Apple signing team." >&2
+        exit 1
+    fi
+    if [[ -n "${MORROW_EXPECTED_TEAM:-}" && "$morrow_app_team" != "$MORROW_EXPECTED_TEAM" ]]; then
+        echo "The signing certificate does not belong to the configured Apple team." >&2
         exit 1
     fi
     codesign --verify --strict "$app/Contents/MacOS/morrow"

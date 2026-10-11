@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added a dedicated Xcode 27 release workflow with Developer ID signing, Apple notarization, ticket stapling, checksum packaging, and temporary-keychain cleanup. Development builds remain available without release credentials.
+- Added a bundled default binary catalog shared by the app and its CLI, with custom-source overrides and effective-source reporting.
+- Added a Contabo/S3 publishing tool using a local AWS CLI profile, immutable archive keys, public checksum verification, and conditional catalog updates. Customer downloads require no storage credentials or Homebrew; the first hosted distribution is Go for Apple silicon.
+
 - Registered Morrow with Launch Services for background association and added matching-team/signature checks for customer app builds.
 - Cleanup now reports unsigned development builds honestly and avoids relabeling their services into additional ungrouped Morrow rows. New native workers use the shared runner only when the app and launcher have valid matching signing teams.
 - Added a narrow signed-helper operation that repairs gateway association metadata without restarting services, changing ports, replacing binaries, or rewriting DNS. Older helpers safely reject these requests before domain setup.

@@ -1,0 +1,8 @@
+{
+  "endpointURL": "https://eu2.contabostorage.com",
+  "bucket": "REPLACE_WITH_YOUR_BUCKET",
+  "publicBaseURL": "https://REPLACE_WITH_YOUR_PUBLIC_DOWNLOAD_BASE",
+  "prefix": "morrow",
+  "profile": "contabo",
+  "region": "default"
+}

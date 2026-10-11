@@ -1,0 +1,53 @@
+name: Signed macOS release
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: Release version (for example 0.1.0)
+        required: true
+        default: '0.1.0'
+permissions:
+  contents: read
+concurrency:
+  group: morrow-signed-release
+  cancel-in-progress: false
+jobs:
+  release:
+    if: github.ref == 'refs/heads/main'
+    runs-on: xcode-27
+    timeout-minutes: 60
+    environment: release
+    env:
+      DEVELOPER_DIR: /Applications/Xcode.app/Contents/Developer
+      MORROW_RELEASE_VERSION: ${{ inputs.version }}
+      MORROW_EXPECTED_TEAM: ${{ vars.MORROW_APPLE_TEAM_ID }}
+      MORROW_DEFAULT_BINARY_CATALOG_URL: ${{ vars.MORROW_BINARY_CATALOG_URL }}
+      MORROW_APP_OUTPUT: build/release/Morrow.app
+    steps:
+      - uses: actions/checkout@v7
+      - name: Import Developer ID into a temporary keychain
+        env:
+          MORROW_CERTIFICATE_P12_BASE64: ${{ secrets.MORROW_CERTIFICATE_P12_BASE64 }}
+          MORROW_CERTIFICATE_PASSWORD: ${{ secrets.MORROW_CERTIFICATE_PASSWORD }}
+          MORROW_NOTARY_KEY_BASE64: ${{ secrets.MORROW_NOTARY_KEY_BASE64 }}
+          MORROW_NOTARY_KEY_ID: ${{ secrets.MORROW_NOTARY_KEY_ID }}
+          MORROW_NOTARY_ISSUER_ID: ${{ secrets.MORROW_NOTARY_ISSUER_ID }}
+        run: python3 scripts/release-keychain.py
+      - name: Build and sign the app and its bundled CLI
+        run: ./scripts/build-app.sh release
+      - name: Notarize, staple, and package
+        run: ./scripts/notarize-app.sh
+      - name: Upload the notarized release
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: Morrow-${{ inputs.version }}-macos-arm64
+          path: |
+            build/release/Morrow-*.zip
+            build/release/SHA256SUMS
+            build/release/notarization.json
+            build/release/notarization-log.json
+          if-no-files-found: ignore
+      - name: Remove temporary signing material
+        if: always()
+        run: python3 scripts/release-keychain.py --cleanup

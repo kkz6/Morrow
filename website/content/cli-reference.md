@@ -8,7 +8,7 @@ order: 6
 
 | Command | Purpose |
 | --- | --- |
-| `morrow binary source <https-url\|clear>` | Validate and configure the native distribution catalog, or clear it |
+| `morrow binary source <https-url\|clear>` | Validate a custom distribution catalog, or return to the release's bundled source |
 | `morrow binary list` | List compatible published catalog releases |
 | `morrow binary refresh` | Refresh provider metadata; refresh Homebrew only with opt-in |
 | `morrow binary brew on` | Enable optional Homebrew installation/upgrade compatibility |

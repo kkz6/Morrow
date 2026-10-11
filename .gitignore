@@ -11,3 +11,8 @@ website/dist
 .env
 .env.*
 !.env.example
+*.p12
+*.pfx
+*.p8
+*.certSigningRequest
+distributions/storage.local.json

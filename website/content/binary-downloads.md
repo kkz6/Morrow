@@ -17,7 +17,7 @@ Homebrew compatibility is **off by default**, including when older preferences d
 | Databases, PHP, Flutter, Python, Ruby | Complete compatible distributions in your configured catalog |
 | Caddy, dnsmasq, Mailpit, MinIO | Complete compatible distributions in your configured catalog |
 
-No Morrow-hosted catalog is deployed in this preview. Without a published package, Morrow explains that it is unavailable instead of installing another release or silently invoking Homebrew. This download layer prepares the app and CLI for object storage; it does not create a server or upload packages.
+Release builds can include a default Morrow-hosted catalog, delivered over public HTTPS from object storage. A saved custom source takes precedence. The initial hosted package is the official Go distribution for Apple silicon; other packages still need complete portable distributions. Without a published package, Morrow explains that it is unavailable instead of installing another release or silently invoking Homebrew. See [Release signing and hosting](/docs/releases) for the publishing workflow.
 
 ## Configure a source
 
@@ -31,7 +31,7 @@ morrow binary brew off
 morrow binary source clear
 ```
 
-The example hostname is a placeholder. Supply your own source; do not embed credentials in the URL. Catalog choice and compatibility permission stay local to this Mac and are not included in iCloud recipes.
+The example hostname is a placeholder. Do not embed credentials in the URL. `source clear` removes your custom override and returns to the release's bundled source, if present. `morrow doctor` shows the effective source. Catalog choice and compatibility permission stay local to this Mac and are not included in iCloud recipes. Customers do not need AWS CLI, storage keys, or Homebrew to download a published distribution.
 
 ## Catalog format
 

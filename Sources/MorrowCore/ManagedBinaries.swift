@@ -44,6 +44,17 @@ public struct ManagedBinaryStore: Sendable {
         Set(DatabaseEngine.allCases.map(\.rawValue) + RuntimeEngine.allCases.map(\.rawValue) + ["caddy", "dnsmasq", "mailpit", "minio"])
     }
     private var directory: URL { store.root.appendingPathComponent("binaries") }
+    public var catalogURL: String {
+        let configured = (try? store.load().preferences.binaryCatalogURL) ?? ""
+        if !configured.isEmpty { return configured }
+        if let value = Bundle.main.object(forInfoDictionaryKey: "MorrowBinaryCatalogURL") as? String { return value }
+        if let launcher = ManagedServiceRunner.launcher() {
+            let app = URL(fileURLWithPath: launcher).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            if app.pathExtension == "app", let bundle = Bundle(url: app), bundle.bundleIdentifier == "dev.morrow.app",
+               let value = bundle.object(forInfoDictionaryKey: "MorrowBinaryCatalogURL") as? String { return value }
+        }
+        return ""
+    }
     private struct Cache: Codable { let source: String; let updated: Date; let catalog: BinaryCatalog }
     public static func validateCatalogURL(_ value: String) throws -> URL? {
         if value.isEmpty { return nil }
@@ -63,7 +74,7 @@ public struct ManagedBinaryStore: Sendable {
         try? FileManager.default.removeItem(at: store.root.appendingPathComponent("binary-catalog.json"))
     }
     public func releases(package: String? = nil, refresh: Bool = false) throws -> [BinaryRelease] {
-        let source = try store.load().preferences.binaryCatalogURL
+        let source = catalogURL
         var values: [BinaryRelease] = []
         if let endpoint = try Self.validateCatalogURL(source) {
             let cacheURL = store.root.appendingPathComponent("binary-catalog.json")

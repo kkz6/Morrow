@@ -60,7 +60,7 @@ DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer ./scripts/build-app.sh
 
 ## Developer preview distribution
 
-Local builds are ad-hoc signed. Developer ID signing and notarization are still required for polished distribution to other Macs. The project currently documents source builds and CI artifacts rather than a notarized installer.
+Default local builds are ad-hoc signed. The dedicated **Signed macOS release** workflow creates a Developer ID signed and notarized app archive when its release credentials are configured. Use that archive for customer distribution; development and ordinary CI builds are not notarized releases. See [Release signing and hosting](/docs/releases).
 
 ## Running after a startup error
 

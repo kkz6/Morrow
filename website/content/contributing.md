@@ -86,7 +86,7 @@ Build the complete app, including the bundled `dev.morrow.setup.plist`, with a D
 MORROW_SIGNING_IDENTITY="Developer ID Application: Your Name (TEAMID)" ./scripts/build-app.sh release
 ```
 
-The build signs nested executables before the app, enables hardened runtime, and requests a timestamp when an identity is provided. Default local/CI builds remain ad-hoc signed. A customer release still needs Apple's notarization submission and ticket stapling; providing a signing variable does not itself notarize the app.
+The build signs nested executables before the app, enables hardened runtime, and requests a timestamp when an identity is provided. Default development builds remain ad-hoc signed. The **Signed macOS release** workflow imports private signing material into a temporary keychain, builds with Xcode 27, submits to Apple, staples the accepted ticket, and packages an Apple silicon release with its SHA-256 digest. Its cleanup always removes temporary signing material. See [Release signing and hosting](/docs/releases) for configuration and download publishing. Providing a signing variable alone does not notarize a local build.
 
 Setup uses native `SMAppService` approval. Do not reintroduce AppleScript/Python elevation or cache a sudo password. Keep the setup helper's operations limited to validated local DNS and gateway installation.
 

@@ -1,0 +1,67 @@
+---
+title: Release signing and hosting
+description: Sign and notarize customer builds, and publish verified native distributions to object storage.
+group: Reference
+order: 7.5
+---
+## Signed application builds
+
+The **Signed macOS release** GitHub Actions workflow runs on main through **Actions → Signed macOS release → Run workflow**. Enter a numeric version such as `0.1.0`. It uses Xcode 27 and its current macOS SDK, while keeping macOS 14 as the minimum supported version. The initial release targets Apple silicon.
+
+Configure these repository secrets through GitHub's encrypted secret storage:
+
+| Secret | Value |
+| --- | --- |
+| `MORROW_CERTIFICATE_P12_BASE64` | Base64 of the Developer ID Application certificate and private key, exported as an encrypted `.p12` |
+| `MORROW_CERTIFICATE_PASSWORD` | Password protecting that `.p12` |
+| `MORROW_NOTARY_KEY_BASE64` | Base64 of the dedicated App Store Connect team API key's `.p8` file |
+| `MORROW_NOTARY_KEY_ID` | That API key's Key ID |
+| `MORROW_NOTARY_ISSUER_ID` | The team's Issuer ID |
+
+Set repository variable `MORROW_APPLE_TEAM_ID` to the certificate's Apple Team ID. Set `MORROW_BINARY_CATALOG_URL` to the public HTTPS catalog to include it as the default source in releases. A user-selected source overrides this default.
+
+The workflow imports the certificate into a temporary keychain, checks its team, signs the app and bundled launcher with hardened runtime and timestamps, and submits an archive to Apple. Only an accepted submission is stapled and packaged. It verifies the ticket and Gatekeeper assessment before producing `Morrow-<version>-macos-arm64.zip`, `SHA256SUMS`, and the notarization reports. On failure, available reports are retained for diagnosis. Temporary credentials and the keychain are removed even after a failed build. Downloads are available under the workflow run's artifacts; this workflow does not automatically publish a GitHub Release.
+
+Never put private keys, certificate passwords, or storage credentials in source files, workflow text, documentation, or chat. Apple Developer membership and a valid Developer ID Application certificate are required. See [Apple's notarization workflow](https://developer.apple.com/documentation/security/customizing-the-notarization-workflow).
+
+## Contabo publisher setup
+
+AWS CLI is an administrator publishing tool. Customers download public HTTPS archives directly through Morrow and do not install it. Install AWS CLI v2 using [AWS's macOS installer](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html); a current-user installation works without Homebrew. This development machine uses `~/.local/bin/aws`.
+
+Configure a dedicated profile locally. Enter access keys only in your own terminal:
+
+```sh
+aws configure --profile contabo
+aws configure set endpoint_url https://sin1.contabostorage.com --profile contabo
+aws configure set s3.addressing_style path --profile contabo
+```
+
+Use region `default` for the signing region and output `json`. Choose the endpoint matching your bucket's location; the example is Singapore. Copy `distributions/storage.example.json` to the ignored `distributions/storage.local.json`, then enter your bucket, public download base, endpoint, and profile. The public base uses Contabo's documented tenant-and-bucket URL; it is distinct from the endpoint used by AWS CLI. See [Contabo's object storage documentation](https://docs.contabo.com/docs/storage/object-storage/).
+
+## Publish a prepared native archive
+
+First prepare a complete relocatable distribution and a release descriptor using the [catalog format](/docs/binary-downloads). Include all required libraries, resources, executable paths, redistribution notices, architecture, minimum macOS version, and the archive's SHA-256. Optional `license`, `sourceURL`, `sourceSHA256`, and `notarizationID` fields preserve provenance. Do not upload Homebrew bottles with external Cellar dependencies.
+
+```sh
+python3 scripts/publish-binary.py \
+  --archive /path/to/distribution.tar.gz \
+  --release /path/to/release.json \
+  --dry-run
+
+python3 scripts/publish-binary.py \
+  --archive /path/to/distribution.tar.gz \
+  --release /path/to/release.json \
+  --public-read
+```
+
+`--dry-run` shows the planned public URLs and descriptor without contacting storage. Publishing checks the local checksum, uploads to a content-addressed key, downloads the public object to verify its bytes, then merges the release into `morrow/catalog.json`. Existing releases with conflicting content are refused. Conditional catalog writes prevent silently overwriting a concurrent publisher; unsupported conditional writes stop publication.
+
+`--public-read` sets the ACL only on the archive and catalog objects being published. It does not make the entire bucket public or change unrelated objects. Omit it when public access is already configured separately. The publisher delegates authentication to AWS CLI's profile and never reads or prints access keys.
+
+After publishing, set the repository's `MORROW_BINARY_CATALOG_URL` variable to the printed catalog URL and build a signed release. On an existing Mac, save the URL through **General → Binary Downloads** or `morrow binary source <url>`. New catalog patch versions become available through Morrow's existing update checks; previous archives remain immutable.
+
+The first hosted distribution is Go for Apple silicon. Other services need their own portable packages before they can be installed on a clean Mac without optional Homebrew compatibility. Existing services and data continue using their current binaries during this transition.
+
+## Preserve running services during deployment
+
+Stage a new app with `MORROW_APP_OUTPUT`; do not overwrite executable files used by active service runners. Deploy the entire staged bundle atomically, preserving the previous bundle until its processes have exited. Launch Services registration and scoped attribution cleanup can update association metadata without stopping servers. Already running legacy workers and historical macOS records may remain separate until macOS refreshes or those workers next restart normally. Never reset the global background-task database to force a cosmetic cleanup.
