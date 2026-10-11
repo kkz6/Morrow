@@ -13,7 +13,7 @@
 - Registered Morrow with Launch Services for background association and added matching-team/signature checks for customer app builds.
 - Cleanup now reports unsigned development builds honestly and avoids relabeling their services into additional ungrouped Morrow rows. New native workers use the shared runner only when the app and launcher have valid matching signing teams.
 - Added a narrow signed-helper operation that repairs gateway association metadata without restarting services, changing ports, replacing binaries, or rewriting DNS. Older helpers safely reject these requests before domain setup.
-- Added staged app output for development builds so attribution work can be prepared without replacing executables used by running services. Apple signing and live list consolidation remain deferred until release.
+- Added staged app output for development builds so attribution work can be prepared without replacing executables used by running services. Ad-hoc development remains supported; customer builds use the signed release workflow.
 
 - Settings and onboarding now read native setup/login permission status on launch, while monitoring, and when returning from System Settings. Approval prompts are conditional; allowed access is distinguished from working local routing, and pending setup survives reopening the app.
 - Added scoped background-registration cleanup that archives obsolete inactive Morrow jobs and updates retained service attribution without interrupting running services or resetting macOS's background-item database.
