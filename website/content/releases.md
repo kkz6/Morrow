@@ -60,7 +60,19 @@ python3 scripts/publish-binary.py \
 
 After publishing, set the repository's `MORROW_BINARY_CATALOG_URL` variable to the printed catalog URL and build a signed release. Customer releases use this source automatically. For an existing development Mac, set an override with `morrow binary source <url>`. New catalog patch versions become available through Morrow's existing update checks; previous archives remain immutable.
 
-The first hosted distribution is Go for Apple silicon. Other services need their own portable packages before they can be installed on a clean Mac without optional Homebrew compatibility. Existing services and data continue using their current binaries during this transition.
+Hosted distributions include Go for Apple silicon and PHP 8.0.30 for Apple silicon and Intel. Other services need their own portable packages before they can be installed on a clean Mac without optional Homebrew compatibility. Existing services and data continue using their current binaries during this transition.
+
+### Portable PHP preparation
+
+`distributions/php/8.0.30.json` pins the upstream StaticPHP CLI/FPM archives and SHA-256 digests for both architectures. Prepare a fresh signed package directory with:
+
+```sh
+python3 scripts/package-php.py --recipe distributions/php/8.0.30.json --output .build/php-release --identity "$MORROW_SIGNING_IDENTITY" --team "$MORROW_EXPECTED_TEAM"
+```
+
+Preparation validates archive layout, architecture, minimum macOS, and dependencies restricted to system libraries. It includes upstream license notices, source provenance, and version-specific configuration, then signs each executable with Developer ID. Run `scripts/notarize-php.sh .build/php-release` to notarize its submission ZIP and record the accepted ID in both descriptors before publishing each archive with `scripts/publish-binary.py`. No Homebrew installation or global PHP linking occurs during preparation.
+
+The **Signed PHP distributions** GitHub Actions workflow runs this preparation and notarization with the existing release credentials in a temporary keychain. It uploads signed archives, descriptors, and the Apple acceptance report; download these artifacts to publish through the locally configured object-storage profile. Storage access keys are not needed by this workflow.
 
 ## Preserve running services during deployment
 

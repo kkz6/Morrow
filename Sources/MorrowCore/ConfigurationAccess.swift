@@ -14,7 +14,7 @@ public struct ConfigurationAccess: Sendable {
     public init(store: StateStore = StateStore(), runner: any CommandRunning = CommandRunner()) { self.store = store; self.runner = runner }
     public func files(_ runtime: RuntimeInstallation) throws -> [ConfigurationFile] {
         if runtime.engine == .php {
-            let output = try runner.run(runtime.executable, ["--ini"], environment: [:]).checked()
+            let output = try runner.run(runtime.executable, ["--ini"], environment: runtime.environment).checked()
             var paths: [ConfigurationFile] = []
             for line in output.components(separatedBy: .newlines) {
                 if line.hasPrefix("Loaded Configuration File:"), let value = line.split(separator: ":", maxSplits: 1).last {

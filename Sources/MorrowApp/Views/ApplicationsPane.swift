@@ -16,7 +16,7 @@ struct ApplicationsPane: View {
     private var options: [SelectOption<String>] {
         let existing = versions.map { SelectOption(value: $0.id, title: $0.version, symbol: "square.stack.3d.up") }
         let missing = (model.inventory.channels[engine.rawValue] ?? []).filter { channel in !versions.contains { $0.formula == channel.formula || $0.version == channel.version } }
-            .map { SelectOption(value: $0.formula, title: "\($0.version) · \($0.formula)", symbol: "square.stack.3d.up") }
+            .map { SelectOption(value: $0.formula, title: $0.formula.hasPrefix("managed:") ? $0.version : "\($0.version) · \($0.formula)", symbol: "square.stack.3d.up") }
         return (engine == .node ? [SelectOption(value: "lts", title: "Latest LTS · nvm", symbol: "morrow.node")] : []) + existing + missing
     }
     var body: some View {

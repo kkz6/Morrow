@@ -341,8 +341,8 @@ public struct SiteManager: Sendable {
             let component = phpComponent(item)
             let configuration = base.appendingPathComponent(component + ".conf")
             try writeFile(fpmConfiguration(item, web: web), to: configuration)
-            try runner.run(executable, ["--test", "--fpm-config", configuration.path], environment: [:]).checked()
-            try writeJob(component, web: web, arguments: [executable, "--nodaemonize", "--fpm-config", configuration.path], output: base.appendingPathComponent(component + ".log"))
+            try runner.run(executable, ["--test", "--fpm-config", configuration.path], environment: item.environment).checked()
+            try writeJob(component, web: web, arguments: [executable, "--nodaemonize", "--fpm-config", configuration.path], output: base.appendingPathComponent(component + ".log"), runtimeEnvironment: item.environment)
             if !live(component, web: web) { try launchd.unload(label(component, web: web)); try launchd.bootstrap(job(component, web: web)) }
         }
     }

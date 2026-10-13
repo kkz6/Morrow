@@ -17,7 +17,7 @@ Morrow handles binary downloads automatically during service creation or runtime
 | Databases, PHP, Flutter, Python, Ruby | Complete compatible distributions in your configured catalog |
 | Caddy, dnsmasq, Mailpit, MinIO | Complete compatible distributions in your configured catalog |
 
-Release builds can include a default Morrow-hosted catalog, delivered over public HTTPS from object storage. A saved custom source takes precedence. The initial hosted package is the official Go distribution for Apple silicon; other packages still need complete portable distributions. Without a published package, Morrow explains that it is unavailable instead of installing another release or silently invoking Homebrew. See [Release signing and hosting](/docs/releases) for the publishing workflow.
+Release builds can include a default Morrow-hosted catalog, delivered over public HTTPS from object storage. A saved custom source takes precedence. Hosted packages include Go for Apple silicon and PHP 8.0.30 with CLI/FPM for Apple silicon and Intel; other packages still need complete portable distributions. Without a published package, Morrow explains that it is unavailable instead of installing another release or silently invoking Homebrew. See [Release signing and hosting](/docs/releases) for the publishing workflow.
 
 When the catalog has no Go release compatible with this Mac, Go can still use its official archive provider. A catalog containing only Apple silicon Go does not block that fallback on an Intel Mac.
 

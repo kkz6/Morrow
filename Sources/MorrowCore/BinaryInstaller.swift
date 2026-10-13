@@ -16,7 +16,7 @@ public struct BinaryInstaller: Sendable {
         try InventoryStore(store: store).save(inventory)
     }
     func requireHomebrew() throws -> HomebrewInstaller {
-        guard allowsHomebrew else { throw MorrowError.message("No compatible managed binary is available. Use an existing installation, configure a binary catalog in General, or explicitly enable Homebrew compatibility.") }
+        guard allowsHomebrew else { throw MorrowError.message("No compatible managed binary is available. Use an existing installation, choose a published release, or explicitly enable Homebrew compatibility from Terminal.") }
         return brew
     }
     public func installations() throws -> [Installation] {

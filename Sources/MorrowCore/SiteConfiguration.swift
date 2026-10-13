@@ -113,11 +113,12 @@ extension SiteManager {
         try FileManager.default.setAttributes([.posixPermissions: 0o600], ofItemAtPath: url.path)
     }
     func job(_ component: String, web: WebWorkspace) -> URL { store.root.appendingPathComponent("jobs/\(label(component, web: web)).plist") }
-    func writeJob(_ component: String, web: WebWorkspace, arguments: [String], output: URL) throws {
+    func writeJob(_ component: String, web: WebWorkspace, arguments: [String], output: URL, runtimeEnvironment: [String: String] = [:]) throws {
         var environment = store.workerEnvironment
         environment["HOME"] = FileManager.default.homeDirectoryForCurrentUser.path
         environment["PATH"] = "/opt/homebrew/bin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin"
         environment["LC_ALL"] = "C"
+        environment.merge(runtimeEnvironment) { _, configured in configured }
         let description: [String: Any] = ["Label": label(component, web: web), "ProgramArguments": ManagedServiceRunner.arguments(arguments), "AssociatedBundleIdentifiers": ManagedServiceRunner.bundleIdentifiers, "WorkingDirectory": base.path,
             "RunAtLoad": true, "KeepAlive": component == "watch" ? ["SuccessfulExit": false] as Any : false as Any, "StandardOutPath": output.path, "StandardErrorPath": output.path, "ExitTimeOut": 30, "EnvironmentVariables": environment]
         let data = try PropertyListSerialization.data(fromPropertyList: description, format: .xml, options: 0)

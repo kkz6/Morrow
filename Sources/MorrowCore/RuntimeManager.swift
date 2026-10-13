@@ -40,6 +40,12 @@ public struct RuntimeInstallation: Codable, Identifiable, Equatable, Sendable {
         return [prefix + "/sbin/php-fpm", prefix + "/bin/php-fpm"].first { FileManager.default.isExecutableFile(atPath: $0) }
     }
     public var binDirectory: String { URL(fileURLWithPath: executable).deletingLastPathComponent().path }
+    /// Portable PHP uses its own configuration instead of another installation's
+    /// global php.ini or extension scan directory.
+    public var environment: [String: String] {
+        guard engine == .php, source == "managed" else { return [:] }
+        return ["PHPRC": prefix + "/etc/php.ini", "PHP_INI_SCAN_DIR": prefix + "/etc/conf.d"]
+    }
     public init(engine: RuntimeEngine, formula: String, version: String, prefix: String, executable: String, source: String) {
         self.engine = engine; self.formula = formula; self.version = version; self.prefix = prefix; self.executable = executable; self.source = source
     }
@@ -77,10 +83,10 @@ public struct RuntimeManager: Sendable {
     public init(store: StateStore = StateStore(), runner: any CommandRunning = CommandRunner()) { self.store = store; self.runner = runner }
     func installer() throws -> HomebrewInstaller { HomebrewInstaller(runner: runner, configuredPath: try store.load().preferences.homebrewPath) }
     public var shimDirectory: URL { store.root.appendingPathComponent("bin") }
-    public func channels(_ engine: RuntimeEngine) throws -> [RuntimeChannel] {
+    public func channels(_ engine: RuntimeEngine, refresh: Bool = false) throws -> [RuntimeChannel] {
         if engine == .node { return try NodeVersionManager(store: store, runner: runner).channels() }
         let policy = BinaryInstaller(store: store, runner: runner)
-        let managed = try policy.managed.releases(package: engine.rawValue).map { RuntimeChannel(engine: engine, formula: $0.channel, version: $0.version) }
+        let managed = try policy.managed.releases(package: engine.rawValue, refresh: refresh).map { RuntimeChannel(engine: engine, formula: $0.channel, version: $0.version) }
         if !policy.allowsHomebrew || policy.executable == nil { return managed }
         let installer = try installer()
         if engine.isCask {
@@ -356,6 +362,7 @@ public struct RuntimeManager: Sendable {
         process.executableURL = URL(fileURLWithPath: executable); process.arguments = arguments
         process.currentDirectoryURL = URL(fileURLWithPath: folder, isDirectory: true)
         var environment = ProcessInfo.processInfo.environment
+        environment.merge(item.environment) { _, configured in configured }
         environment["PATH"] = shimDirectory.path + ":" + item.binDirectory + ":" + (environment["PATH"] ?? "/usr/bin:/bin")
         if engine == .go {
             environment.removeValue(forKey: "GOROOT")
@@ -407,7 +414,8 @@ public struct RuntimeManager: Sendable {
             else if let release = try? String(contentsOf: root.appendingPathComponent("version"), encoding: .utf8).trimmingCharacters(in: .whitespacesAndNewlines), SoftwareVersion(release) != nil { version = release }
             else { throw MorrowError.message("Flutter SDK metadata is missing. Run flutter --version once, then refresh Morrow.") }
         } else {
-            let result = try runner.run(executable, engine == .go ? ["version"] : ["--version"], environment: [:]).checked()
+            let arguments = engine == .php ? ["-n", "--version"] : engine == .go ? ["version"] : ["--version"]
+            let result = try runner.run(executable, arguments, environment: [:]).checked()
             let pattern: String
             switch engine {
             case .php: pattern = "PHP ([0-9]+(?:\\.[0-9]+)+)"

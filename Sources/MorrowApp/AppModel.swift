@@ -316,7 +316,7 @@ final class AppModel {
         let context = feedbackContext
         Task {
             do {
-                let channels = try await Task.detached { try runtimes.channels(engine) }.value
+                let channels = try await Task.detached { try runtimes.channels(engine, refresh: force) }.value
                 inventory.channels[engine.rawValue] = channels
                 try InventoryStore(store: manager.store).save(inventory)
             } catch { notify(error.localizedDescription, error: true, context: context) }

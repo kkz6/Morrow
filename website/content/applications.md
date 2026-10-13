@@ -40,6 +40,22 @@ Morrow uses a directory selected in **General → Node Version Manager**, then `
 
 ## Configuration and PHP logs
 
+### PHP 8.0
+
+PHP **8.0.30** is available from Morrow's hosted catalog for Apple silicon and Intel Macs running macOS 14 or newer. The package includes PHP CLI and PHP-FPM, with built-in extensions including MySQLi, PDO MySQL, mbstring, intl, curl, Redis, and OPcache. Installing it does not require Homebrew or change your existing PHP default.
+
+Choose **Runtimes → PHP → 8.0.30 → Install**, then use **Folder Versions** to assign it to a project. From Terminal:
+
+```sh
+morrow binary refresh
+morrow tool install php 8.0
+morrow project use php 8.0 --path /path/to/project
+```
+
+Portable PHP has its own editable `php.ini` and additional INI directory. Morrow's commands and PHP-FPM use those files, keeping other PHP installations' configuration separate. The built-in extensions do not require separately installed libraries. Optional extension binaries must match this PHP build; `phpize` and `php-config` are not included.
+
+PHP 8.0 is a legacy release, with [upstream support ending in November 2023](https://www.php.net/eol.php). Morrow keeps it available for older local projects and does not silently switch them to another PHP series.
+
 Use the configuration icon on a runtime card to open its configuration. PHP exposes its loaded `php.ini` and additional `.ini` files in a shared editor, with an **Open in Editor** action. Saving preserves file permissions and refuses to overwrite a file changed elsewhere; restart affected services to apply settings. These PHP files may be shared with applications outside Morrow. A generated Morrow PHP-FPM pool, when present, is visible read-only; its managed settings belong in Sites. The reload icon rereads a file after an outside edit.
 
 nvm's default alias is visible as a managed, read-only file. Change it using version selection. Runtimes without a shared configuration file show an explanation; their project-specific configuration stays in the project. PHP-FPM cards expose the hosting log when one exists.
