@@ -42,9 +42,9 @@ Morrow uses a directory selected in **General → Node Version Manager**, then `
 
 ### PHP 8.0
 
-PHP **8.0.30** is available from Morrow's hosted catalog for Apple silicon and Intel Macs running macOS 14 or newer. The package includes PHP CLI and PHP-FPM, with built-in extensions including MySQLi, PDO MySQL, mbstring, intl, curl, Redis, and OPcache. Installing it does not require Homebrew or change your existing PHP default.
+PHP **8.0.30** is available from Morrow's hosted catalog for Apple silicon and Intel Macs running macOS 14 or newer. The package includes PHP CLI and PHP-FPM, with built-in extensions including MySQLi, PDO MySQL, mbstring, intl, curl, Redis, and OPcache. It does not require Homebrew.
 
-Choose **Runtimes → PHP → 8.0.30 → Install**, then use **Folder Versions** to assign it to a project. From Terminal:
+Use **Runtimes → Folder Versions → Choose Folder…**, select PHP and **8.0.30**, then save to install and assign it to that folder while keeping the global default. The Add Runtime **Install** action installs and selects a runtime as Morrow's default, as it does for other versions. From Terminal, installation and folder assignment are separate:
 
 ```sh
 morrow binary refresh
