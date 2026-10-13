@@ -60,6 +60,8 @@ python3 scripts/publish-binary.py \
 
 After publishing, set the repository's `MORROW_BINARY_CATALOG_URL` variable to the printed catalog URL and build a signed release. Customer releases use this source automatically. For an existing development Mac, set an override with `morrow binary source <url>`. New catalog patch versions become available through Morrow's existing update checks; previous archives remain immutable.
 
+Publication merges the current catalog and uses conditional writes. Returned ETags are normalized for Ceph/Contabo compatibility; concurrent catalog changes still stop publication. Storage failures name the operation and error category without printing credentials.
+
 Hosted distributions include Go for Apple silicon and PHP 8.0.30 for Apple silicon and Intel. Other services need their own portable packages before they can be installed on a clean Mac without optional Homebrew compatibility. Existing services and data continue using their current binaries during this transition.
 
 ### Portable PHP preparation

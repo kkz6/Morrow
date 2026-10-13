@@ -75,7 +75,10 @@ try:
     environment=os.environ.copy(); environment['AWS_PAGER']=''
     def aws(*options,check=True):
         result=subprocess.run(command+list(options),capture_output=True,text=True,env=environment)
-        if check and result.returncode: raise RuntimeError('Contabo request failed. Check the local profile, endpoint and bucket permissions; credentials were not printed.')
+        if check and result.returncode:
+            code=re.search(r'An error occurred \(([A-Za-z0-9]+)\)',result.stderr)
+            reason=code.group(1) if code else 'transport or CLI failure'
+            raise RuntimeError(f'Object storage {options[0]} failed ({reason}). Check the local profile, endpoint and bucket permissions; credentials were not printed.')
         return result
     with tempfile.TemporaryDirectory(prefix='morrow-publish-') as temporary:
         remote=Path(temporary)/'catalog.json'
@@ -117,7 +120,9 @@ try:
             if latest.returncode or json.loads(latest.stdout).get('ETag')!=previous_etag: raise ValueError('The catalog changed during upload. Retry to merge the latest releases.')
         elif latest.returncode==0: raise ValueError('Another publisher created the catalog. Retry to merge it.')
         # Conditional writes fail safely if a provider does not implement them.
-        condition=['--if-match',previous_etag] if previous_etag else ['--if-none-match','*']
+        # Ceph accepts the ETag digest here; passing the literal response quotes
+        # can return an empty precondition error that AWS CLI cannot parse.
+        condition=['--if-match',previous_etag.strip('"')] if previous_etag else ['--if-none-match','*']
         acl=['--acl','public-read'] if args.public_read else []
         aws('put-object','--bucket',bucket,'--key',catalog_key,'--body',str(remote),'--content-type','application/json','--cache-control','public, max-age=300',*condition,*acl)
     print('Published verified binary: '+release['url'])

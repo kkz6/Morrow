@@ -4,6 +4,7 @@
 
 - Added hosted PHP 8.0.30 CLI/FPM distributions for Apple silicon and Intel, with pinned source archives, signing, notarization, license notices, and PHP web extensions. PHP 8.0 can be installed or assigned to a folder without Homebrew or changing the global default.
 - Added a signed PHP distribution workflow in GitHub Actions that shares the existing release credentials and returns notarized archives for publication through the local storage profile.
+- Fixed conditional catalog updates with Contabo/Ceph ETag formatting, retaining concurrent-write protection and credential-safe publication errors.
 - Managed PHP commands, PHP-FPM, and configuration access now share version-specific INI paths. Runtime refresh explicitly reloads hosted catalog metadata, and hosted version selectors hide provider identifiers.
 
 - Removed binary-source and Homebrew-location controls from General; service creation and runtime installation handle sourcing automatically, with advanced overrides retained in the CLI.
