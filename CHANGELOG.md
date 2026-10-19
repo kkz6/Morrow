@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added reproducible distribution recipes and a signed GitHub Actions workflow for complete Node 22/24 LTS, Caddy, Mailpit, and DNS-only dnsmasq packages on Apple silicon and Intel. Packages include pinned sources, license notices, dependency/architecture checks, and Apple notarization before Contabo publication.
+
 - Added hosted PHP 8.0.30 CLI/FPM distributions for Apple silicon and Intel, with pinned source archives, signing, notarization, license notices, and PHP web extensions. PHP 8.0 can be installed or assigned to a folder without Homebrew or changing the global default.
 - Added a signed PHP distribution workflow in GitHub Actions that shares the existing release credentials and returns notarized archives for publication through the local storage profile.
 - Fixed conditional catalog updates with Contabo/Ceph ETag formatting, retaining concurrent-write protection and credential-safe publication errors.

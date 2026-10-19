@@ -46,12 +46,13 @@ try:
     prefix=config.get('prefix','morrow').strip('/')
     if any(not re.fullmatch(r'[A-Za-z0-9._-]+',x) or x in ['.','..'] for x in prefix.split('/')): raise ValueError('Unsafe storage prefix.')
     release=json.loads(args.release.read_text())
-    fields={'package','version','architecture','minimumMacOS','url','sha256','archive','rootDirectory','executables','license','sourceURL','sourceSHA256','notarizationID'}
+    fields={'package','version','architecture','minimumMacOS','url','sha256','archive','rootDirectory','executables','license','sourceURL','sourceSHA256','notarizationID','lts'}
     if set(release)-fields: raise ValueError('The descriptor contains unknown fields; keep credentials and machine settings out of release metadata.')
     packages={'postgresql','mysql','mariadb','mongodb','redis','valkey','memcached','php','go','flutter','node','python','ruby','caddy','dnsmasq','mailpit','minio'}
     package=safe_component(release['package']); version=safe_component(release['version'])
     architecture=release['architecture']
     if package not in packages or architecture not in ['arm64','x86_64','universal']: raise ValueError('Unsupported package or architecture.')
+    if 'lts' in release and (package != 'node' or not isinstance(release['lts'],bool)): raise ValueError('LTS metadata is a Boolean for Node distributions only.')
     if not re.fullmatch(r'[0-9]+(?:\.[0-9]+){0,2}',release['minimumMacOS']): raise ValueError('Invalid minimum macOS version.')
     if release['archive'] not in ['tar','zip','binary'] or not isinstance(release['executables'],list) or not release['executables'] or len(release['executables'])>64: raise ValueError('Incomplete release descriptor.')
     for value in [release['rootDirectory'],*release['executables']]:

@@ -76,6 +76,14 @@ Preparation validates archive layout, architecture, minimum macOS, and dependenc
 
 The **Signed PHP distributions** GitHub Actions workflow runs this preparation and notarization with the existing release credentials in a temporary keychain. It uploads signed archives, descriptors, and the Apple acceptance report; download these artifacts to publish through the locally configured object-storage profile. Storage access keys are not needed by this workflow.
 
+### Node and service preparation
+
+The **Signed service distributions** workflow uses reviewed recipes in `distributions/<package>/<version>.json`. Recipes cover Node 22.23.3 and 24.22.0 LTS, Caddy 2.11.7, Mailpit 1.31.6, and dnsmasq 2.93 for Apple silicon and Intel. Node includes npm, npx, headers, and its bundled licenses. Caddy and Mailpit use checksum-pinned official release archives. dnsmasq is built from pinned source using Xcode, with optional DHCP, TFTP, scripting, and external library integrations disabled for Morrow's loopback DNS use.
+
+Run the workflow with the package name and exact recipe version. It prepares both architectures, rejects external library dependencies or incorrect minimum macOS declarations, signs all native executables with the release identity, checks the native executable's version, and submits the packages to Apple. Only accepted submissions produce publishable artifacts. Build tools are confined to the publisher's build machine; customers do not need Homebrew, nvm, Git, AWS CLI, or Xcode for these downloads.
+
+Download the workflow artifact and publish each architecture's archive with its corresponding `*-release.json` through `scripts/publish-binary.py`. Storage credentials stay in the locally configured profile. Node descriptors may include `lts: true`; this records the upstream release designation instead of inferring it from a version number. An immutable package is never rebuilt over an existing published version.
+
 ## Preserve running services during deployment
 
 Stage a new app with `MORROW_APP_OUTPUT`; do not overwrite executable files used by active service runners. Deploy the entire staged bundle atomically, preserving the previous bundle until its processes have exited. Launch Services registration and scoped attribution cleanup can update association metadata without stopping servers. Already running legacy workers and historical macOS records may remain separate until macOS refreshes or those workers next restart normally. Never reset the global background-task database to force a cosmetic cleanup.

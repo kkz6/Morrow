@@ -1,0 +1,28 @@
+{
+  "schemaVersion": 1,
+  "package": "dnsmasq",
+  "version": "2.93",
+  "minimumMacOS": "14.0",
+  "layout": "dnsmasq-source",
+  "executables": [
+    "bin/dnsmasq"
+  ],
+  "versionArguments": [
+    "--version"
+  ],
+  "versionPattern": "Dnsmasq version 2\\.93\\b",
+  "license": "GPL-2.0-or-later OR GPL-3.0-or-later; see COPYING and COPYING-v3",
+  "provider": "https://thekelleys.org.uk/dnsmasq/doc.html",
+  "sources": {
+    "arm64": {
+      "url": "https://thekelleys.org.uk/dnsmasq/dnsmasq-2.93.tar.gz",
+      "sha256": "cc967771abdafeb43d10db18932d6b59fd4bed2c69c22acf8cb96aff6920d55f",
+      "rootDirectory": "dnsmasq-2.93"
+    },
+    "x86_64": {
+      "url": "https://thekelleys.org.uk/dnsmasq/dnsmasq-2.93.tar.gz",
+      "sha256": "cc967771abdafeb43d10db18932d6b59fd4bed2c69c22acf8cb96aff6920d55f",
+      "rootDirectory": "dnsmasq-2.93"
+    }
+  }
+}
