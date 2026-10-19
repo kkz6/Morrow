@@ -12,6 +12,7 @@ from pathlib import Path, PurePosixPath
 import platform
 import plistlib
 import re
+import shlex
 import shutil
 import subprocess
 import tarfile
@@ -19,7 +20,10 @@ from urllib.parse import urlparse
 
 
 def run(*command, **kwargs):
-    return subprocess.check_output(command, text=True, stderr=subprocess.STDOUT, **kwargs)
+    try:
+        return subprocess.check_output(command, text=True, stderr=subprocess.STDOUT, **kwargs)
+    except subprocess.CalledProcessError as error:
+        raise RuntimeError('Distribution command failed: ' + error.output[-6000:]) from error
 
 
 def digest(path):
@@ -171,11 +175,14 @@ def prepare(args):
                 # Morrow uses loopback DNS only. Disable optional services and
                 # third-party library integrations at build time.
                 env = os.environ.copy()
-                env.update({'MACOSX_DEPLOYMENT_TARGET': recipe['minimumMacOS'],
-                            'CC': run('/usr/bin/xcrun', '--find', 'clang').strip(),
-                            'CFLAGS': '-O2 -arch ' + arch + ' -mmacosx-version-min=' + recipe['minimumMacOS'],
-                            'LDFLAGS': '-arch ' + arch + ' -mmacosx-version-min=' + recipe['minimumMacOS']})
-                subprocess.run(['/usr/bin/make', '-j4', 'COPTS=-DNO_DHCP -DNO_TFTP -DNO_SCRIPT -DNO_AUTH -DNO_IPSET -DNO_NFTSET'], cwd=upstream, env=env, check=True)
+                sdk = run('/usr/bin/xcrun', '--sdk', 'macosx', '--show-sdk-path').strip()
+                compiler = run('/usr/bin/xcrun', '--find', 'clang').strip()
+                flags = '-O2 -arch ' + arch + ' -mmacosx-version-min=' + recipe['minimumMacOS'] + ' -isysroot ' + shlex.quote(sdk)
+                env.update({'MACOSX_DEPLOYMENT_TARGET': recipe['minimumMacOS'], 'SDKROOT': sdk})
+                # Explicit make arguments survive its recursive Makefiles;
+                # environment CFLAGS can be replaced by upstream defaults.
+                subprocess.run(['/usr/bin/make', '-j4', 'CC=' + compiler, 'CFLAGS=' + flags, 'LDFLAGS=' + flags,
+                                'COPTS=-DNO_DHCP -DNO_TFTP -DNO_SCRIPT -DNO_AUTH -DNO_IPSET -DNO_NFTSET'], cwd=upstream, env=env, check=True)
                 shutil.copy2(upstream / 'src/dnsmasq', root / 'bin/dnsmasq')
                 for name in ['COPYING', 'COPYING-v3', 'dnsmasq.conf.example']:
                     shutil.copy2(upstream / name, root / name)
