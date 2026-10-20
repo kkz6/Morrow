@@ -152,6 +152,11 @@ public struct RuntimeManager: Sendable {
         }
         let policy = BinaryInstaller(store: store, runner: runner)
         if let release = try policy.managed.release(package: engine.rawValue, request: version) {
+            // Selectors such as LTS need catalog metadata first. Reuse a
+            // complete matching installation once their exact version is known.
+            if let existing = found.first(where: { $0.version == release.version }) {
+                let valid = try validate(existing); try register(valid); return valid
+            }
             let installed = try policy.managed.install(release)
             let valid = try probe(engine, prefix: installed.prefix, formula: release.channel, source: "managed", packageVersion: release.version)
             guard valid.version == release.version else { throw MorrowError.message("The downloaded runtime reports another version. It was not selected.") }

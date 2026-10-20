@@ -34,7 +34,7 @@ morrow tool channels node
 morrow tool exec node --command npm -- --version
 ```
 
-A numeric series selects a published release in that series; an exact version must be installed or published. `lts` chooses the newest compatible hosted release explicitly marked LTS by its recipe. It does not silently choose another version when none is available. The CLI's install command preserves the current default until `tool use`; the app's Install action installs and selects its version.
+A numeric series selects a published release in that series; an exact version must be installed or published. `lts` chooses the newest compatible hosted release explicitly marked LTS by its recipe, reusing an existing installation of that exact version when available. It does not silently choose another version when none is available. The CLI's install command preserves the current default until `tool use`; the app's Install action installs and selects its version.
 
 Existing nvm, Homebrew, and PATH Node installations remain selectable. Morrow reads an existing nvm directory selected under **General → Existing Node Installations**, `NVM_DIR`, or `~/.nvm`. It never installs nvm scripts, changes its default alias, or edits shell startup files. New managed versions live separately under Morrow's binary directory. Legacy `nvm@<version>` selectors remain accepted for compatible installed or published versions.
 
