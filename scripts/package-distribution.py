@@ -19,7 +19,7 @@ import tarfile
 import zipfile
 import stat
 from urllib.parse import urlparse
-from distribution_builders import build, prepare_runtime, relocate
+from distribution_builders import build, prepare_runtime, relocate, mach_files
 
 
 def run(*command, **kwargs):
@@ -135,13 +135,7 @@ def os_version(value):
 
 def sign_tree(root, arch, recipe, args, entitlements):
     count = 0
-    for binary in sorted(root.rglob('*')):
-        if binary.is_symlink() or not binary.is_file():
-            continue
-        with binary.open('rb') as source:
-            magic = source.read(4)
-        if magic not in [b'\xcf\xfa\xed\xfe', b'\xfe\xed\xfa\xcf', b'\xca\xfe\xba\xbe', b'\xca\xfe\xba\xbf']:
-            continue
+    for binary in sorted(mach_files(root)):
         commands = run('/usr/bin/otool', '-l', str(binary))
         platforms = re.findall(r'\bplatform ([A-Za-z0-9_]+)', commands)
         if recipe['package'] == 'flutter' and platforms and not any(v in ['1', 'MACOS', 'macos'] for v in platforms):

@@ -207,8 +207,18 @@ def mach_files(root):
         if path.is_symlink() or not path.is_file():
             continue
         with path.open('rb') as source:
-            magic = source.read(4)
-        if magic in [b'\xcf\xfa\xed\xfe', b'\xfe\xed\xfa\xcf', b'\xca\xfe\xba\xbe', b'\xca\xfe\xba\xbf']:
+            header = source.read(32)
+            magic = header[:4]
+            if magic in [b'\xca\xfe\xba\xbe', b'\xca\xfe\xba\xbf']:
+                width = 8 if magic[-1] == 0xbf else 4
+                source.seek(int.from_bytes(header[16:16 + width], 'big'))
+                header = source.read(32); magic = header[:4]
+        if magic not in [b'\xcf\xfa\xed\xfe', b'\xfe\xed\xfa\xcf']:
+            continue
+        kind = int.from_bytes(header[12:16], 'little' if magic == b'\xcf\xfa\xed\xfe' else 'big')
+        # Object files (including Go's cross-architecture .syso race support)
+        # are SDK inputs, not loadable executables, libraries, or bundles.
+        if kind in [2, 6, 8]:
             yield path
 
 
