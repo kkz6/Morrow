@@ -38,6 +38,8 @@ A numeric series selects a published release in that series; an exact version mu
 
 Existing nvm, Homebrew, and PATH Node installations remain selectable. Morrow reads an existing nvm directory selected under **General → Existing Node Installations**, `NVM_DIR`, or `~/.nvm`. It never installs nvm scripts, changes its default alias, or edits shell startup files. New managed versions live separately under Morrow's binary directory. Legacy `nvm@<version>` selectors remain accepted for compatible installed or published versions.
 
+On upgrading, Morrow discards only the old nvm channel list so the selector reloads published versions. Cached installed software and other runtime lists remain available.
+
 ## Configuration and PHP logs
 
 ### PHP 8.0
