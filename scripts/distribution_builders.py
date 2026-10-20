@@ -131,7 +131,7 @@ def build(recipe, arch, source, root, workspace, cache, fetch, extract):
         environment.update({'CPPFLAGS': include, 'LDFLAGS': flags + ' ' + lib,
                             'OPENSSL_CFLAGS': include, 'OPENSSL_LIBS': lib + ' -lssl -lcrypto',
                             'ONIG_CFLAGS': include, 'ONIG_LIBS': lib + ' -lonig',
-                            'ICU_CFLAGS': include, 'ICU_LIBS': lib + ' -licui18n -licuuc -licudata -lc++',
+                            'ICU_CFLAGS': include, 'ICU_LIBS': lib + ' -licuio -licui18n -licuuc -licudata -lc++',
                             'LIBXML_CFLAGS': '-I' + sdk + '/usr/include/libxml2', 'LIBXML_LIBS': '-lxml2',
                             'CURL_CFLAGS': '-I' + sdk + '/usr/include', 'CURL_LIBS': '-lcurl',
                             'SQLITE_CFLAGS': '-I' + sdk + '/usr/include', 'SQLITE_LIBS': '-lsqlite3',

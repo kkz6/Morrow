@@ -86,6 +86,8 @@ SDK packaging must preserve macOS framework bundle install names so generated ap
 
 PHP source builds resolve Apple's iconv headers and library through the selected SDK's `usr` directory, alongside explicit SDK flags for system XML, curl, SQLite, and zlib. They must not discover those headers through a host package manager.
 
+Static PHP intl linking includes ICU's I/O library before its internationalization, common, and data libraries. The complete library group is required for message formatting as well as the locale APIs.
+
 The Nuxt toolchain currently reports upstream high-severity npm audit advisories involving its development dependencies. Patched Git parser versions are pinned through overrides. The published site contains static HTML, CSS, and client scripts; its development server stays on 127.0.0.1. Recheck advisories when updating dependencies rather than forcing an incompatible Nuxt downgrade.
 
 ## Customer distribution
