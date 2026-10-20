@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "package": "php",
+  "version": "8.5.11",
+  "minimumMacOS": "14.0",
+  "layout": "source",
+  "build": "php",
+  "executables": [
+    "bin/php",
+    "bin/php-fpm"
+  ],
+  "versionArguments": [
+    "-n",
+    "--version"
+  ],
+  "versionPattern": "PHP 8\\.5\\.11",
+  "license": "PHP-3.01 and bundled dependency licenses; see licenses/",
+  "provider": "https://www.php.net/releases/",
+  "sources": {
+    "arm64": {
+      "url": "https://www.php.net/distributions/php-8.5.11.tar.gz",
+      "sha256": "338630ba9450f0b938bef8d740162c61c33bf64a1b421c6333c01df8a9fdb0ab",
+      "rootDirectory": "php-8.5.11"
+    },
+    "x86_64": {
+      "url": "https://www.php.net/distributions/php-8.5.11.tar.gz",
+      "sha256": "338630ba9450f0b938bef8d740162c61c33bf64a1b421c6333c01df8a9fdb0ab",
+      "rootDirectory": "php-8.5.11"
+    }
+  },
+  "dependencies": {
+    "openssl": {
+      "url": "https://github.com/openssl/openssl/releases/download/openssl-3.5.9/openssl-3.5.9.tar.gz",
+      "sha256": "603f5602e2eef00d77fbd429d34dcd5822bb301757a1bc9cdb24c670f1eb859a",
+      "rootDirectory": "openssl-3.5.9"
+    },
+    "oniguruma": {
+      "url": "https://github.com/kkos/oniguruma/releases/download/v6.9.10/onig-6.9.10.tar.gz",
+      "sha256": "2a5cfc5ae259e4e97f86b68dfffc152cdaffe94e2060b770cb827238d769fc05",
+      "rootDirectory": "onig-6.9.10"
+    },
+    "icu": {
+      "url": "https://github.com/unicode-org/icu/releases/download/release-78.3/icu4c-78.3-sources.tgz",
+      "sha256": "3a2e7a47604ba702f345878308e6fefeca612ee895cf4a5f222e7955fabfe0c0",
+      "rootDirectory": "icu"
+    },
+    "libzip": {
+      "url": "https://github.com/nih-at/libzip/releases/download/v1.12.1/libzip-1.12.1.tar.xz",
+      "sha256": "c40062022a1963c80573d48f6070792297cecd7c6bffe3aefcac0d8b9bee8913",
+      "rootDirectory": "libzip-1.12.1"
+    }
+  },
+  "files": [
+    {
+      "url": "https://curl.se/ca/cacert.pem",
+      "sha256": "a41b5d356aea97a529fe27e0f7316d2f9d946d75927476cf9cf1b90637d00505",
+      "path": "etc/ssl/cert.pem"
+    }
+  ]
+}

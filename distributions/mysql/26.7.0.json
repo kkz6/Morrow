@@ -1,0 +1,37 @@
+{
+  "schemaVersion": 1,
+  "package": "mysql",
+  "version": "26.7.0",
+  "minimumMacOS": "14.0",
+  "layout": "tree",
+  "executables": [
+    "bin/mysqld",
+    "bin/mysql",
+    "bin/mysqladmin"
+  ],
+  "versionArguments": [
+    "--no-defaults",
+    "--version"
+  ],
+  "versionPattern": "Ver 26\\.7\\.0",
+  "license": "GPL-2.0 with upstream notices",
+  "provider": "https://dev.mysql.com/downloads/mysql/8.4.html?os=33",
+  "sources": {
+    "arm64": {
+      "url": "https://cdn.mysql.com/Downloads/MySQL-26.7/mysql-26.7.0-macos15-arm64.tar.gz",
+      "sha256": "57fb68a4b566823ce588cee7a32feabb3970d1a8622a0c3a7ca37c1ca56610da",
+      "rootDirectory": "mysql-26.7.0-macos15-arm64"
+    },
+    "x86_64": {
+      "url": "https://cdn.mysql.com/Downloads/MySQL-26.7/mysql-26.7.0-macos15-x86_64.tar.gz",
+      "sha256": "3bc4bd9bc2214da8360781e105564a5cbf61c14c40a4e3804425a4ca75e244bc",
+      "rootDirectory": "mysql-26.7.0-macos15-x86_64"
+    }
+  },
+  "sourceArchives": [
+    {
+      "url": "https://cdn.mysql.com/Downloads/MySQL-26.7/mysql-26.7.0.tar.gz",
+      "sha256": "95e949183b94bbe39e70c6355e6c90d2a640a62ede996ca5f7a6a3e0827a3260"
+    }
+  ]
+}

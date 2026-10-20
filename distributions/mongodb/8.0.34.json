@@ -25,5 +25,11 @@
       "sha256": "3d391b8c41df069671afaa88ca21def057178aecce1813437539143b71f28152",
       "rootDirectory": "mongodb-macos-x86_64-8.0.34"
     }
-  }
+  },
+  "sourceArchives": [
+    {
+      "url": "https://github.com/mongodb/mongo/archive/refs/tags/r8.0.34.tar.gz",
+      "sha256": "b86778267f530e430fc3013a37578e9698cf9b58aa185e93f0cf5c8e92465974"
+    }
+  ]
 }

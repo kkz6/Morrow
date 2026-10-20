@@ -3,6 +3,7 @@
 ## Unreleased
 
 - Added native build and relocation pipelines for the remaining database engines, Python, Ruby, Flutter, Go, and MinIO, with separate Apple silicon/Intel jobs, complete package resources, pinned source dependencies, and signing/notarization.
+- Added source builds for current PHP 8.3/8.4/8.5 with CLI/FPM, bundled static libraries, version-specific configuration, and trusted certificate bundles. Existing MySQL 26.7 installations have a matching portable release series.
 
 - Node installation, channels, same-series updates, folder selections, and iCloud restoration now use complete hosted distributions with npm/npx. Latest LTS uses explicit catalog metadata and reuses an existing exact matching version before downloading. Existing nvm installations remain usable without bootstrapping nvm, requiring Git, or changing external aliases. Old nvm channel caches refresh automatically while installed inventory is retained.
 

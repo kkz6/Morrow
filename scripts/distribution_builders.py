@@ -40,10 +40,25 @@ def build(recipe, arch, source, root, workspace, cache, fetch, extract):
                      '-DEVENT__DISABLE_SAMPLES=ON', '-DCMAKE_POLICY_VERSION_MINIMUM=3.5'], upstream, env)
             command(['cmake', '--build', directory / 'build', '--parallel', '4'], upstream, env)
             command(['cmake', '--install', directory / 'build'], upstream, env)
-        elif name == 'libyaml':
+        elif name in ['libyaml', 'oniguruma']:
             command(['./configure', '--prefix=' + str(dependencies), '--disable-shared', '--enable-static'], upstream, env)
             command(['/usr/bin/make', '-j4'], upstream, env)
             command(['/usr/bin/make', 'install'], upstream, env)
+        elif name == 'icu':
+            upstream = upstream / 'source'
+            command(['./runConfigureICU', 'MacOSX', '--prefix=' + str(dependencies), '--enable-static',
+                     '--disable-shared', '--disable-tests', '--disable-samples', '--with-data-packaging=static'], upstream, env)
+            command(['/usr/bin/make', '-j4'], upstream, env)
+            command(['/usr/bin/make', 'install'], upstream, env)
+        elif name == 'libzip':
+            command(['cmake', '-S', upstream, '-B', directory / 'build',
+                     '-DCMAKE_INSTALL_PREFIX=' + str(dependencies), '-DCMAKE_OSX_SYSROOT=' + sdk,
+                     '-DCMAKE_OSX_ARCHITECTURES=' + arch, '-DCMAKE_OSX_DEPLOYMENT_TARGET=' + recipe['minimumMacOS'],
+                     '-DBUILD_SHARED_LIBS=OFF', '-DBUILD_TOOLS=OFF', '-DBUILD_REGRESS=OFF', '-DBUILD_EXAMPLES=OFF',
+                     '-DENABLE_BZIP2=OFF', '-DENABLE_LZMA=OFF', '-DENABLE_ZSTD=OFF', '-DENABLE_OPENSSL=OFF',
+                     '-DCMAKE_IGNORE_PREFIX_PATH=/opt/homebrew;/usr/local'], upstream, env)
+            command(['cmake', '--build', directory / 'build', '--parallel', '4'], upstream, env)
+            command(['cmake', '--install', directory / 'build'], upstream, env)
         else:
             raise ValueError('Unsupported pinned build dependency: ' + name)
         for path in upstream.iterdir():
@@ -96,6 +111,35 @@ def build(recipe, arch, source, root, workspace, cache, fetch, extract):
              '--with-libyaml-dir=' + str(dependencies), '--with-out-ext=gdbm,dbm'])
         run(['/usr/bin/make', '-j4'])
         run(['/usr/bin/make', 'install'])
+    elif kind == 'php':
+        include = '-I' + str(dependencies / 'include')
+        lib = '-L' + str(dependencies / 'lib')
+        environment.update({'CPPFLAGS': include, 'LDFLAGS': flags + ' ' + lib,
+                            'OPENSSL_CFLAGS': include, 'OPENSSL_LIBS': lib + ' -lssl -lcrypto',
+                            'ONIG_CFLAGS': include, 'ONIG_LIBS': lib + ' -lonig',
+                            'ICU_CFLAGS': include, 'ICU_LIBS': lib + ' -licui18n -licuuc -licudata -lc++',
+                            'LIBXML_CFLAGS': '-I' + sdk + '/usr/include/libxml2', 'LIBXML_LIBS': '-lxml2',
+                            'CURL_CFLAGS': '-I' + sdk + '/usr/include', 'CURL_LIBS': '-lcurl',
+                            'SQLITE_CFLAGS': '-I' + sdk + '/usr/include', 'SQLITE_LIBS': '-lsqlite3',
+                            'LIBZIP_CFLAGS': include, 'LIBZIP_LIBS': lib + ' -lzip -lz'})
+        run(['./configure', '--prefix=' + str(root), '--enable-cli', '--enable-fpm', '--disable-cgi',
+             '--disable-phpdbg', '--without-pear', '--with-openssl', '--with-curl', '--with-zlib',
+             '--enable-mbstring', '--enable-intl', '--enable-bcmath', '--enable-sockets', '--enable-pcntl',
+             '--enable-exif', '--enable-soap', '--enable-ftp', '--with-mysqli=mysqlnd', '--with-pdo-mysql=mysqlnd',
+             '--with-sqlite3', '--with-pdo-sqlite', '--with-zip', '--enable-opcache'])
+        run(['/usr/bin/make', '-j4'])
+        run(['/usr/bin/make', 'install'])
+        if (root / 'sbin/php-fpm').exists():
+            shutil.move(root / 'sbin/php-fpm', root / 'bin/php-fpm')
+        configuration = root / 'etc'; (configuration / 'conf.d').mkdir(parents=True, exist_ok=True)
+        extension = subprocess.check_output([str(root / 'bin/php-config'), '--extension-dir'], text=True).strip()
+        relative = Path(extension).relative_to(root)
+        content = '; Morrow local development configuration\nmemory_limit=256M\ndisplay_errors=On\nlog_errors=On\ndate.timezone=UTC\n'
+        content += 'extension_dir="@MORROW_PREFIX@/' + relative.as_posix() + '"\n'
+        content += 'openssl.cafile="@MORROW_PREFIX@/etc/ssl/cert.pem"\ncurl.cainfo="@MORROW_PREFIX@/etc/ssl/cert.pem"\n'
+        if list((root / relative).glob('opcache.*')):
+            content += 'zend_extension=opcache\nopcache.enable_cli=0\nopcache.jit=0\n'
+        (configuration / 'php.ini').write_text(content)
     elif kind == 'minio':
         environment.update({'CGO_ENABLED': '0', 'GOOS': 'darwin', 'GOARCH': 'arm64' if arch == 'arm64' else 'amd64',
                             'GOTOOLCHAIN': recipe['buildGoVersion']})

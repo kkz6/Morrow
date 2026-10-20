@@ -25,5 +25,12 @@
       "sha256": "c4adbda246262a55920ec0804f5a6a9a3a1e5948f3423da71926320b2489e50e",
       "rootDirectory": "python"
     }
-  }
+  },
+  "files": [
+    {
+      "url": "https://curl.se/ca/cacert.pem",
+      "sha256": "a41b5d356aea97a529fe27e0f7316d2f9d946d75927476cf9cf1b90637d00505",
+      "path": "etc/ssl/cert.pem"
+    }
+  ]
 }

@@ -5,7 +5,7 @@ on:
       package:
         description: Complete service or runtime package
         type: choice
-        options: [postgresql, mysql, mariadb, mongodb, redis, valkey, memcached, python, ruby, flutter, go, minio]
+        options: [postgresql, mysql, mariadb, mongodb, redis, valkey, memcached, python, ruby, flutter, go, minio, php]
         required: true
       version:
         description: Exact checked-in recipe version

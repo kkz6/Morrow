@@ -99,6 +99,8 @@ def extract(path, target):
             if str(name) == '.':
                 continue
             if str(name) in seen:
+                if entry.isdir() and (target / str(name)).is_dir():
+                    continue
                 raise ValueError('Duplicate archive entry.')
             seen.add(str(name))
             destination = target / str(name)
@@ -175,7 +177,7 @@ def sign_tree(root, arch, recipe, args, entitlements):
 def prepare(args):
     recipe = json.loads(args.recipe.read_text())
     package, version = recipe['package'], recipe['version']
-    if (recipe['schemaVersion'] != 1 or package not in ['node', 'caddy', 'mailpit', 'dnsmasq', 'postgresql', 'mysql', 'mariadb', 'mongodb', 'redis', 'valkey', 'memcached', 'python', 'ruby', 'flutter', 'go', 'minio']
+    if (recipe['schemaVersion'] != 1 or package not in ['node', 'caddy', 'mailpit', 'dnsmasq', 'postgresql', 'mysql', 'mariadb', 'mongodb', 'redis', 'valkey', 'memcached', 'python', 'ruby', 'flutter', 'go', 'minio', 'php']
             or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]{0,95}', version)):
         raise ValueError('Unsupported distribution recipe.')
     if args.identity == '-' or not re.fullmatch(r'[A-Z0-9]{10}', args.team):
@@ -238,6 +240,12 @@ def prepare(args):
             if not re.fullmatch(r'[A-Za-z0-9_.-]+', notice['name']):
                 raise ValueError('Invalid license notice filename.')
             shutil.copyfile(fetch(notice, cache), root / notice['name'])
+        for item in recipe.get('files', []):
+            destination = root / item['path']
+            if not inside(root, destination):
+                raise ValueError('A recipe resource escapes its package.')
+            destination.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copyfile(fetch(item, cache), destination)
         for name in recipe['executables']:
             binary = root / name
             if not inside(root, binary) or not binary.is_file():
