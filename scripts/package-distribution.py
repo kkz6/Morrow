@@ -154,6 +154,8 @@ def sign_tree(root, arch, recipe, args, entitlements):
             raise ValueError('An executable needs a newer macOS than declared: ' + str(binary))
         dependencies = run('/usr/bin/otool', '-L', str(binary)).splitlines()[1:]
         for line in dependencies:
+            if not line[:1].isspace():
+                continue
             dependency = line.strip().split(' (compatibility version', 1)[0]
             if dependency.startswith(('/usr/lib/', '/System/Library/')) or dependency == '@rpath/' + binary.relative_to(root).as_posix():
                 continue

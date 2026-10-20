@@ -24,10 +24,11 @@ def build(recipe, arch, source, root, workspace, cache, fetch, extract):
         directory = workspace / ('dependency-' + name)
         extract(fetch(item, cache), directory)
         upstream = directory / item['rootDirectory']
+        notice_root = upstream
         env = environment.copy()
         if name == 'openssl':
             command(['./Configure', 'darwin64-' + ('arm64' if arch == 'arm64' else 'x86_64') + '-cc',
-                     'no-shared', 'no-tests', 'no-legacy', '--prefix=' + str(dependencies),
+                     'shared' if recipe['package'] == 'postgresql' else 'no-shared', 'no-tests', 'no-legacy', '--prefix=' + str(dependencies),
                      '--openssldir=' + str(dependencies / 'ssl')], upstream, env)
             command(['/usr/bin/make', '-j4'], upstream, env)
             command(['/usr/bin/make', 'install_sw'], upstream, env)
@@ -61,9 +62,12 @@ def build(recipe, arch, source, root, workspace, cache, fetch, extract):
             command(['cmake', '--install', directory / 'build'], upstream, env)
         else:
             raise ValueError('Unsupported pinned build dependency: ' + name)
-        for path in upstream.iterdir():
+        for path in notice_root.iterdir():
             if path.is_file() and path.name.upper().startswith(('COPYING', 'LICENSE', 'NOTICE', 'LEGAL')):
                 shutil.copy2(path, notices / (name + '-' + path.name))
+    for path in (dependencies / 'lib').glob('*.dylib'):
+        (root / 'lib').mkdir(exist_ok=True)
+        shutil.copy2(path, root / 'lib' / path.name, follow_symlinks=False)
     kind = recipe['build']
     run = lambda arguments, cwd=source: command(arguments, cwd, environment)
     if kind == 'postgresql':
@@ -81,7 +85,8 @@ def build(recipe, arch, source, root, workspace, cache, fetch, extract):
                 continue
             run(['/usr/bin/make', '-j4', 'all', 'install'], source / 'contrib' / extension)
     elif kind in ['redis', 'valkey']:
-        run(['/usr/bin/make', '-j4', 'MALLOC=libc', 'BUILD_TLS=no', 'BUILD_WITH_MODULES=no',
+        targets = [kind + suffix for suffix in ['-server', '-cli', '-benchmark', '-check-aof', '-check-rdb']]
+        run(['/usr/bin/make', '-C', 'src', '-j4', *targets, 'MALLOC=libc', 'BUILD_TLS=no', 'BUILD_WITH_MODULES=no',
              'USE_SYSTEMD=no', 'CC=/usr/bin/clang', 'CFLAGS=' + flags, 'LDFLAGS=' + flags])
         (root / 'bin').mkdir(exist_ok=True)
         for name in [kind + '-server', kind + '-cli', kind + '-benchmark', kind + '-check-aof', kind + '-check-rdb']:
@@ -192,11 +197,13 @@ def relocate(root):
     files = list(mach_files(root))
     for binary in files:
         changes = []
-        ids = subprocess.check_output(['/usr/bin/otool', '-D', str(binary)], text=True).splitlines()[1:]
+        ids = [line.strip() for line in subprocess.check_output(['/usr/bin/otool', '-D', str(binary)], text=True).splitlines() if line.strip() and not line.endswith(':')]
         if ids:
             changes += ['-id', '@rpath/' + binary.relative_to(root).as_posix()]
         libraries = subprocess.check_output(['/usr/bin/otool', '-L', str(binary)], text=True).splitlines()[1:]
         for line in libraries:
+            if not line[:1].isspace():
+                continue
             dependency = line.strip().split(' (compatibility version', 1)[0]
             if dependency in ids or dependency.startswith(('/usr/lib/', '/System/Library/')):
                 continue
