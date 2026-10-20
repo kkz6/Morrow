@@ -84,6 +84,8 @@ Folder choices live in a separate private `project-runtimes.json` document so ol
 
 SDK packaging must preserve macOS framework bundle install names so generated applications can embed them normally. After relocating and signing contained native code, sign and verify the enclosing macOS frameworks and apps from the inside out. Keep iOS and other target-platform artifacts under their upstream signatures.
 
+PHP source builds resolve Apple's iconv headers and library through the selected SDK's `usr` directory, alongside explicit SDK flags for system XML, curl, SQLite, and zlib. They must not discover those headers through a host package manager.
+
 The Nuxt toolchain currently reports upstream high-severity npm audit advisories involving its development dependencies. Patched Git parser versions are pinned through overrides. The published site contains static HTML, CSS, and client scripts; its development server stays on 127.0.0.1. Recheck advisories when updating dependencies rather than forcing an incompatible Nuxt downgrade.
 
 ## Customer distribution

@@ -139,6 +139,7 @@ def build(recipe, arch, source, root, workspace, cache, fetch, extract):
                             'LIBZIP_CFLAGS': include, 'LIBZIP_LIBS': lib + ' -lzip -lz'})
         run(['./configure', '--prefix=' + str(root), '--enable-cli', '--enable-fpm', '--disable-cgi',
              '--disable-phpdbg', '--without-pear', '--with-openssl', '--with-curl', '--with-zlib',
+             '--with-iconv=' + sdk + '/usr',
              '--enable-mbstring', '--enable-intl', '--enable-bcmath', '--enable-sockets', '--enable-pcntl',
              '--enable-exif', '--enable-soap', '--enable-ftp', '--with-mysqli=mysqlnd', '--with-pdo-mysql=mysqlnd',
              '--with-sqlite3', '--with-pdo-sqlite', '--with-zip', '--enable-opcache'])
