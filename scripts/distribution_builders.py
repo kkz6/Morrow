@@ -114,6 +114,9 @@ def build(recipe, arch, source, root, workspace, cache, fetch, extract):
              '-DPLUGIN_OQGRAPH=NO', '-DPLUGIN_SPIDER=NO', '-DPLUGIN_COLUMNSTORE=NO', '-DPLUGIN_S3=NO'])
         run(['cmake', '--build', target, '--parallel', '4'])
         run(['cmake', '--install', target])
+        initializer = root / 'scripts/mariadb-install-db'
+        if initializer.is_file() and not (root / 'bin/mariadb-install-db').exists():
+            (root / 'bin/mariadb-install-db').symlink_to('../scripts/mariadb-install-db')
     elif kind == 'ruby':
         run(['./configure', '--prefix=' + str(root), '--enable-load-relative', '--enable-shared',
              '--disable-install-doc', '--disable-yjit', '--with-openssl-dir=' + str(dependencies),
@@ -130,6 +133,7 @@ def build(recipe, arch, source, root, workspace, cache, fetch, extract):
                             'LIBXML_CFLAGS': '-I' + sdk + '/usr/include/libxml2', 'LIBXML_LIBS': '-lxml2',
                             'CURL_CFLAGS': '-I' + sdk + '/usr/include', 'CURL_LIBS': '-lcurl',
                             'SQLITE_CFLAGS': '-I' + sdk + '/usr/include', 'SQLITE_LIBS': '-lsqlite3',
+                            'ZLIB_CFLAGS': '-I' + sdk + '/usr/include', 'ZLIB_LIBS': '-lz',
                             'LIBZIP_CFLAGS': include, 'LIBZIP_LIBS': lib + ' -lzip -lz'})
         run(['./configure', '--prefix=' + str(root), '--enable-cli', '--enable-fpm', '--disable-cgi',
              '--disable-phpdbg', '--without-pear', '--with-openssl', '--with-curl', '--with-zlib',

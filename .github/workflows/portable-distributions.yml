@@ -40,6 +40,12 @@ jobs:
         run: |
           source scripts/toolchain.sh
           echo "DEVELOPER_DIR=$DEVELOPER_DIR" >> "$GITHUB_ENV"
+      - name: Prepare the pinned MinIO build compiler
+        if: inputs.package == 'minio'
+        uses: actions/setup-go@v6
+        with:
+          go-version: '1.27.2'
+          cache: false
       - name: Import release credentials into a temporary keychain
         env:
           MORROW_CERTIFICATE_P12_BASE64: ${{ secrets.MORROW_CERTIFICATE_P12_BASE64 }}
