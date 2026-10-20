@@ -20,11 +20,6 @@
       "url": "https://github.com/axllent/mailpit/releases/download/v1.31.6/mailpit-darwin-arm64.tar.gz",
       "sha256": "1411270aa8fd7f4fb0cc358318754d7bb7c2c30bfd70572dd12d05a53e956373",
       "rootDirectory": ""
-    },
-    "x86_64": {
-      "url": "https://github.com/axllent/mailpit/releases/download/v1.31.6/mailpit-darwin-amd64.tar.gz",
-      "sha256": "2f89ed77d2e6623bf700de42236858d10dde1ba96a222c9dbdefd33fa094a6f3",
-      "rootDirectory": ""
     }
   },
   "notices": [

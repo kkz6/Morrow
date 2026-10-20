@@ -6,12 +6,14 @@
   "licenseDirectory": "https://dl.static-php.dev/static-php-cli/bulk/license/",
   "sources": {
     "arm64": {
-      "php": {"url": "https://dl.static-php.dev/static-php-cli/bulk/php-8.0.30-cli-macos-aarch64.tar.gz", "sha256": "13c77c837cd50c027e1c614c192b25205123311a30d2335e9a3c8f82d23acb9a"},
-      "php-fpm": {"url": "https://dl.static-php.dev/static-php-cli/bulk/php-8.0.30-fpm-macos-aarch64.tar.gz", "sha256": "e91bc2624c4469ceb0d7f7d93d643e1aebadd451556b0b1cc8d5142531b14138"}
-    },
-    "x86_64": {
-      "php": {"url": "https://dl.static-php.dev/static-php-cli/bulk/php-8.0.30-cli-macos-x86_64.tar.gz", "sha256": "b025f2c343916dd97d4cad543f0cc4c07ac882af10bc72773ad27ab8f6c9f59a"},
-      "php-fpm": {"url": "https://dl.static-php.dev/static-php-cli/bulk/php-8.0.30-fpm-macos-x86_64.tar.gz", "sha256": "ec02cd54162c190c0029ddccbc382e21442b4941aedef9455b8d6fd32bc472d5"}
+      "php": {
+        "url": "https://dl.static-php.dev/static-php-cli/bulk/php-8.0.30-cli-macos-aarch64.tar.gz",
+        "sha256": "13c77c837cd50c027e1c614c192b25205123311a30d2335e9a3c8f82d23acb9a"
+      },
+      "php-fpm": {
+        "url": "https://dl.static-php.dev/static-php-cli/bulk/php-8.0.30-fpm-macos-aarch64.tar.gz",
+        "sha256": "e91bc2624c4469ceb0d7f7d93d643e1aebadd451556b0b1cc8d5142531b14138"
+      }
     }
   }
 }

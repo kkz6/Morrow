@@ -17,9 +17,31 @@ Morrow handles binary downloads automatically during service creation or runtime
 | Databases, PHP, Flutter, Python, Ruby | Complete compatible distributions in your configured catalog |
 | Caddy, dnsmasq, Mailpit, MinIO | Complete compatible distributions in your configured catalog |
 
-Release builds can include a default Morrow-hosted catalog, delivered over public HTTPS from object storage. A saved custom source takes precedence. Hosted packages include Go for Apple silicon; PHP 8.0.30 CLI/FPM, Node 22.23.3 and 24.22.0 LTS, Caddy 2.11.7, Mailpit 1.31.6, and dnsmasq 2.93 for Apple silicon and Intel. Additional complete database, storage, and SDK packages use the same signed distribution workflow and appear in the catalog after publication. Without a published package, Morrow explains that it is unavailable instead of installing another release or silently invoking Homebrew. See [Release signing and hosting](/docs/releases) for the publishing workflow.
+Release builds include Morrow's public HTTPS catalog on Contabo object storage. A saved custom source takes precedence. The active catalog contains 23 releases across all 17 supported service and runtime families for Apple silicon (arm64) Macs. New Intel packages are no longer built or published. Previously published Intel archives remain at their original URLs, but are not offered in the active catalog. Packages support macOS 14 or newer, except Flutter 3.47.7 which requires macOS 15 for its bundled iPhone tools:
 
-When the catalog has no Go release compatible with this Mac, Go can still use its official archive provider. A catalog containing only Apple silicon Go does not block that fallback on an Intel Mac.
+| Software | Published versions |
+| --- | --- |
+| PostgreSQL | 17.11, 18.6 |
+| MySQL | 8.4.11, 26.7.0 |
+| MariaDB | 11.8.9 |
+| MongoDB Community | 8.0.34 |
+| Redis | 8.10.2 |
+| Valkey | 9.1.2 |
+| Memcached | 1.6.45 |
+| PHP CLI and FPM | 8.0.30, 8.3.35, 8.4.26, 8.5.11 |
+| Node.js with npm and npx | 22.23.3, 24.22.0 LTS |
+| Go | 1.27.2 |
+| Python with pip | 3.15.0 |
+| Ruby with RubyGems and Bundler | 4.0.7 |
+| Flutter with Dart | 3.47.7 |
+| Mailpit | 1.31.6 |
+| MinIO | 2025.10.15 |
+| Caddy | 2.11.7 |
+| dnsmasq | 2.93 |
+
+These are published versions, not every historical patch. Refresh the version selector to retrieve new catalog releases. Missing releases are reported without substituting another version or invoking Homebrew. See [Release signing and hosting](/docs/releases) for the publishing workflow. Compiling applications or native extensions may require Xcode, Git, Android tools, or project-specific development headers; runtime downloads do not install those tools.
+
+When a custom catalog has no compatible Go release, Go can still use its official archive provider.
 
 ## Existing installations
 
@@ -59,7 +81,7 @@ A catalog contains `schemaVersion: 1` and a `releases` array. This illustrative 
 }
 ```
 
-Supported package identifiers are the database and runtime names from `morrow db catalog`/`morrow tool catalog`, plus `caddy`, `dnsmasq`, `mailpit`, and `minio`. Architectures are `arm64`, `x86_64`, and `universal`. `archive` accepts `tar` (including compressed tar archives), `zip`, or `binary`. Use an empty `rootDirectory` when files are already at archive root. Raw binary downloads need one executable and an empty root directory. Node releases can include the optional Boolean `lts` field; `lts: true` makes a published release eligible for the Latest LTS selector. Older catalogs and receipts without this field remain valid.
+Supported package identifiers are the database and runtime names from `morrow db catalog`/`morrow tool catalog`, plus `caddy`, `dnsmasq`, `mailpit`, and `minio`. New distributions use `arm64`. The reader retains `x86_64` and `universal` metadata compatibility for older catalogs and installation receipts; these are not new distribution targets. `archive` accepts `tar` (including compressed tar archives), `zip`, or `binary`. Use an empty `rootDirectory` when files are already at archive root. Raw binary downloads need one executable and an empty root directory. Node releases can include the optional Boolean `lts` field; `lts: true` makes a published release eligible for the Latest LTS selector. Older catalogs and receipts without this field remain valid.
 
 Database executables and auxiliary services use `bin/<executable>`. PHP needs its CLI and PHP-FPM; Flutter needs complete SDK metadata. Package all required libraries and resources with relocatable paths. A Homebrew bottle referencing another machine's Cellar is not a portable distribution. Publishing and redistribution rights, build signing/notarization, dependency packaging, and minimum-system support are the publisher's responsibility.
 

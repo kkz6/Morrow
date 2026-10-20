@@ -24,8 +24,6 @@ jobs:
         include:
           - architecture: arm64
             runner: xcode-27
-          - architecture: x86_64
-            runner: macos-26-intel
     runs-on: ${{ matrix.runner }}
     timeout-minutes: 180
     environment: release

@@ -25,7 +25,7 @@ morrow tool list
 
 ## Node.js distributions
 
-Choose **Node.js** and **Latest LTS**, or select an available exact release. Morrow downloads a complete Node package from its hosted catalog, including npm, npx, headers, and license notices. Node **22.23.3** and **24.22.0** LTS are published for Apple silicon and Intel. Downloads need neither nvm nor Homebrew, Git, or Xcode. Installing native npm add-ons can still require their own development tools.
+Choose **Node.js** and **Latest LTS**, or select an available exact release. Morrow downloads a complete Node package from its hosted catalog, including npm, npx, headers, and license notices. Node **22.23.3** and **24.22.0** LTS are published for Apple silicon. Downloads need neither nvm nor Homebrew, Git, or Xcode. Installing native npm add-ons can still require their own development tools.
 
 ```sh
 morrow tool install node lts
@@ -44,7 +44,9 @@ On upgrading, Morrow discards only the old nvm channel list so the selector relo
 
 ### PHP 8.0
 
-PHP **8.0.30** is available from Morrow's hosted catalog for Apple silicon and Intel Macs running macOS 14 or newer. The package includes PHP CLI and PHP-FPM, with built-in extensions including MySQLi, PDO MySQL, mbstring, intl, curl, Redis, and OPcache. It does not require Homebrew.
+PHP **8.0.30** is available from Morrow's hosted catalog for Apple silicon Macs running macOS 14 or newer. The package includes PHP CLI and PHP-FPM, with built-in extensions including MySQLi, PDO MySQL, mbstring, intl, curl, Redis, and OPcache. It does not require Homebrew.
+
+Current source-built releases **8.3.35**, **8.4.26**, and **8.5.11** also include CLI/FPM, MySQLi/PDO MySQL, SQLite, mbstring, intl, curl, zip, and OPcache. They include their required non-system libraries and trusted certificate bundle. Each version has its own editable INI file; optional third-party extensions are separate from the built-in set.
 
 Use **Runtimes → Folder Versions → Choose Folder…**, select PHP and **8.0.30**, then save to install and assign it to that folder while keeping the global default. The Add Runtime **Install** action installs and selects a runtime as Morrow's default, as it does for other versions. From Terminal, installation and folder assignment are separate:
 

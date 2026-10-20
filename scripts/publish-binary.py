@@ -52,7 +52,8 @@ try:
     packages={'postgresql','mysql','mariadb','mongodb','redis','valkey','memcached','php','go','flutter','node','python','ruby','caddy','dnsmasq','mailpit','minio'}
     package=safe_component(release['package']); version=safe_component(release['version'])
     architecture=release['architecture']
-    if package not in packages or architecture not in ['arm64','x86_64','universal']: raise ValueError('Unsupported package or architecture.')
+    if package not in packages: raise ValueError('Unsupported package.')
+    if architecture != 'arm64': raise ValueError('New Morrow distributions target Apple silicon (arm64) only.')
     if 'lts' in release and (package != 'node' or not isinstance(release['lts'],bool)): raise ValueError('LTS metadata is a Boolean for Node distributions only.')
     if not re.fullmatch(r'[0-9]+(?:\.[0-9]+){0,2}',release['minimumMacOS']): raise ValueError('Invalid minimum macOS version.')
     if release['archive'] not in ['tar','zip','binary'] or not isinstance(release['executables'],list) or not release['executables'] or len(release['executables'])>64: raise ValueError('Incomplete release descriptor.')

@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Focused new app and binary releases on Apple silicon. Distribution recipes, signing jobs, publication, and the active catalog use arm64 only; existing Intel archive URLs remain available and running services are not changed.
+
 - Omitted Flutter's optional Pub preload archives containing unsigned example binaries while preserving SDK resources and dependency license notices. Pub retrieves original dependencies when needed; notarization failures retain Apple's detailed reports.
 
 - Preserved bundled SDK framework identities and sealed native macOS framework signatures after relocation, retaining upstream signatures for other target platforms.
@@ -10,18 +12,20 @@
 
 - Recorded Flutter 3.47.7's macOS 15 requirement from its bundled native iPhone tools. Older Macs do not receive an incompatible SDK; Morrow's own macOS 14 minimum is unchanged.
 
+- Published complete native distributions for every supported database, runtime, mail, web/DNS, and object-storage family on Apple silicon. Contabo serves 23 releases across 17 families, with pinned provenance, bundled dependencies, and corresponding source archives where applicable. Existing services are preserved until an explicit transition.
+
 - Added explicit transitions from existing external installations to same-version portable packages through the normal update actions. Database downloads and validation finish before the existing backup/restart procedure begins; runtime defaults can switch while folder pins and external files remain preserved.
 
 - Removed Homebrew installation, metadata refresh, and update execution from shared app/CLI management. Existing installations are discovered without executing or requiring the Homebrew command; legacy compatibility settings cannot re-enable it. Catalog-only updates and iCloud restoration preserve existing data and services.
 
-- Added native build and relocation pipelines for the remaining database engines, Python, Ruby, Flutter, Go, and MinIO, with separate Apple silicon/Intel jobs, complete package resources, pinned source dependencies, and signing/notarization.
+- Added native build and relocation pipelines for the remaining database engines, Python, Ruby, Flutter, Go, and MinIO, with native Apple silicon jobs, complete package resources, pinned source dependencies, and signing/notarization.
 - Added source builds for current PHP 8.3/8.4/8.5 with CLI/FPM, bundled static libraries, version-specific configuration, and trusted certificate bundles. Existing MySQL 26.7 installations have a matching portable release series.
 
 - Node installation, channels, same-series updates, folder selections, and iCloud restoration now use complete hosted distributions with npm/npx. Latest LTS uses explicit catalog metadata and reuses an existing exact matching version before downloading. Existing nvm installations remain usable without bootstrapping nvm, requiring Git, or changing external aliases. Old nvm channel caches refresh automatically while installed inventory is retained.
 
-- Added reproducible distribution recipes and a signed GitHub Actions workflow for complete Node 22/24 LTS, Caddy, Mailpit, and DNS-only dnsmasq packages on Apple silicon and Intel. Packages include pinned sources, license notices, dependency/architecture checks, and Apple notarization before Contabo publication.
+- Added reproducible distribution recipes and a signed GitHub Actions workflow for complete Node 22/24 LTS, Caddy, Mailpit, and DNS-only dnsmasq packages on Apple silicon. Packages include pinned sources, license notices, dependency/architecture checks, and Apple notarization before Contabo publication.
 
-- Added hosted PHP 8.0.30 CLI/FPM distributions for Apple silicon and Intel, with pinned source archives, signing, notarization, license notices, and PHP web extensions. PHP 8.0 can be installed or assigned to a folder without Homebrew or changing the global default.
+- Added hosted PHP 8.0.30 CLI/FPM distributions for Apple silicon, with pinned source archives, signing, notarization, license notices, and PHP web extensions. PHP 8.0 can be installed or assigned to a folder without Homebrew or changing the global default.
 - Added a signed PHP distribution workflow in GitHub Actions that shares the existing release credentials and returns notarized archives for publication through the local storage profile.
 - Fixed conditional catalog updates with Contabo/Ceph ETag formatting, retaining concurrent-write protection and credential-safe publication errors.
 - Managed PHP commands, PHP-FPM, and configuration access now share version-specific INI paths. Runtime refresh explicitly reloads hosted catalog metadata, and hosted version selectors hide provider identifiers.

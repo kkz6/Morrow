@@ -6,7 +6,7 @@ processes managed by macOS launchd.
 
 ## Build and open
 
-Building requires macOS 14 or later and Xcode. Customer downloads use verified
+Building requires an Apple silicon Mac, macOS 14 or later, and Xcode. Customer downloads use verified
 portable distributions; Homebrew is not used for installation or updates.
 Morrow has no third-party Swift package dependencies and bundles no database
 servers, browser runtime, container engine, or VM.
@@ -55,8 +55,7 @@ checked with a real socket bind. Port availability is checked again after
 installation and on startup. Existing data and external service processes are
 not adopted or overwritten when reusing a server binary.
 
-**Version management:** installable versions follow the hosted catalog and,
-when explicitly enabled, Homebrew’s available channels. Each instance records
+**Version management:** installable versions follow the hosted catalog. Each instance records
 its exact installation path and patch version. Creating another instance supports
 another version with separate data and a separate port. Arbitrary historical
 patch downloads, major-version data migration, and uninstalling shared
@@ -72,7 +71,7 @@ later feature.
 
 ## Updates and development runtimes
 
-Settings → Databases → Check Updates compares pinned releases with compatible catalog packages and published release metadata. Compatible maintenance updates use an explicit backup, upgrade, and recovery workflow. Different release series require migration. Homebrew can update shared dependencies; this is not an isolated package environment.
+Settings → Databases → Check Updates compares pinned releases with compatible catalog packages. Compatible maintenance updates use an explicit backup, upgrade, and recovery workflow. A matching portable release also offers an explicit transition for an existing external installation. Downloads and binary validation finish before the backup and restart. Different release series require migration. Existing external installations retain their original library requirements until moved.
 
 ```sh
 morrow db updates --refresh
@@ -94,12 +93,14 @@ See the [update guide](https://kkz6.github.io/Morrow/docs/updates) and [runtime 
 
 ## Hosted binary distributions
 
-Contabo serves immutable HTTPS packages with SHA-256 checksums. Hosted packages
-include Node 22.23.3 and 24.22.0 LTS (with npm/npx), PHP 8.0.30 CLI/FPM, Caddy
-2.11.7, Mailpit 1.31.6, and dnsmasq 2.93 for Apple silicon and Intel, plus Go for
-Apple silicon. New packages are signed and notarized in GitHub Actions before
-publication. Other database and SDK packages are still being prepared; existing
-services keep their current binaries and data.
+Contabo serves immutable HTTPS packages with SHA-256 checksums for all 17
+supported service and runtime families on Apple silicon (M-series) Macs. This includes
+every database engine; PHP 8.0/8.3/8.4/8.5 CLI/FPM; Node 22/24 LTS with npm/npx;
+Go, Python with pip, Ruby with RubyGems/Bundler, Flutter with Dart; and Caddy,
+dnsmasq, Mailpit, and MinIO. See the documentation's exact published versions.
+New packages are signed and notarized in GitHub Actions before publication.
+Existing services keep their current binaries and data. Move their selections
+to portable packages before removing the libraries they currently use.
 
 Maintainers use reviewed recipes in `distributions/` and the locally configured
 Contabo AWS CLI profile. Customer downloads need no storage credentials, AWS
@@ -124,7 +125,7 @@ See the [Sites guide](https://kkz6.github.io/Morrow/docs/sites) for npm `predev`
 
 ## Local SMTP testing
 
-Settings → Mail creates a native Mailpit server with SMTP and a browser inbox. It reuses existing binaries or installs Mailpit through Homebrew, validates both ports, captures mail locally, and exposes logs and lifecycle controls in the app and CLI.
+Settings → Mail creates a native Mailpit server with SMTP and a browser inbox. It reuses existing binaries or downloads a verified portable Mailpit package, validates both ports, captures mail locally, and exposes logs and lifecycle controls in the app and CLI.
 
 ```sh
 morrow mail create local-mail --start
@@ -148,7 +149,7 @@ S3 endpoints are loopback-only. Generated credentials stay in private local file
 
 ## iCloud workspace setup
 
-Settings → General → iCloud Sync stores a portable workspace blueprint in a folder inside iCloud Drive. Enable sync on each Mac and opt in to automatic Homebrew setup where missing services should be recreated. Morrow shares recipes and runtime defaults; each Mac keeps its own database data and native executable paths.
+Settings → General → iCloud Sync stores a portable workspace blueprint in a folder inside iCloud Drive. Enable sync on each Mac and opt in to automatic setup where missing services should be recreated from portable distributions. Morrow shares recipes and runtime defaults; each Mac keeps its own database data and native executable paths.
 
 ```sh
 morrow sync enable --auto-install

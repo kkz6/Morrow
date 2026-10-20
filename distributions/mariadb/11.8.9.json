@@ -20,11 +20,6 @@
       "url": "https://downloads.mariadb.org/rest-api/mariadb/11.8.9/mariadb-11.8.9.tar.gz",
       "sha256": "2e015b7e91004142eda8b3a20d3ceb875cf2ae55e72603e7222cd497d4e56fc6",
       "rootDirectory": "mariadb-11.8.9"
-    },
-    "x86_64": {
-      "url": "https://downloads.mariadb.org/rest-api/mariadb/11.8.9/mariadb-11.8.9.tar.gz",
-      "sha256": "2e015b7e91004142eda8b3a20d3ceb875cf2ae55e72603e7222cd497d4e56fc6",
-      "rootDirectory": "mariadb-11.8.9"
     }
   },
   "build": "mariadb",

@@ -6,6 +6,7 @@
 - Keep all app input and selector styles in the shared DesignSystem components.
 - Use shared action styles and SettingsCard geometry for grouped button corners. Do not add per-pane corner radii, shadows, or row-position styling. Keep one primary creation action in an empty database view.
 - Use scripts/build-app.sh, scripts/build-cli.sh, and scripts/test.sh. They select full Xcode, use its current macOS SDK, and keep the minimum supported macOS version separate from that SDK.
+- New app, CLI, and hosted binary releases target Apple silicon (arm64) only. Keep historical Intel archive URLs and existing installations intact.
 - Every user-facing feature change must update the relevant website/content Markdown pages and CHANGELOG.md in the same change. Update the CLI reference when command behavior or options change.
 - Build the Nuxt docs with Node 24.15 or newer, npm ci, npm run generate, and npm run check. GitHub Pages republishes main automatically.
 - Do not commit generated app bundles, user databases, credentials, node_modules, .nuxt, or .output directories.

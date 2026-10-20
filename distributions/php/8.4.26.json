@@ -21,11 +21,6 @@
       "url": "https://www.php.net/distributions/php-8.4.26.tar.gz",
       "sha256": "c248abaebc4bb777b80968f0760da0da8e989836e896c9ff637b6775d7d37662",
       "rootDirectory": "php-8.4.26"
-    },
-    "x86_64": {
-      "url": "https://www.php.net/distributions/php-8.4.26.tar.gz",
-      "sha256": "c248abaebc4bb777b80968f0760da0da8e989836e896c9ff637b6775d7d37662",
-      "rootDirectory": "php-8.4.26"
     }
   },
   "dependencies": {

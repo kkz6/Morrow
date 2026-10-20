@@ -201,6 +201,8 @@ def prepare(args):
         raise ValueError('Unsupported distribution recipe.')
     if args.identity == '-' or not re.fullmatch(r'[A-Z0-9]{10}', args.team):
         raise ValueError('Use a Developer ID signing identity and its Apple team.')
+    if set(recipe['sources']) != {'arm64'}:
+        raise ValueError('Morrow distributions target Apple silicon (arm64) only.')
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
     cache = output / 'sources'; cache.mkdir(exist_ok=True)
@@ -214,7 +216,7 @@ def prepare(args):
     for arch, source in recipe['sources'].items():
         if args.arch and arch != args.arch:
             continue
-        if arch not in ['arm64', 'x86_64']:
+        if arch != 'arm64':
             raise ValueError('Unsupported CPU architecture.')
         workspace = output / ('work-' + arch)
         extract(fetch(source, cache), workspace)
@@ -303,5 +305,5 @@ if __name__ == '__main__':
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--identity', required=True)
     parser.add_argument('--team', required=True)
-    parser.add_argument('--arch', choices=['arm64', 'x86_64'])
+    parser.add_argument('--arch', choices=['arm64'], default='arm64')
     prepare(parser.parse_args())

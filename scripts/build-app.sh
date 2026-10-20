@@ -8,8 +8,8 @@ if [[ "$configuration" != "release" && "$configuration" != "debug" ]]; then
     exit 1
 fi
 echo "$(xcodebuild -version | head -1) · macOS SDK $MORROW_SDK_VERSION"
-xcrun swift build -c "$configuration" --sdk "$MORROW_SDK_PATH" "${MORROW_SDK_LINK_FLAGS[@]}"
-binary_directory="$(xcrun swift build -c "$configuration" --show-bin-path)"
+xcrun swift build --arch arm64 -c "$configuration" --sdk "$MORROW_SDK_PATH" "${MORROW_SDK_LINK_FLAGS[@]}"
+binary_directory="$(xcrun swift build --arch arm64 -c "$configuration" --show-bin-path)"
 app="${MORROW_APP_OUTPUT:-build/Morrow.app}"
 if [[ "$app" != *.app ]]; then
     echo "MORROW_APP_OUTPUT must name an .app bundle." >&2

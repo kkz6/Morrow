@@ -49,6 +49,8 @@ def prepare():
         raise ValueError('Unsupported PHP distribution recipe.')
     if args.identity == '-' or not re.fullmatch(r'[A-Z0-9]{10}', args.team):
         raise ValueError('Use a Developer ID signing identity and its Apple team.')
+    if set(recipe['sources']) != {'arm64'}:
+        raise ValueError('Morrow distributions target Apple silicon (arm64) only.')
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
     cache = output / 'sources'; cache.mkdir(exist_ok=True)
@@ -71,7 +73,7 @@ def prepare():
     }))
     packages = output / 'packages'; packages.mkdir(exist_ok=True)
     for arch, sources in recipe['sources'].items():
-        if arch not in ['arm64', 'x86_64'] or set(sources) != {'php', 'php-fpm'}:
+        if arch != 'arm64' or set(sources) != {'php', 'php-fpm'}:
             raise ValueError('A PHP package needs native CLI and FPM binaries.')
         root = packages / arch / ('php-' + version)
         if root.exists():

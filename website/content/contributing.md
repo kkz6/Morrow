@@ -4,6 +4,8 @@ description: Keep app behavior, CLI commands, and documentation in sync.
 group: Project
 order: 8
 ---
+New app and hosted binary releases target Apple silicon (arm64) only. Use native Apple silicon runners; existing Intel download objects are retained for compatibility.
+
 ## Shared architecture
 
 `MorrowCore` owns native discovery, provisioning, validation, lifecycle, and persistent state. `MorrowApp` supplies the macOS UI, and `MorrowCLI` exposes the same manager to Terminal.

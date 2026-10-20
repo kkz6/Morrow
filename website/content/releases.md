@@ -40,6 +40,8 @@ Use region `default` for the signing region and output `json`. Choose the endpoi
 
 ## Publish a prepared native archive
 
+New releases target Apple silicon (arm64) only. Recipes and publication reject new Intel packages. Historical Intel objects remain immutable so existing download URLs continue to work.
+
 First prepare a complete relocatable distribution and a release descriptor using the [catalog format](/docs/binary-downloads). Include all required libraries, resources, executable paths, redistribution notices, architecture, minimum macOS version, and the archive's SHA-256. Optional `license`, `sourceURL`, `sourceSHA256`, and `notarizationID` fields preserve provenance. Do not upload Homebrew bottles with external Cellar dependencies.
 
 ```sh
@@ -64,23 +66,23 @@ After publishing, set the repository's `MORROW_BINARY_CATALOG_URL` variable to t
 
 Publication merges the current catalog and uses conditional writes. Returned ETags are normalized for Ceph/Contabo compatibility; concurrent catalog changes still stop publication. Storage failures name the operation and error category without printing credentials.
 
-Hosted distributions include Go for Apple silicon; PHP 8.0.30 CLI/FPM, Node 22.23.3 and 24.22.0 LTS, Caddy 2.11.7, Mailpit 1.31.6, and dnsmasq 2.93 for Apple silicon and Intel. Additional complete packages appear only after their native build, signing, notarization, and publication succeed. Existing services and data continue using their current binaries during this transition.
+The hosted catalog covers all 17 supported service and runtime families on Apple silicon (arm64). The [published version table](/docs/binary-downloads) lists exact releases. Newly prepared packages pass native dependency and version checks, Developer ID signing, and Apple notarization before publication. The original checksum-verified official Go archive for Apple silicon remains immutable. Existing services and data continue using their current binaries during this transition.
 
 ### Portable PHP preparation
 
-`distributions/php/8.0.30.json` pins the upstream StaticPHP CLI/FPM archives and SHA-256 digests for both architectures. Prepare a fresh signed package directory with:
+`distributions/php/8.0.30.json` pins the upstream StaticPHP CLI/FPM archives and SHA-256 digests for Apple silicon. Prepare a fresh signed package directory with:
 
 ```sh
 python3 scripts/package-php.py --recipe distributions/php/8.0.30.json --output .build/php-release --identity "$MORROW_SIGNING_IDENTITY" --team "$MORROW_EXPECTED_TEAM"
 ```
 
-Preparation validates archive layout, architecture, minimum macOS, and dependencies restricted to system libraries. It includes upstream license notices, source provenance, and version-specific configuration, then signs each executable with Developer ID. Run `scripts/notarize-php.sh .build/php-release` to notarize its submission ZIP and record the accepted ID in both descriptors before publishing each archive with `scripts/publish-binary.py`. No Homebrew installation or global PHP linking occurs during preparation.
+Preparation validates archive layout, architecture, minimum macOS, and dependencies restricted to system libraries. It includes upstream license notices, source provenance, and version-specific configuration, then signs each executable with Developer ID. Run `scripts/notarize-php.sh .build/php-release` to notarize its submission ZIP and record the accepted ID in the descriptor before publishing the archive with `scripts/publish-binary.py`. No Homebrew installation or global PHP linking occurs during preparation.
 
 The **Signed PHP distributions** GitHub Actions workflow runs this preparation and notarization with the existing release credentials in a temporary keychain. It uploads signed archives, descriptors, and the Apple acceptance report; download these artifacts to publish through the locally configured object-storage profile. Storage access keys are not needed by this workflow.
 
 ### Node and service preparation
 
-The **Complete portable distributions** workflow builds each architecture on a native Mac runner. Its recipes cover PostgreSQL, MySQL, MariaDB, MongoDB, Redis, Valkey, Memcached, Python, Ruby, Flutter, Go, and MinIO. Native source builds use pinned dependencies; complete upstream SDKs retain their libraries, resources, and notices. The publisher rewrites references only to libraries already inside that package, rejects unresolved host dependencies, and signs the relocated code before notarization. Recipes and accepted build artifacts are published before their versions are advertised to customers.
+The **Complete portable distributions** workflow builds Apple silicon packages on a native arm64 Mac runner. Its recipes cover PostgreSQL, MySQL, MariaDB, MongoDB, Redis, Valkey, Memcached, Python, Ruby, Flutter, Go, and MinIO. Native source builds use pinned dependencies; complete upstream SDKs retain their libraries, resources, and notices. The publisher rewrites references only to libraries already inside that package, rejects unresolved host dependencies, and signs the relocated code before notarization. Recipes and accepted build artifacts are published before their versions are advertised to customers.
 
 Current PHP source recipes include CLI/FPM and pinned OpenSSL, Oniguruma, ICU, and libzip builds. They supply a trusted certificate bundle and a version-specific INI file; Morrow resolves its own configuration placeholder after download without running an installation script. The older PHP 8.0 StaticPHP workflow remains available for that legacy release.
 
@@ -88,11 +90,11 @@ Ruby's native-extension configuration and PHP's `phpize`/`php-config` helpers us
 
 Signed Go packages retain the compiler, tools, standard library, headers, and source, but omit the compiler suite's `testdata` directories containing deliberately malformed or foreign executables. These fixtures are not required to build Go applications; use the upstream source archive for developing or running Go's own compiler suite.
 
-The **Signed service distributions** workflow uses reviewed recipes in `distributions/<package>/<version>.json`. Recipes cover Node 22.23.3 and 24.22.0 LTS, Caddy 2.11.7, Mailpit 1.31.6, and dnsmasq 2.93 for Apple silicon and Intel. Node includes npm, npx, headers, and its bundled licenses. Caddy and Mailpit use checksum-pinned official release archives. dnsmasq is built from pinned source using Xcode, with optional DHCP, TFTP, scripting, and external library integrations disabled for Morrow's loopback DNS use.
+The **Signed service distributions** workflow uses reviewed recipes in `distributions/<package>/<version>.json`. Recipes cover Node 22.23.3 and 24.22.0 LTS, Caddy 2.11.7, Mailpit 1.31.6, and dnsmasq 2.93 for Apple silicon. Node includes npm, npx, headers, and its bundled licenses. Caddy and Mailpit use checksum-pinned official release archives. dnsmasq is built from pinned source using Xcode, with optional DHCP, TFTP, scripting, and external library integrations disabled for Morrow's loopback DNS use.
 
-Run the workflow with the package name and exact recipe version. It prepares both architectures, rejects external library dependencies or incorrect minimum macOS declarations, signs all native executables with the release identity, checks the native executable's version, and submits the packages to Apple. Only accepted submissions produce publishable artifacts. Build tools are confined to the publisher's build machine; customers do not need Homebrew, nvm, Git, AWS CLI, or Xcode for these downloads.
+Run the workflow with the package name and exact recipe version. It prepares the arm64 package, rejects external library dependencies or incorrect minimum macOS declarations, signs all native executables with the release identity, checks the native executable's version, and submits the packages to Apple. Only accepted submissions produce publishable artifacts. Build tools are confined to the publisher's build machine; customers do not need Homebrew, nvm, Git, AWS CLI, or Xcode for these downloads.
 
-Download the workflow artifact and publish each architecture's archive with its corresponding `*-release.json` through `scripts/publish-binary.py`. Storage credentials stay in the locally configured profile. Node descriptors may include `lts: true`; this records the upstream release designation instead of inferring it from a version number. An immutable package is never rebuilt over an existing published version.
+Download the workflow artifact and publish the arm64 archive with its corresponding `*-release.json` through `scripts/publish-binary.py`. Storage credentials stay in the locally configured profile. Node descriptors may include `lts: true`; this records the upstream release designation instead of inferring it from a version number. An immutable package is never rebuilt over an existing published version.
 
 ## Preserve running services during deployment
 

@@ -36,7 +36,7 @@ jobs:
           MORROW_NOTARY_KEY_ID: ${{ secrets.MORROW_NOTARY_KEY_ID }}
           MORROW_NOTARY_ISSUER_ID: ${{ secrets.MORROW_NOTARY_ISSUER_ID }}
         run: python3 scripts/release-keychain.py
-      - name: Prepare and sign both Mac architectures
+      - name: Prepare and sign the Apple silicon package
         run: |
           python3 scripts/package-distribution.py --recipe "distributions/$MORROW_PACKAGE/$MORROW_PACKAGE_VERSION.json" --output .build/distribution-release --identity "$MORROW_SIGNING_IDENTITY" --team "$MORROW_EXPECTED_TEAM"
       - name: Notarize the distributions

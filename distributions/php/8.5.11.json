@@ -21,11 +21,6 @@
       "url": "https://www.php.net/distributions/php-8.5.11.tar.gz",
       "sha256": "338630ba9450f0b938bef8d740162c61c33bf64a1b421c6333c01df8a9fdb0ab",
       "rootDirectory": "php-8.5.11"
-    },
-    "x86_64": {
-      "url": "https://www.php.net/distributions/php-8.5.11.tar.gz",
-      "sha256": "338630ba9450f0b938bef8d740162c61c33bf64a1b421c6333c01df8a9fdb0ab",
-      "rootDirectory": "php-8.5.11"
     }
   },
   "dependencies": {

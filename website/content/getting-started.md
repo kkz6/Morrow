@@ -4,13 +4,13 @@ description: Build Morrow and create your first local database in one step.
 group: Start here
 order: 1
 ---
-Morrow is a native macOS menu bar app and CLI. Both use the same databases, development runtimes, settings, and data folders. This developer preview supports macOS 14 and later.
+Morrow is a native macOS menu bar app and CLI. Both use the same databases, development runtimes, settings, and data folders. This developer preview supports Apple silicon (M-series) Macs running macOS 14 and later.
 
 ## Build the app and CLI
 
 Install a full version of Xcode and its command line tools. The build script selects the newest full Xcode in `/Applications` and uses its macOS SDK. No Homebrew installation is required. Missing software uses a configured verified binary catalog; Go can also use official archives. Read [Binary downloads](/docs/binary-downloads) before creating services on a fresh Mac.
 
-Morrow supports macOS 14 or newer. Individual runtime packages can require a newer system: Flutter 3.47.7 requires macOS 15 because of its bundled iPhone tooling. Version selectors filter incompatible packages automatically.
+Morrow targets Apple silicon only and supports macOS 14 or newer. Individual runtime packages can require a newer system: Flutter 3.47.7 requires macOS 15 because of its bundled iPhone tooling. Version selectors filter incompatible packages automatically.
 
 Flutter includes its SDK, Dart, and engine resources. Its optional package-download cache is omitted; the first use of Dart dependencies can require network access to Pub, as normal project dependency installation does. Dependency license notices remain included.
 
