@@ -10,6 +10,8 @@ Morrow is a native macOS menu bar app and CLI. Both use the same databases, deve
 
 Install a full version of Xcode and its command line tools. The build script selects the newest full Xcode in `/Applications` and uses its macOS SDK. No Homebrew installation is required. Missing software uses a configured verified binary catalog; Go can also use official archives. Read [Binary downloads](/docs/binary-downloads) before creating services on a fresh Mac.
 
+Morrow supports macOS 14 or newer. Individual runtime packages can require a newer system: Flutter 3.47.7 requires macOS 15 because of its bundled iPhone tooling. Version selectors filter incompatible packages automatically.
+
 ```sh
 git clone https://github.com/kkz6/Morrow.git
 cd Morrow

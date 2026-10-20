@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "package": "flutter",
   "version": "3.47.7",
-  "minimumMacOS": "14.0",
+  "minimumMacOS": "15.0",
   "layout": "tree",
   "executables": [
     "bin/flutter",

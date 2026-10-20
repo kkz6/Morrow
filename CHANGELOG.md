@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Recorded Flutter 3.47.7's macOS 15 requirement from its bundled native iPhone tools. Older Macs do not receive an incompatible SDK; Morrow's own macOS 14 minimum is unchanged.
+
 - Added explicit transitions from existing external installations to same-version portable packages through the normal update actions. Database downloads and validation finish before the existing backup/restart procedure begins; runtime defaults can switch while folder pins and external files remain preserved.
 
 - Removed Homebrew installation, metadata refresh, and update execution from shared app/CLI management. Existing installations are discovered without executing or requiring the Homebrew command; legacy compatibility settings cannot re-enable it. Catalog-only updates and iCloud restoration preserve existing data and services.

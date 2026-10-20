@@ -149,7 +149,8 @@ def sign_tree(root, arch, recipe, args, entitlements):
             raise ValueError('The executable architecture differs from the recipe: ' + str(binary))
         minimum = re.search(r'\bminos ([0-9.]+)', commands) or re.search(r'LC_VERSION_MIN_MACOSX\s+cmdsize \d+\s+version ([0-9.]+)', commands)
         if minimum is None or os_version(minimum.group(1)) > os_version(recipe['minimumMacOS']):
-            raise ValueError('An executable needs a newer macOS than declared: ' + str(binary))
+            required = minimum.group(1) if minimum else 'unknown'
+            raise ValueError('An executable needs macOS ' + required + ', exceeding declared ' + recipe['minimumMacOS'] + ': ' + str(binary))
         dependencies = run('/usr/bin/otool', '-L', str(binary)).splitlines()[1:]
         for line in dependencies:
             if not line[:1].isspace():
