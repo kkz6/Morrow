@@ -1,0 +1,45 @@
+name: Notarization diagnostics
+on:
+  workflow_dispatch:
+    inputs:
+      submission:
+        description: Optional Apple submission UUID; blank retrieves recent rejected submissions
+        required: false
+        default: ''
+permissions:
+  contents: read
+jobs:
+  report:
+    if: github.ref == 'refs/heads/main'
+    runs-on: xcode-27
+    timeout-minutes: 15
+    environment: release
+    env:
+      MORROW_EXPECTED_TEAM: ${{ vars.MORROW_APPLE_TEAM_ID }}
+      MORROW_SUBMISSION_ID: ${{ inputs.submission }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Select the current full macOS SDK
+        run: |
+          source scripts/toolchain.sh
+          echo "DEVELOPER_DIR=$DEVELOPER_DIR" >> "$GITHUB_ENV"
+      - name: Import release credentials into a temporary keychain
+        env:
+          MORROW_CERTIFICATE_P12_BASE64: ${{ secrets.MORROW_CERTIFICATE_P12_BASE64 }}
+          MORROW_CERTIFICATE_PASSWORD: ${{ secrets.MORROW_CERTIFICATE_PASSWORD }}
+          MORROW_NOTARY_KEY_BASE64: ${{ secrets.MORROW_NOTARY_KEY_BASE64 }}
+          MORROW_NOTARY_KEY_ID: ${{ secrets.MORROW_NOTARY_KEY_ID }}
+          MORROW_NOTARY_ISSUER_ID: ${{ secrets.MORROW_NOTARY_ISSUER_ID }}
+        run: python3 scripts/release-keychain.py
+      - name: Retrieve Apple submission reports
+        run: python3 scripts/notarization-report.py
+      - name: Upload diagnostic reports
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: notarization-diagnostics
+          path: .build/notarization-diagnostics/*.json
+          if-no-files-found: ignore
+      - name: Remove release credentials
+        if: always()
+        run: python3 scripts/release-keychain.py --cleanup

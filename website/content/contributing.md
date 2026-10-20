@@ -88,6 +88,8 @@ PHP source builds resolve Apple's iconv headers and library through the selected
 
 Static PHP intl linking includes ICU's I/O library before its internationalization, common, and data libraries. The complete library group is required for message formatting as well as the locale APIs.
 
+Use the **Notarization diagnostics** workflow to retrieve Apple's rejection details through the existing temporary release profile. It uploads submission history and diagnostic JSON only; signing keys and passwords stay in GitHub's encrypted secrets and temporary keychain. A rejected package remains unpublished until a corrected submission is accepted.
+
 The Nuxt toolchain currently reports upstream high-severity npm audit advisories involving its development dependencies. Patched Git parser versions are pinned through overrides. The published site contains static HTML, CSS, and client scripts; its development server stays on 127.0.0.1. Recheck advisories when updating dependencies rather than forcing an incompatible Nuxt downgrade.
 
 ## Customer distribution
