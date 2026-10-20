@@ -157,7 +157,7 @@ def sign_tree(root, arch, recipe, args, entitlements):
             if not line[:1].isspace():
                 continue
             dependency = line.strip().split(' (compatibility version', 1)[0]
-            if dependency.startswith(('/usr/lib/', '/System/Library/')) or dependency == '@rpath/' + binary.relative_to(root).as_posix():
+            if dependency.startswith(('/usr/lib/', '/System/Library/')) or dependency == '@rpath/' + binary.name:
                 continue
             if dependency.startswith('@loader_path/'):
                 library = binary.parent / dependency.removeprefix('@loader_path/')

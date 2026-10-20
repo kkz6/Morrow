@@ -6,10 +6,12 @@
   "layout": "tree",
   "executables": [
     "bin/flutter",
-    "bin/dart"
+    "bin/dart",
+    "bin/cache/dart-sdk/bin/dart"
   ],
   "versionArguments": [
-    "--version"
+    "--version",
+    "--suppress-analytics"
   ],
   "versionPattern": "3\\.47\\.7",
   "license": "BSD-3-Clause and bundled third-party licenses",

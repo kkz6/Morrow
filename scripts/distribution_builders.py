@@ -166,13 +166,15 @@ def build(recipe, arch, source, root, workspace, cache, fetch, extract):
 
 def prepare_runtime(recipe, root):
     """Replace publisher-path shebangs without depending on the user's PATH."""
-    if recipe['package'] == 'go':
+    if recipe['package'] in ['go', 'flutter']:
         # The Go source tree includes deliberately malformed/foreign Mach-O
         # inputs for compiler tests. They are data, not SDK executables; omit
         # those fixtures from the signed runtime while retaining Go sources.
-        for directory in sorted(root.rglob('testdata'), key=lambda p: len(p.parts), reverse=True):
-            if directory.is_dir() and not directory.is_symlink():
-                shutil.rmtree(directory)
+        names = ['testdata'] if recipe['package'] == 'go' else ['testdata', 'test_data', 'fixtures']
+        for name in names:
+            for directory in sorted(root.rglob(name), key=lambda p: len(p.parts), reverse=True):
+                if directory.is_dir() and not directory.is_symlink():
+                    shutil.rmtree(directory)
     if recipe['package'] == 'python':
         for binary in (root / 'bin').glob('pip*'):
             if binary.is_file() and not binary.is_symlink():
@@ -208,9 +210,14 @@ def relocate(root):
     files = list(mach_files(root))
     for binary in files:
         changes = []
+        commands = subprocess.check_output(['/usr/bin/otool', '-l', str(binary)], text=True)
+        import re
+        platforms = re.findall(r'\bplatform ([A-Za-z0-9_]+)', commands)
+        if platforms and not any(value in ['1', 'MACOS', 'macos'] for value in platforms):
+            continue
         ids = [line.strip() for line in subprocess.check_output(['/usr/bin/otool', '-D', str(binary)], text=True).splitlines() if line.strip() and not line.endswith(':')]
         if ids:
-            changes += ['-id', '@rpath/' + binary.relative_to(root).as_posix()]
+            changes += ['-id', '@rpath/' + binary.name]
         libraries = subprocess.check_output(['/usr/bin/otool', '-L', str(binary)], text=True).splitlines()[1:]
         for line in libraries:
             if not line[:1].isspace():
@@ -225,8 +232,13 @@ def relocate(root):
                 candidates.append(Path(dependency))
             elif dependency.startswith('@executable_path/'):
                 candidates.append(root / 'bin' / dependency.removeprefix('@executable_path/'))
-            candidates += [p for p in root.rglob(Path(dependency).name) if p.is_file()]
+            elif dependency.startswith('@rpath/'):
+                for rpath in re.findall(r'cmd LC_RPATH\s+cmdsize \d+\s+path (.+?) \(offset', commands):
+                    base = rpath.replace('@loader_path', str(binary.parent)).replace('@executable_path', str(root / 'bin'))
+                    candidates.append(Path(base) / dependency.removeprefix('@rpath/'))
             valid = {p.resolve() for p in candidates if p.exists() and p.resolve().is_relative_to(root)}
+            if not valid:
+                valid = {p.resolve() for p in root.rglob(Path(dependency).name) if p.is_file() and p.resolve().is_relative_to(root)}
             if len(valid) != 1:
                 raise ValueError('Unresolved or ambiguous bundled library: ' + dependency + ' in ' + str(binary))
             library = next(iter(valid))
