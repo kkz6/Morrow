@@ -58,6 +58,8 @@ python3 scripts/publish-binary.py \
 
 `--public-read` sets the ACL only on the archive and catalog objects being published. It does not make the entire bucket public or change unrelated objects. Omit it when public access is already configured separately. The publisher delegates authentication to AWS CLI's profile and never reads or prints access keys.
 
+For complete source-build recipes and recipes declaring corresponding sources, the publisher also retains their pinned source archives and build dependencies under immutable `sources/` keys. Public source URLs and checksums are attached as `sourceArchives` metadata. This keeps redistribution sources available alongside the binary without adding compiler tools to customer installations. License notices stay inside the package.
+
 After publishing, set the repository's `MORROW_BINARY_CATALOG_URL` variable to the printed catalog URL and build a signed release. Customer releases use this source automatically. For an existing development Mac, set an override with `morrow binary source <url>`. New catalog patch versions become available through Morrow's existing update checks; previous archives remain immutable.
 
 Publication merges the current catalog and uses conditional writes. Returned ETags are normalized for Ceph/Contabo compatibility; concurrent catalog changes still stop publication. Storage failures name the operation and error category without printing credentials.

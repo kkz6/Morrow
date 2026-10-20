@@ -210,7 +210,8 @@ def prepare(args):
         if recipe['layout'] == 'source':
             build(recipe, arch, upstream, root, workspace, cache, fetch, extract)
         elif recipe['layout'] == 'tree':
-            shutil.copytree(upstream, root, symlinks=True)
+            root.parent.mkdir(parents=True, exist_ok=True)
+            shutil.move(str(upstream), str(root))
         else:
             (root / 'bin').mkdir(parents=True)
             if recipe['layout'] == 'single':

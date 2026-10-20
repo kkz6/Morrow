@@ -13,6 +13,7 @@ import tempfile
 import urllib.error
 import urllib.parse
 import urllib.request
+from distribution_sources import publish_sources
 
 parser=argparse.ArgumentParser(description=__doc__)
 parser.add_argument('--config',type=Path,default=Path('distributions/storage.local.json'))
@@ -46,7 +47,7 @@ try:
     prefix=config.get('prefix','morrow').strip('/')
     if any(not re.fullmatch(r'[A-Za-z0-9._-]+',x) or x in ['.','..'] for x in prefix.split('/')): raise ValueError('Unsafe storage prefix.')
     release=json.loads(args.release.read_text())
-    fields={'package','version','architecture','minimumMacOS','url','sha256','archive','rootDirectory','executables','license','sourceURL','sourceSHA256','notarizationID','lts'}
+    fields={'package','version','architecture','minimumMacOS','url','sha256','archive','rootDirectory','executables','license','sourceURL','sourceSHA256','notarizationID','lts','sourceArchives'}
     if set(release)-fields: raise ValueError('The descriptor contains unknown fields; keep credentials and machine settings out of release metadata.')
     packages={'postgresql','mysql','mariadb','mongodb','redis','valkey','memcached','php','go','flutter','node','python','ruby','caddy','dnsmasq','mailpit','minio'}
     package=safe_component(release['package']); version=safe_component(release['version'])
@@ -95,6 +96,9 @@ try:
         tuple_key=(package,version,architecture)
         old=next((item for item in catalog['releases'] if (item['package'],item['version'],item['architecture'])==tuple_key),None)
         if old and old['sha256']!=actual: raise ValueError('This release already exists with different contents. Publish a new revision instead.')
+        if not old and release['archive']=='tar':
+            sources=publish_sources(args.archive,release,aws,bucket,prefix,base,args.public_read)
+            if sources: release['sourceArchives']=sources
         found=aws('head-object','--bucket',bucket,'--key',key,check=False)
         if found.returncode==0:
             if json.loads(found.stdout).get('Metadata',{}).get('sha256')!=actual: raise ValueError('The existing object has conflicting checksum metadata.')

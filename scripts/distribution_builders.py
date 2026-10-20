@@ -97,8 +97,9 @@ def build(recipe, arch, source, root, workspace, cache, fetch, extract):
         environment['ac_cv_func_sandbox_init'] = 'no'
         run(['./configure', '--prefix=' + str(root), '--with-libevent=' + str(dependencies),
              '--disable-sasl', '--disable-tls', '--disable-extstore'])
-        run(['/usr/bin/make', '-j4'])
-        run(['/usr/bin/make', 'install'])
+        run(['/usr/bin/make', '-j4', 'memcached'])
+        (root / 'bin').mkdir(exist_ok=True)
+        shutil.copy2(source / 'memcached', root / 'bin/memcached')
     elif kind == 'mariadb':
         target = workspace / 'build'
         run(['cmake', '-S', source, '-B', target, '-DCMAKE_BUILD_TYPE=Release',
