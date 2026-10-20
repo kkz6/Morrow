@@ -67,7 +67,7 @@ struct ApplicationsPane: View {
                 }.frame(maxWidth: .infinity, alignment: .leading).settingsCellPadding()
             }
             if engine == .flutter { SettingsNote(text: "Flutter SDKs are kept separately by version. Target platforms may require Xcode, Android SDK, or other Flutter prerequisites.") }
-            SettingsNote(text: "Version selection applies to Morrow commands and its optional PATH setup. Managed distributions stay separate by version; Homebrew compatibility can update shared dependencies when enabled.")
+            SettingsNote(text: "Version selection applies to Morrow commands and its optional PATH setup. Downloads stay separate by version; existing installations and folder choices are preserved.")
         }
         .onAppear { engine = RuntimeEngine.parse(model.preferences.lastRuntime) ?? .php }
         .task(id: "\(engine.rawValue):\(model.tools.map(\.id).joined()):\(model.inventory.channels[engine.rawValue]?.count ?? 0)") { await loadVersions() }
@@ -82,7 +82,7 @@ struct ApplicationsPane: View {
                     pendingUpdate = nil
                 }
             }
-        } message: { Text("Managed updates are installed beside the existing version. Homebrew compatibility may update shared packages. Morrow selects the update only if this version is your default.") }
+        } message: { Text("Updates are installed beside the existing version. Morrow selects the update only if this version is your default.") }
         .confirmationDialog("Remove from Morrow?", isPresented: Binding(get: { pendingRemoval != nil }, set: { if !$0 { pendingRemoval = nil } }), titleVisibility: .visible) {
             if let item = pendingRemoval {
                 Button("Remove Selection", role: .destructive) {

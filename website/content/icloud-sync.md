@@ -27,7 +27,7 @@ Database contents, captured mail/attachments, logs, credentials, executable path
 
 ## Automatic setup
 
-When enabled, Morrow verifies existing installations and reuses a compatible release series before downloading. Missing Node and other runtime versions use the configured binary provider, with the same validation as normal creation. Existing nvm versions can be reused without changing their alias. Catalog source and Homebrew opt-in are local to each Mac. A historical patch that is unavailable may be recreated using an available patch in the same series. The setup report shows the version actually used.
+When enabled, Morrow verifies existing installations and reuses a compatible release series before downloading. Missing Node and other runtime versions use the configured binary provider, with the same validation as normal creation. Existing nvm versions can be reused without changing their alias. The catalog source is local to each Mac; synchronization never invokes Homebrew. A historical patch that is unavailable may be recreated using an available patch in the same series. The setup report shows the version actually used.
 
 A new database or mail service starts stopped. Its launch-at-login choice is retained. If its preferred port is occupied, Morrow chooses the next available engine port and reports it. Existing instances keep their machine's local port and data. Settings changes require stopping a running instance; a different engine or release series is reported for local review rather than automatically migrated.
 
@@ -39,7 +39,7 @@ Mailpit setup is recreated using a detected compatible version or a current avai
 
 Each Mac publishes a separate snapshot file under `devices`. Revisions give delivered snapshots a deterministic order. On publication, Morrow keeps additions from the delivered cloud setup and gives that Mac's local settings and defaults precedence. Simultaneous edits to the same preference or service are not merged field by field; the selected snapshot wins. This preview does not promise real-time synchronization or a distributed transactional merge.
 
-Unavailable catalog distributions, missing optional compatibility installers, port/configuration problems, and running-instance settings conflicts are listed under **Sync Status**. One failure does not stop unrelated recipes from being restored. Failed recipes are not downloaded repeatedly on every timer tick: use **Sync and Retry Setup** after resolving the problem, or deliver a changed blueprint.
+Unavailable catalog distributions, port/configuration problems, and running-instance settings conflicts are listed under **Sync Status**. One failure does not stop unrelated recipes from being restored. Failed recipes are not downloaded repeatedly on every timer tick: use **Sync and Retry Setup** after resolving the problem, or deliver a changed blueprint.
 
 If iCloud has not downloaded a snapshot, Morrow waits and reports that settings are downloading. Use Finder to download the selected folder if needed. Disabling sync leaves local services and existing cloud files intact.
 
@@ -59,4 +59,4 @@ For an explicitly chosen folder:
 morrow sync enable --folder "$HOME/Library/Mobile Documents/com~apple~CloudDocs/Morrow" --auto-install
 ```
 
-The CLI reconciles once per `sync now` invocation. Keep the macOS app open for periodic checks. A compatible distribution must be available from the configured provider for missing database, mail, and runtime software; Node uses complete hosted distributions and Go also has an official provider. Homebrew compatibility is optional. iCloud Drive must be enabled and the chosen folder available on both Macs. Automatic setup can download large SDKs, especially Flutter.
+The CLI reconciles once per `sync now` invocation. Keep the macOS app open for periodic checks. A compatible distribution must be available from the configured provider for missing database, mail, and runtime software; Node uses complete hosted distributions and Go also has an official provider. No package manager is used. iCloud Drive must be enabled and the chosen folder available on both Macs. Automatic setup can download large SDKs, especially Flutter.

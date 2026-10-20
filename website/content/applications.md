@@ -6,7 +6,7 @@ order: 4.7
 ---
 ## Select a version
 
-Open **Settings → Runtimes**, choose an application and version, then click **Install** beside the version selector. For a detected installation the action becomes **Set Default**; a selected default shows a label instead of another button. Morrow verifies and reuses an existing binary, or installs a missing version and selects it in the same operation. Node.js and other missing runtimes use the configured verified catalog; Go also has a direct official archive provider. Homebrew is used only when compatibility is explicitly enabled. See [Binary downloads](/docs/binary-downloads).
+Open **Settings → Runtimes**, choose an application and version, then click **Install** beside the version selector. For a detected installation the action becomes **Set Default**; a selected default shows a label instead of another button. Morrow verifies and reuses an existing binary, or installs a missing version and selects it in the same operation. Node.js and other missing runtimes use the configured verified catalog; Go also has a direct official archive provider. No package manager is used for installation or updates. See [Binary downloads](/docs/binary-downloads).
 
 Supported runtimes in this preview are PHP, Go, Flutter, Node.js, Python, and Ruby. The provider catalog can be extended as more runtimes are added. PHP web hosting and app-port routing live in [Sites](/docs/sites). [Folder Versions](/docs/project-versions) selects a runtime per project. Automatic ownership of Node/Go development processes, portable project version files, and additional runtimes are future work.
 
@@ -21,7 +21,7 @@ morrow tool use php 8.4
 morrow tool list
 ```
 
-`tool install` without a version reuses an available runtime first. Explicit `current` or `latest` selects the current release from the runtime's provider. A version series reuses an existing matching installation or selects a compatible catalog release. Optional compatibility also accepts formula names such as `php@8.4`. An exact release can be downloaded when the catalog publishes it, or reused when already installed. Optional Homebrew compatibility cannot provide every historical patch.
+`tool install` without a version reuses an available runtime first. Explicit `current` or `latest` selects the current release from the runtime's provider. A version series reuses an existing matching installation or selects a compatible catalog release. Legacy installed-version selectors remain supported. An exact release can be downloaded when the catalog publishes it, or reused when already installed. Unavailable historical patches are reported without substituting another version.
 
 ## Node.js distributions
 
@@ -102,9 +102,9 @@ morrow tool upgrade php
 morrow tool upgrade php 8.4
 ```
 
-The default version is updated only if the selected installation was the default. Other version selections remain recorded. Homebrew dependencies can be updated globally during an upgrade; external package cleanup can later remove pinned formula versions. Compatible managed releases can be installed beside existing runtimes. External versions with no catalog release remain the responsibility of their original installer. Node updates use published distributions within the same major series, retaining the previous version and folder selections. Existing nvm aliases are preserved. A refresh does not require Homebrew.
+The default version is updated only if the selected installation was the default. Other version selections remain recorded. Existing external binaries are preserved; portable updates include their own libraries. Compatible managed releases can be installed beside existing runtimes. External versions with no catalog release remain the responsibility of their original installer. Node updates use published distributions within the same major series, retaining the previous version and folder selections. Existing nvm aliases are preserved. A refresh does not require Homebrew.
 
-Flutter can use complete catalog SDK archives. When Homebrew compatibility is enabled, its cask has one current installable release. Managed SDKs already have separate version directories. Morrow copies externally installed Flutter SDKs into its own `tools/flutter/<version>` directory before selecting them. This preserves selected SDKs when Homebrew replaces its global cask. Flutter's own `upgrade` command can mutate an SDK; use Morrow's update command to retain separate versions. Flutter builds can require Git, Xcode, Android SDK, or other target-platform dependencies in addition to the SDK.
+Flutter can use complete catalog SDK archives. Managed SDKs already have separate version directories. Morrow copies externally installed Flutter SDKs into its own `tools/flutter/<version>` directory before selecting them. This preserves selected SDKs when Homebrew replaces its global cask. Flutter's own `upgrade` command can mutate an SDK; use Morrow's update command to retain separate versions. Flutter builds can require Git, Xcode, Android SDK, or other target-platform dependencies in addition to the SDK.
 
 ## Remove a selection
 

@@ -10,8 +10,7 @@ order: 6
 | --- | --- |
 | `morrow binary source <https-url\|clear>` | Validate a custom distribution catalog, or return to the release's bundled source |
 | `morrow binary list` | List compatible published catalog releases |
-| `morrow binary refresh` | Refresh provider metadata; refresh Homebrew only with opt-in |
-| `morrow binary brew on` | Enable optional Homebrew installation/upgrade compatibility |
+| `morrow binary refresh` | Refresh verified distribution metadata |
 | `morrow binary brew off` | Disable Homebrew mutations; existing installations remain usable |
 | `morrow background status` | Show native permission status for owned service jobs |
 | `morrow background clean` | Register the app, archive obsolete inactive registrations, and normalize retained definitions only with valid matching Apple signing teams |
@@ -27,7 +26,7 @@ Read [Binary downloads](/docs/binary-downloads) for manifest format and current 
 | `morrow --help` | List commands and options |
 | `morrow --version` | Print the application version |
 | `morrow service-runner -- <executable> [args]` | Internal unprivileged native-service supervisor used for app attribution |
-| `morrow doctor` | Check binary providers, optional Homebrew compatibility, and storage |
+| `morrow doctor` | Check portable download sources and local storage |
 | `morrow settings` | Open the macOS app’s Settings window |
 
 ## Catalog and software
@@ -93,7 +92,7 @@ The standalone CLI shares the same core and default data directory as the app. A
 
 | Command | Purpose |
 | --- | --- |
-| `morrow db updates [name] [--refresh] [--json]` | Compare pinned releases against available formula metadata; refresh runs `brew update` |
+| `morrow db updates [name] [--refresh] [--json]` | Compare pinned releases against published packages; refresh reloads the catalog |
 | `morrow db upgrade <name>` | Stop, back up, apply a compatible maintenance release, and restart if previously running |
 | `morrow db recover <name>` | Recover an interrupted update from its journal and backup |
 
@@ -104,7 +103,7 @@ Read [Database updates](/docs/updates) for compatibility, shared dependency beha
 | Command | Purpose |
 | --- | --- |
 | `morrow tool catalog` | List supported runtimes |
-| `morrow tool channels <runtime>` | Show hosted distributions, official Go archives, or optional Homebrew releases |
+| `morrow tool channels <runtime>` | Show hosted distributions or official Go archives |
 | `morrow tool versions [runtime]` | Discover existing binaries |
 | `morrow tool install <runtime> [version-or-channel]` | Reuse or install a runtime; defaults to automatic reuse |
 | `morrow tool use <runtime> <version>` | Select a default and create Morrow-owned command wrappers |
@@ -117,7 +116,7 @@ Read [Database updates](/docs/updates) for compatibility, shared dependency beha
 
 Supported runtime names: `php`, `go`, `flutter`, `node`, `python`, `ruby`. Aliases: `nodejs`, `python3`.
 
-For `install` and `use`, numeric release series, existing exact versions, and available formula names are accepted. PHP 8.0.30 is a hosted CLI/FPM package for both Mac architectures: `morrow tool install php 8.0` adds it without changing the current default; `morrow project use php 8.0 --path <folder>` assigns it to a folder. Node installs use complete hosted distributions and accept `lts` as well as numeric release series/exact versions. `lts` requires a published release marked LTS; existing nvm versions can be reused without changing nvm’s default alias. Go uses official archives; other missing runtimes require a configured distribution catalog or explicit Homebrew compatibility. `current` and `latest` choose the current release; they are installation selectors, not aliases for a saved default.
+For `install` and `use`, numeric release series, existing exact versions, and available formula names are accepted. PHP 8.0.30 is a hosted CLI/FPM package for both Mac architectures: `morrow tool install php 8.0` adds it without changing the current default; `morrow project use php 8.0 --path <folder>` assigns it to a folder. Node installs use complete hosted distributions and accept `lts` as well as numeric release series/exact versions. `lts` requires a published release marked LTS; existing nvm versions can be reused without changing nvm’s default alias. Go can also use official archives; other missing runtimes require a complete published distribution. `current` and `latest` choose the current release; they are installation selectors, not aliases for a saved default.
 
 ```sh
 morrow tool install go

@@ -8,7 +8,7 @@ Morrow is a native macOS menu bar app and CLI. Both use the same databases, deve
 
 ## Build the app and CLI
 
-Install a full version of Xcode and its command line tools. The build script selects the newest full Xcode in `/Applications` and uses its macOS SDK. Homebrew is optional. Missing software uses a configured verified binary catalog; Go can also use official archives. Read [Binary downloads](/docs/binary-downloads) before creating services on a fresh Mac.
+Install a full version of Xcode and its command line tools. The build script selects the newest full Xcode in `/Applications` and uses its macOS SDK. No Homebrew installation is required. Missing software uses a configured verified binary catalog; Go can also use official archives. Read [Binary downloads](/docs/binary-downloads) before creating services on a fresh Mac.
 
 ```sh
 git clone https://github.com/kkz6/Morrow.git
@@ -31,7 +31,7 @@ Choose **Allow Morrow Setup** to review a native in-app explanation, then contin
 
 In Settings, open **Databases → New Instance**. Choose the engine and version, enter a name, and click **Create Instance**. The default **Start after creating** option starts it immediately.
 
-Morrow finds compatible existing binaries, including Homebrew, PATH, Herd, and Postgres.app installations. If the requested version is missing, creation downloads a compatible catalog distribution. Until a package is published, use an existing installation or explicitly enable Homebrew compatibility. Port conflicts and duplicate names are rejected before downloading or initializing data.
+Morrow finds compatible existing binaries, including Homebrew, PATH, Herd, and Postgres.app installations. If the requested version is missing, creation downloads a compatible catalog distribution. If a release is not published, use an existing installation or choose a published version. Port conflicts and duplicate names are rejected before downloading or initializing data.
 
 The equivalent terminal command is:
 
@@ -68,7 +68,7 @@ Copy the returned address into your application’s database settings. For Postg
 
 ## Manage development runtimes
 
-Open **Settings → Runtimes** to select PHP, Go, Flutter, Node.js, Python, or Ruby. Existing versions are reused. Morrow handles downloads automatically: Node and other missing releases use its bundled distribution source; Go can also use official archives. Advanced Homebrew compatibility is an explicit CLI opt-in. Installation discovery is cached rather than repeated on each navigation. See [Applications and runtimes](/docs/applications) for Terminal setup and companion commands.
+Open **Settings → Runtimes** to select PHP, Go, Flutter, Node.js, Python, or Ruby. Existing versions are reused. Morrow handles downloads automatically: Node and other missing releases use its bundled distribution source; Go can also use official archives. Installation and updates use complete native packages. Installation discovery is cached rather than repeated on each navigation. See [Applications and runtimes](/docs/applications) for Terminal setup and companion commands.
 
 ## Set up another Mac
 

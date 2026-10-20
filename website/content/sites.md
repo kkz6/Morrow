@@ -47,7 +47,7 @@ morrow site refresh
 morrow site list
 ```
 
-Morrow reuses existing Caddy and dnsmasq binaries or downloads complete distributions from the configured catalog. Homebrew is used only with explicit compatibility opt-in. Services use separate user-owned launchd jobs. PHP projects use complete PHP-FPM installations; choose a default in Sites or a per-project version in **Project Settings**.
+Morrow reuses existing Caddy and dnsmasq binaries or downloads complete distributions from the configured catalog. No package manager is required. Services use separate user-owned launchd jobs. PHP projects use complete PHP-FPM installations; choose a default in Sites or a per-project version in **Project Settings**.
 
 ```sh
 morrow site php
@@ -55,7 +55,7 @@ morrow site php 8.4
 morrow site php --install
 ```
 
-The install option reuses a complete PHP-FPM installation or downloads a complete PHP distribution from the catalog. Homebrew is an optional compatibility source. A standalone PHP CLI without PHP-FPM is not sufficient for web hosting. This choice is separate from your ordinary CLI runtime default.
+The install option reuses a complete PHP-FPM installation or downloads a complete PHP distribution from the catalog. Only complete native distributions are installed. A standalone PHP CLI without PHP-FPM is not sufficient for web hosting. This choice is separate from your ordinary CLI runtime default.
 
 The directory watcher continues when the menu bar app closes. Changes are checked approximately every three seconds while hosting is enabled. Start-at-login can be changed in **Hosting Settings**. `morrow site watch` also runs the watcher in the foreground while hosting is enabled.
 

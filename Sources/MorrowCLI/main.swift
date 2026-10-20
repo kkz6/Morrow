@@ -37,7 +37,7 @@ Morrow — databases and development runtimes.
   morrow binary source <https-url|clear> Set a verified distribution catalog
   morrow binary list                     List compatible managed releases
   morrow binary refresh                  Refresh release metadata
-  morrow binary brew on|off              Opt in/out of Homebrew compatibility
+  morrow binary brew off                 Clear the legacy compatibility setting
   morrow background status               Show service permission status
   morrow background clean                Archive obsolete owned registrations
   morrow storage create <name>            Create a local MinIO S3 server
@@ -177,7 +177,7 @@ func main() throws {
         let installer = try manager.installer()
         print("Data:      \(manager.store.root.path)")
         print("Catalog:   \(installer.managed.catalogURL.isEmpty ? "Not configured (direct Go downloads available)" : installer.managed.catalogURL)")
-        print("Homebrew:  \(installer.allowsHomebrew ? "Compatibility enabled" : "Compatibility off") · \(installer.executable ?? "not installed")")
+        print("Installer: Portable distributions; no package manager required")
         print("Grouping:  \(BackgroundAttribution(launcher: URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath()).message)")
         print("Versions:  \(try installer.installations().count) native installations")
         print("Instances: \(try manager.store.load().instances.count)")
@@ -342,7 +342,7 @@ func toolsMain(_ args: [String], manager: RuntimeManager) throws {
     switch action {
     case "catalog":
         guard remaining.isEmpty else { throw MorrowError.message("Usage: morrow tool catalog") }
-        for item in RuntimeEngine.allCases { print("\(item.rawValue) · \(item.title) · \(item.isCask ? "Homebrew cask" : "Homebrew formula")") }
+        for item in RuntimeEngine.allCases { print("\(item.rawValue) · \(item.title) · native distributions") }
     case "channels":
         let options = try Options(remaining); try options.requireCount(1, usage: "morrow tool channels <runtime>")
         for item in try manager.channels(runtime(options.positional[0])) { print("\(item.formula) · \(item.version)") }
@@ -555,7 +555,7 @@ func siteMain(_ args: [String], manager: SiteManager) throws {
     case "php":
         let options = try Options(remaining, allowedFlags: ["--install"])
         guard options.positional.count <= 1 else { throw MorrowError.message("Usage: morrow site php [version] [--install]") }
-        if options.flags.contains("--install") { guard options.positional.isEmpty else { throw MorrowError.message("--install selects Homebrew's current complete PHP.") }; try manager.installPHP() }
+        if options.flags.contains("--install") { guard options.positional.isEmpty else { throw MorrowError.message("--install selects a published complete PHP distribution.") }; try manager.installPHP() }
         else if let version = options.positional.first {
             guard let item = try manager.availablePHP().first(where: { $0.version == version || $0.version.hasPrefix(version + ".") || $0.id == version }) else { throw MorrowError.message("No complete PHP-FPM installation matches that version.") }
             try manager.selectPHP(item); print("Sites uses PHP \(item.version).")

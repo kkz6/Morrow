@@ -6,7 +6,7 @@ order: 4.8
 ---
 ## Create a mail server
 
-Open **Settings → Mail → Create Mail Server**. Choose a name, Mailpit version, SMTP port, and inbox port. Creation reuses a detected native binary or downloads a verified Mailpit distribution from the configured catalog. Homebrew installation requires explicit compatibility opt-in. Port conflicts and duplicate names are checked before installation.
+Open **Settings → Mail → Create Mail Server**. Choose a name, Mailpit version, SMTP port, and inbox port. Creation reuses a detected native binary or downloads a verified Mailpit distribution from the configured catalog. No package manager is required. Port conflicts and duplicate names are checked before installation.
 
 The suggested ports begin at **1025** for SMTP and **8025** for the inbox. Each service has its own captured-message database. Multiple services can run on different ports; database and mail reservations share the same port validation.
 
@@ -19,7 +19,7 @@ morrow mail smtp local-mail
 morrow mail inbox local-mail
 ```
 
-Use `--smtp-port`, `--http-port`, `--version`, and `--autostart` when needed. Automatic selection reuses a detected installation. An exact version must already be installed or be published in the catalog. Optional Homebrew compatibility can provide only its current release.
+Use `--smtp-port`, `--http-port`, `--version`, and `--autostart` when needed. Automatic selection reuses a detected installation. An exact version must already be installed or be published in the catalog. Missing versions must be published before they can be downloaded.
 
 ## Configure your app
 

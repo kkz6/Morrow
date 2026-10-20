@@ -222,6 +222,16 @@ public struct ManagedBinaryStore: Sendable {
             guard binary.resolvingSymlinksInPath().path.hasPrefix(prefix.standardizedFileURL.path + "/"), fm.isExecutableFile(atPath: binary.path) else { throw MorrowError.message("The distribution is missing \(path).") }
             try validateArchitecture(binary)
         }
+        if release.package == "php" {
+            let configuration = prefix.appendingPathComponent("etc/php.ini")
+            if fm.fileExists(atPath: configuration.path) {
+                let text = try String(contentsOf: configuration, encoding: .utf8)
+                // Resolve only Morrow's known PHP configuration placeholder;
+                // downloaded distributions never execute installation scripts.
+                let escaped = target.path.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"")
+                try text.replacingOccurrences(of: "@MORROW_PREFIX@", with: escaped).write(to: configuration, atomically: true, encoding: .utf8)
+            }
+        }
         try JSONEncoder().encode(release).write(to: prefix.appendingPathComponent(".morrow-release.json"), options: .atomic)
         try fm.createDirectory(at: target.deletingLastPathComponent(), withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
         try fm.moveItem(at: prefix, to: target)

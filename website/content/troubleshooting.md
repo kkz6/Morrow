@@ -16,7 +16,7 @@ Do not stop another application’s service merely to make Morrow’s default po
 
 ## Homebrew is not found
 
-Homebrew is optional and compatibility is off by default. Compatible existing native binaries can be reused. Customer releases use Morrow's bundled download source and the direct official Go provider automatically. Advanced users can configure a custom source or explicitly enable Homebrew compatibility from Terminal. See [Binary downloads](/docs/binary-downloads).
+Homebrew is not used for installation or updates. Compatible existing native binaries can be reused. Customer releases use Morrow's bundled download source and the direct official Go provider automatically. Advanced users can configure a custom source from Terminal. See [Binary downloads](/docs/binary-downloads).
 
 ## Duplicate background entries or stale permission status
 

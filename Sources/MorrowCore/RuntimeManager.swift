@@ -43,8 +43,12 @@ public struct RuntimeInstallation: Codable, Identifiable, Equatable, Sendable {
     /// Portable PHP uses its own configuration instead of another installation's
     /// global php.ini or extension scan directory.
     public var environment: [String: String] {
-        guard engine == .php, source == "managed" else { return [:] }
-        return ["PHPRC": prefix + "/etc/php.ini", "PHP_INI_SCAN_DIR": prefix + "/etc/conf.d"]
+        guard source == "managed" else { return [:] }
+        var values: [String: String] = [:]
+        if engine == .php { values = ["PHPRC": prefix + "/etc/php.ini", "PHP_INI_SCAN_DIR": prefix + "/etc/conf.d"] }
+        if [.python, .ruby, .php].contains(engine), ProcessInfo.processInfo.environment["SSL_CERT_FILE"] == nil,
+           FileManager.default.fileExists(atPath: prefix + "/etc/ssl/cert.pem") { values["SSL_CERT_FILE"] = prefix + "/etc/ssl/cert.pem" }
+        return values
     }
     public init(engine: RuntimeEngine, formula: String, version: String, prefix: String, executable: String, source: String) {
         self.engine = engine; self.formula = formula; self.version = version; self.prefix = prefix; self.executable = executable; self.source = source
@@ -75,7 +79,7 @@ public struct RuntimeUpdate: Codable, Identifiable, Sendable {
 }
 
 /// Runtimes share database state, validation, and verified distributions, with
-/// optional Homebrew compatibility. Existing nvm versions remain discoverable.
+/// existing native installations. New installs always use portable packages.
 /// Selecting a version affects only Morrow's commands, never brew link or shell files.
 public struct RuntimeManager: Sendable {
     public let store: StateStore
@@ -84,22 +88,8 @@ public struct RuntimeManager: Sendable {
     func installer() throws -> HomebrewInstaller { HomebrewInstaller(runner: runner, configuredPath: try store.load().preferences.homebrewPath) }
     public var shimDirectory: URL { store.root.appendingPathComponent("bin") }
     public func channels(_ engine: RuntimeEngine, refresh: Bool = false) throws -> [RuntimeChannel] {
-        let policy = BinaryInstaller(store: store, runner: runner)
-        let managed = try policy.managed.releases(package: engine.rawValue, refresh: refresh).map { RuntimeChannel(engine: engine, formula: $0.channel, version: $0.version) }
-        if !policy.allowsHomebrew || policy.executable == nil { return managed }
-        let installer = try installer()
-        if engine.isCask {
-            let package = try installer.package("flutter", cask: true)
-            return managed + [RuntimeChannel(engine: engine, formula: "flutter", version: package.version)]
-        }
-        let output = try runner.run(installer.requireExecutable(), ["search", "--formula", "/^\(engine.formulaBase)(@[0-9.]+)?$/"], environment: [:]).checked()
-        let names = output.components(separatedBy: .whitespacesAndNewlines).filter { engine.allows($0) }
-        var seen = Set<String>()
-        return managed + names.compactMap { name in
-            // Disabled formulae are omitted rather than offered as installable.
-            guard let package = try? installer.package(name), seen.insert(package.name).inserted else { return nil }
-            return RuntimeChannel(engine: engine, formula: package.name, version: package.packageVersion)
-        }.sorted { $0.version.localizedStandardCompare($1.version) == .orderedDescending }
+        try ManagedBinaryStore(store: store, runner: runner).releases(package: engine.rawValue, refresh: refresh)
+            .map { RuntimeChannel(engine: engine, formula: $0.channel, version: $0.version) }
     }
     public func installations() throws -> [RuntimeInstallation] {
         let fm = FileManager.default
@@ -108,8 +98,7 @@ public struct RuntimeManager: Sendable {
             guard let engine = RuntimeEngine(rawValue: item.release.package), let valid = try? probe(engine, prefix: item.prefix, formula: item.release.channel, source: "managed", packageVersion: item.release.version) else { continue }
             result.append(valid)
         }
-        if let brew = try installer().executable {
-            let root = URL(fileURLWithPath: brew).deletingLastPathComponent().deletingLastPathComponent()
+        for root in try installer().searchPrefixes {
             let cellar = root.appendingPathComponent("Cellar")
             for formula in (try? fm.contentsOfDirectory(at: cellar, includingPropertiesForKeys: nil)) ?? [] {
                 guard let engine = RuntimeEngine.allCases.first(where: { !$0.isCask && $0.allows(formula.lastPathComponent) }) else { continue }
@@ -164,29 +153,7 @@ public struct RuntimeManager: Sendable {
         }
         guard !version.hasPrefix("managed:") else { throw MorrowError.message("That exact managed release is unavailable. No other release was substituted.") }
         if engine == .node, version == "lts" { throw MorrowError.message("No compatible Node LTS distribution is published. Refresh available versions or choose an existing installation.") }
-        _ = try policy.requireHomebrew()
-        guard ["current", "latest", "automatic"].contains(version) || engine.allows(version) || SoftwareVersion(version) != nil else { throw MorrowError.message("Invalid runtime version or channel.") }
-        let catalog = try channels(engine)
-        guard let channel = catalog.first(where: {
-            ["current", "latest", "automatic"].contains(version) ? ($0.formula == engine.formulaBase || catalog.count == 1)
-                : ($0.formula == version || Self.versionMatches($0.version, version) || $0.formula == engine.formulaBase + "@" + version)
-        }) else { throw MorrowError.message("Homebrew does not provide that release. Choose an available channel or an existing installation.") }
-        if let existing = found.first(where: { $0.version == channel.version }) {
-            let valid = try validate(existing); try register(valid); return valid
-        }
-        if engine == .flutter, let previous = found.first(where: { $0.formula == "flutter" && $0.source == "homebrew" }) {
-            let retained = try retainFlutter(previous)
-            try register(retained)
-            try installer().upgradePackage(installer().package("flutter", cask: true))
-        } else {
-            try runner.run(installer().requireExecutable(), ["install", engine.isCask ? "--cask" : "--formula", channel.formula], environment: [:]).checked()
-        }
-        guard let installed = try installations().first(where: { $0.engine == engine && $0.formula == channel.formula && $0.version == channel.version }) else {
-            throw MorrowError.message("Homebrew completed but the requested runtime was not detected. Refresh before trying again.")
-        }
-        let valid = try validate(installed)
-        let retained = engine == .flutter ? try retainFlutter(valid) : valid
-        try register(retained); return retained
+        throw MorrowError.message("No compatible \(engine.title) distribution is published for this request. Refresh available versions or select an existing installation.")
     }
     public func use(_ installation: RuntimeInstallation, cli: URL) throws {
         try store.operation {
@@ -253,7 +220,6 @@ public struct RuntimeManager: Sendable {
         }
     }
     public func updates(refresh: Bool = false) throws -> [RuntimeUpdate] {
-        let installer = try installer()
         let policy = BinaryInstaller(store: store, runner: runner)
         let tracked = try store.load().tools
         if refresh { try policy.refreshMetadata() }
@@ -264,14 +230,7 @@ public struct RuntimeManager: Sendable {
                 }
                 if item.source == "managed" { return RuntimeUpdate(installationID: item.id, engine: item.engine, currentVersion: item.version, availableVersion: nil, canUpgrade: false, message: "No newer compatible catalog release") }
             } catch { return RuntimeUpdate(installationID: item.id, engine: item.engine, currentVersion: item.version, availableVersion: nil, canUpgrade: false, message: error.localizedDescription) }
-            if !policy.allowsHomebrew { return RuntimeUpdate(installationID: item.id, engine: item.engine, currentVersion: item.version, availableVersion: nil, canUpgrade: false, message: "Existing installation preserved; Homebrew compatibility is off") }
-            guard item.engine.allows(item.formula) else { return RuntimeUpdate(installationID: item.id, engine: item.engine, currentVersion: item.version, availableVersion: nil, canUpgrade: false, message: "External installation — use its original installer.") }
-            do {
-                let package = try installer.package(item.formula, cask: item.engine.isCask)
-                let available = SoftwareVersion(package.packageVersion), current = SoftwareVersion(item.version)
-                let newer = available != nil && current != nil && available! > current!
-                return RuntimeUpdate(installationID: item.id, engine: item.engine, currentVersion: item.version, availableVersion: package.packageVersion, canUpgrade: newer, message: newer ? "Update available" : "Up to date")
-            } catch { return RuntimeUpdate(installationID: item.id, engine: item.engine, currentVersion: item.version, availableVersion: nil, canUpgrade: false, message: error.localizedDescription) }
+            return RuntimeUpdate(installationID: item.id, engine: item.engine, currentVersion: item.version, availableVersion: nil, canUpgrade: false, message: "No newer compatible published release; existing installation preserved")
         }
     }
     @discardableResult public func upgrade(_ item: RuntimeInstallation, cli: URL) throws -> RuntimeInstallation {
@@ -287,33 +246,7 @@ public struct RuntimeManager: Sendable {
                 return installed
             }
         }
-        _ = try BinaryInstaller(store: store, runner: runner).requireHomebrew()
-        return try store.operation {
-            guard item.engine.allows(item.formula) else { throw MorrowError.message("Update external runtimes with their original installer.") }
-            let package = try installer().package(item.formula, cask: item.engine.isCask)
-            guard let old = SoftwareVersion(item.version), let next = SoftwareVersion(package.packageVersion), next > old else { throw MorrowError.message("No update is available.") }
-            let wasDefault = try store.load().toolDefaults[item.engine.rawValue] == item.id
-            // Flutter's cask replaces its global SDK. Preserve the selected SDK
-            // inside Morrow before Homebrew removes that directory.
-            if item.engine == .flutter {
-                let previous = try retainFlutter(item)
-                try register(previous)
-                if try store.load().toolDefaults[item.engine.rawValue] == item.id {
-                    try writeShims(previous, cli: cli.resolvingSymlinksInPath())
-                    try store.update { $0.toolDefaults[item.engine.rawValue] = previous.id }
-                }
-            }
-            try installer().upgradePackage(package)
-            guard let installed = try installations().first(where: { $0.engine == item.engine && $0.formula == package.name && $0.version == package.packageVersion }) else { throw MorrowError.message("The updated runtime could not be found.") }
-            let valid = try validate(installed)
-            let retained = item.engine == .flutter ? try retainFlutter(valid) : valid
-            try register(retained)
-            if wasDefault {
-                try writeShims(retained, cli: cli.resolvingSymlinksInPath())
-                try store.update { $0.toolDefaults[item.engine.rawValue] = retained.id }
-            }
-            return retained
-        }
+        throw MorrowError.message("No newer compatible portable release is available. The current runtime and folder selections were preserved.")
     }
     /// Remove a selection from Morrow, leaving shared packages on the machine.
     public func forget(_ item: RuntimeInstallation) throws {

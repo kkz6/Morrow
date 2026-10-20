@@ -261,7 +261,7 @@ public struct WorkspaceSync: Sendable {
                     let policy = try databases.installer()
                     let available: String
                     if let release = try policy.managed.release(package: "mailpit", request: "current") { available = release.version }
-                    else { available = try policy.package("mailpit").version }
+                    else { throw MorrowError.message("No compatible Mailpit distribution is published.") }
                     guard SoftwareVersion(available)?.components.first == SoftwareVersion(recipe.version)?.components.first else { throw MorrowError.message("The synced Mailpit release is unavailable.") }
                     version = available
                 }

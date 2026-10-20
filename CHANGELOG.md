@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Removed Homebrew installation, metadata refresh, and update execution from shared app/CLI management. Existing installations are discovered without executing or requiring the Homebrew command; legacy compatibility settings cannot re-enable it. Catalog-only updates and iCloud restoration preserve existing data and services.
+
 - Added native build and relocation pipelines for the remaining database engines, Python, Ruby, Flutter, Go, and MinIO, with separate Apple silicon/Intel jobs, complete package resources, pinned source dependencies, and signing/notarization.
 - Added source builds for current PHP 8.3/8.4/8.5 with CLI/FPM, bundled static libraries, version-specific configuration, and trusted certificate bundles. Existing MySQL 26.7 installations have a matching portable release series.
 

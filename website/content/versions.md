@@ -12,7 +12,7 @@ Version selection is part of creating an instance. There is no separate installa
 morrow db create redis local-cache --start
 ```
 
-With no `--version`, Morrow reuses an available compatible server. If none is present, it downloads a compatible release from the configured catalog. A package without a published distribution requires an existing installation or explicit Homebrew compatibility.
+With no `--version`, Morrow reuses an available compatible server. If none is present, it downloads a compatible release from the configured catalog. A package without a published distribution requires a complete published distribution or an existing installation.
 
 ## Choose a release series
 
@@ -21,7 +21,7 @@ morrow db create postgresql legacy-app --version 16 --start
 morrow db create postgresql new-app --version 17 --start
 ```
 
-The selected release series follows published catalog releases. Optional Homebrew compatibility adds formula channels such as `postgresql@17` or `mysql@8.4`. An existing binary in the requested series is reused; a different major release is not silently substituted.
+The selected release series follows published catalog releases. Existing formula names remain recorded for legacy installations; new channels come from the portable catalog. An existing binary in the requested series is reused; a different major release is not silently substituted.
 
 Each instance stores its exact executable path and patch version. These two PostgreSQL instances keep separate data and ports.
 

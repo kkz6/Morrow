@@ -1,7 +1,7 @@
 import Foundation
 
 /// Installation policy shared by app, CLI and workspace sync. Existing native
-/// copies are always reused; Homebrew is an explicit compatibility option.
+/// copies are always reused; all new installs use complete portable packages.
 public struct BinaryInstaller: Sendable {
     public let store: StateStore
     public let runner: any CommandRunning
@@ -9,15 +9,12 @@ public struct BinaryInstaller: Sendable {
     public var managed: ManagedBinaryStore { ManagedBinaryStore(store: store, runner: runner) }
     var brew: HomebrewInstaller { HomebrewInstaller(runner: runner, configuredPath: (try? store.load().preferences.homebrewPath) ?? "") }
     public var executable: String? { brew.executable }
-    public var allowsHomebrew: Bool { (try? store.load().preferences.allowHomebrewFallback) == true }
+    public var allowsHomebrew: Bool { false }
     public func setHomebrewCompatibility(_ enabled: Bool) throws {
-        try store.update { $0.preferences.allowHomebrewFallback = enabled }
+        guard !enabled else { throw MorrowError.message("Homebrew installation has been removed. Morrow downloads complete native packages automatically.") }
+        try store.update { $0.preferences.allowHomebrewFallback = false }
         var inventory = InventoryStore(store: store).load(); inventory.channels = [:]
         try InventoryStore(store: store).save(inventory)
-    }
-    func requireHomebrew() throws -> HomebrewInstaller {
-        guard allowsHomebrew else { throw MorrowError.message("No compatible managed binary is available. Use an existing installation, choose a published release, or explicitly enable Homebrew compatibility from Terminal.") }
-        return brew
     }
     public func installations() throws -> [Installation] {
         let managed = self.managed.installations().compactMap { item -> Installation? in
@@ -30,11 +27,10 @@ public struct BinaryInstaller: Sendable {
             .sorted { $0.version.localizedStandardCompare($1.version) == .orderedDescending }
     }
     public func channels() throws -> [VersionChannel] {
-        var channels = try managed.releases().compactMap { release -> VersionChannel? in
+        let channels = try managed.releases().compactMap { release -> VersionChannel? in
             guard let engine = DatabaseEngine(rawValue: release.package) else { return nil }
             return VersionChannel(engine: engine, formula: release.channel, version: release.version)
         }
-        if allowsHomebrew, brew.executable != nil { channels += try brew.channels() }
         return channels
     }
     public func install(engine: DatabaseEngine, channel: String) throws -> [Installation] {
@@ -51,7 +47,7 @@ public struct BinaryInstaller: Sendable {
             return [valid]
         }
         guard !channel.hasPrefix("managed:") else { throw MorrowError.message("This exact managed release is no longer in the catalog. No other version was substituted.") }
-        return try requireHomebrew().install(engine: engine, channel: channel)
+        throw MorrowError.message("No compatible \(engine.title) distribution is published for this request. Refresh available versions or select an existing installation.")
     }
     public static func matches(_ item: Installation, request: String) -> Bool {
         if request.hasPrefix("managed:") { return ManagedBinaryStore.matches(item.version, request: request, package: item.engine.rawValue) }
@@ -60,10 +56,7 @@ public struct BinaryInstaller: Sendable {
     public func refreshMetadata() throws {
         _ = try managed.releases(refresh: true)
         try? FileManager.default.removeItem(at: store.root.appendingPathComponent("go-releases.json"))
-        if allowsHomebrew, brew.executable != nil { try brew.refreshMetadata() }
     }
-    func package(_ name: String, cask: Bool = false) throws -> BrewPackage { try requireHomebrew().package(name, cask: cask) }
-    func upgradePackage(_ package: BrewPackage) throws { try requireHomebrew().upgradePackage(package) }
     /// Auxiliary services consume the same catalog as database/runtime setup.
     public func auxiliary(_ name: String, request: String = "automatic", preferred: String? = nil) throws -> String {
         let managed = self.managed.installations().filter { $0.release.package == name && (request == "automatic" || ManagedBinaryStore.matches($0.release.version, request: request, package: name)) }
@@ -77,11 +70,6 @@ public struct BinaryInstaller: Sendable {
             guard FileManager.default.isExecutableFile(atPath: executable) else { throw MorrowError.message("The distribution needs bin/\(name).") }
             return executable
         }
-        let brew = try requireHomebrew()
-        let package = try brew.package(name)
-        guard ["automatic", "current", "latest"].contains(request) || package.version == request else { throw MorrowError.message("That exact \(name) release is unavailable. No different release was installed.") }
-        try runner.run(brew.requireExecutable(), ["install", "--formula", name], environment: [:]).checked()
-        guard let existing = candidates.first(where: { FileManager.default.isExecutableFile(atPath: $0) }) else { throw MorrowError.message("The installed \(name) executable was not found.") }
-        return URL(fileURLWithPath: existing).resolvingSymlinksInPath().path
+        throw MorrowError.message("No compatible \(name) distribution is published for this request. Existing installations were preserved.")
     }
 }

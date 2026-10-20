@@ -1,6 +1,6 @@
 ---
 title: Binary downloads
-description: Verified native distributions and optional Homebrew compatibility.
+description: Complete native service and runtime distributions without a package manager.
 group: Start here
 order: 1.5
 ---
@@ -8,7 +8,7 @@ order: 1.5
 
 Morrow first verifies and reuses a compatible existing installation. Missing software uses complete native distributions kept under `~/Library/Application Support/Morrow/binaries/<package>/<version>-<architecture>-<hash>`. Database creation stays one workflow; no separate Installed Versions screen is needed.
 
-Morrow handles binary downloads automatically during service creation or runtime installation. General does not expose catalog URLs or binary-management controls. Homebrew compatibility is **off by default**, including when older preferences do not contain the new option. Existing Homebrew installations and their data remain usable. Advanced users can explicitly allow Homebrew to install or upgrade unpublished packages with `morrow binary brew on`; use `morrow binary brew off` to disable it again.
+Morrow handles binary downloads automatically during service creation or runtime installation. General does not expose catalog URLs or binary-management controls. Morrow never runs Homebrew to install, refresh, or update software. Existing native installations and their data remain usable through read-only discovery, even when Homebrew’s command is absent. A saved legacy compatibility preference cannot re-enable package-manager installs. The deprecated `morrow binary brew off` command clears that preference; `brew on` is rejected.
 
 | Software | Source for missing versions |
 | --- | --- |
@@ -17,9 +17,13 @@ Morrow handles binary downloads automatically during service creation or runtime
 | Databases, PHP, Flutter, Python, Ruby | Complete compatible distributions in your configured catalog |
 | Caddy, dnsmasq, Mailpit, MinIO | Complete compatible distributions in your configured catalog |
 
-Release builds can include a default Morrow-hosted catalog, delivered over public HTTPS from object storage. A saved custom source takes precedence. Hosted packages include Go for Apple silicon; PHP 8.0.30 CLI/FPM, Node 22.23.3 and 24.22.0 LTS, Caddy 2.11.7, Mailpit 1.31.6, and dnsmasq 2.93 for Apple silicon and Intel. Other packages still need complete portable distributions. Without a published package, Morrow explains that it is unavailable instead of installing another release or silently invoking Homebrew. See [Release signing and hosting](/docs/releases) for the publishing workflow.
+Release builds can include a default Morrow-hosted catalog, delivered over public HTTPS from object storage. A saved custom source takes precedence. Hosted packages include Go for Apple silicon; PHP 8.0.30 CLI/FPM, Node 22.23.3 and 24.22.0 LTS, Caddy 2.11.7, Mailpit 1.31.6, and dnsmasq 2.93 for Apple silicon and Intel. Additional complete database, storage, and SDK packages use the same signed distribution workflow and appear in the catalog after publication. Without a published package, Morrow explains that it is unavailable instead of installing another release or silently invoking Homebrew. See [Release signing and hosting](/docs/releases) for the publishing workflow.
 
 When the catalog has no Go release compatible with this Mac, Go can still use its official archive provider. A catalog containing only Apple silicon Go does not block that fallback on an Intel Mac.
+
+## Existing installations
+
+Publishing portable packages does not move running instances automatically. Existing instances and folder choices keep their recorded executable paths. Before uninstalling a package manager yourself, move those selections to portable installations and confirm their services work. Morrow never removes Homebrew, its Cellar, shared libraries, or user databases. Different database release series require migration; compatible updates use the existing backup and recovery workflow.
 
 ## Advanced source configuration
 
@@ -29,11 +33,10 @@ Release builds use Morrow's bundled download source without customer configurati
 morrow binary source https://downloads.example.com/catalog.json
 morrow binary list
 morrow binary refresh
-morrow binary brew off
 morrow binary source clear
 ```
 
-The example hostname is a placeholder. Do not embed credentials in the URL. `source clear` removes your custom override and returns to the release's bundled source, if present. `morrow doctor` shows the effective source. Catalog choice and compatibility permission stay local to this Mac and are not included in iCloud recipes. Customers do not need AWS CLI, storage keys, or Homebrew to download a published distribution.
+The example hostname is a placeholder. Do not embed credentials in the URL. `source clear` removes your custom override and returns to the release's bundled source, if present. `morrow doctor` shows the effective source. Catalog choice stays local to this Mac and is not included in iCloud recipes. Customers do not need AWS CLI, storage keys, or Homebrew to download a published distribution.
 
 ## Catalog format
 

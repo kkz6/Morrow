@@ -154,7 +154,7 @@ public struct AppPreferences: Codable, Equatable, Sendable {
         showRunningCount = try values.decodeIfPresent(Bool.self, forKey: .showRunningCount) ?? true
         appearance = try values.decodeIfPresent(String.self, forKey: .appearance) ?? "system"
         homebrewPath = try values.decodeIfPresent(String.self, forKey: .homebrewPath) ?? ""
-        allowHomebrewFallback = try values.decodeIfPresent(Bool.self, forKey: .allowHomebrewFallback) ?? false
+        allowHomebrewFallback = false // Legacy compatibility never re-enables package-manager installs.
         binaryCatalogURL = try values.decodeIfPresent(String.self, forKey: .binaryCatalogURL) ?? ""
         iCloudSyncEnabled = try values.decodeIfPresent(Bool.self, forKey: .iCloudSyncEnabled) ?? false
         autoSetupSyncedServices = try values.decodeIfPresent(Bool.self, forKey: .autoSetupSyncedServices) ?? false

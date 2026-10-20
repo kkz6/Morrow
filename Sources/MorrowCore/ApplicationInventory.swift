@@ -14,11 +14,10 @@ public struct InventoryStore: Sendable {
     private var url: URL { store.root.appendingPathComponent("inventory.json") }
     public func load() -> ApplicationInventory {
         guard let data = try? Data(contentsOf: url), var cached = try? JSONDecoder().decode(ApplicationInventory.self, from: data) else { return ApplicationInventory() }
-        // nvm's old index advertised releases that may not exist in the hosted
-        // catalog. Refresh only that selector after the provider migration;
-        // retain the installed inventory and every other cached channel list.
-        if cached.channels[RuntimeEngine.node.rawValue]?.contains(where: { $0.formula.hasPrefix("nvm@") }) == true {
-            cached.channels.removeValue(forKey: RuntimeEngine.node.rawValue)
+        // Drop old package-manager channel lists while preserving installed
+        // inventory. Fresh selectors advertise only published portable releases.
+        for (engine, channels) in cached.channels where channels.contains(where: { !$0.formula.hasPrefix("managed:") }) {
+            cached.channels.removeValue(forKey: engine)
         }
         return cached
     }

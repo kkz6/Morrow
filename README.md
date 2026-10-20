@@ -7,7 +7,7 @@ processes managed by macOS launchd.
 ## Build and open
 
 Building requires macOS 14 or later and Xcode. Customer downloads use verified
-portable distributions; Homebrew compatibility is optional and off by default.
+portable distributions; Homebrew is not used for installation or updates.
 Morrow has no third-party Swift package dependencies and bundles no database
 servers, browser runtime, container engine, or VM.
 
@@ -36,9 +36,8 @@ it directly. A standalone CLI build is available through `scripts/build-cli.sh`.
 
 Supported native providers: PostgreSQL, MySQL, MariaDB, MongoDB, Redis,
 Valkey, and Memcached. Missing versions need complete distributions in the
-configured catalog or explicit Homebrew compatibility. Existing native binaries
-and Homebrew installations remain usable. When compatibility is enabled,
-MongoDB uses its official tap. Morrow never starts or stops Homebrew’s shared
+configured catalog or an existing installation. Existing native binaries
+and Homebrew installations remain usable. Legacy package-manager paths are read only. Morrow never starts or stops Homebrew’s shared
 service jobs.
 
 **Create Instance** is the main workflow in both the menu and Settings. Select
@@ -73,7 +72,7 @@ later feature.
 
 ## Updates and development runtimes
 
-Settings → Databases → Check Updates compares pinned releases with compatible catalog packages and optional Homebrew metadata. Compatible maintenance updates use an explicit backup, upgrade, and recovery workflow. Different release series require migration. Homebrew can update shared dependencies; this is not an isolated package environment.
+Settings → Databases → Check Updates compares pinned releases with compatible catalog packages and published release metadata. Compatible maintenance updates use an explicit backup, upgrade, and recovery workflow. Different release series require migration. Homebrew can update shared dependencies; this is not an isolated package environment.
 
 ```sh
 morrow db updates --refresh
@@ -81,7 +80,7 @@ morrow db upgrade my-project
 morrow db recover my-project # only for an interrupted update
 ```
 
-Settings → Runtimes manages PHP, Go, Flutter, Node.js, Python, and Ruby. Select a version to reuse or install it and set its Morrow default. Existing binaries are detected before installation. Missing runtimes use complete hosted distributions; Go also supports official archives. Existing nvm versions are discovered without changing their aliases. Homebrew installation is an explicit compatibility opt-in. Version discovery is cached on disk so changing pages does not rescan installations. Runtime cards expose configuration files and PHP-FPM logs. Morrow provides optional PATH wrappers, without changing Homebrew links or shell files. Flutter SDK selections are copied into Morrow storage to preserve them across cask upgrades.
+Settings → Runtimes manages PHP, Go, Flutter, Node.js, Python, and Ruby. Select a version to reuse or install it and set its Morrow default. Existing binaries are detected before installation. Missing runtimes use complete hosted distributions; Go also supports official archives. Existing nvm versions are discovered without changing their aliases. No package manager is required. Version discovery is cached on disk so changing pages does not rescan installations. Runtime cards expose configuration files and PHP-FPM logs. Morrow provides optional PATH wrappers, without changing Homebrew links or shell files. Flutter SDK selections are copied into Morrow storage to preserve them across cask upgrades.
 
 ```sh
 morrow tool install php 8.4
