@@ -64,7 +64,7 @@ For complete source-build recipes and recipes declaring corresponding sources, t
 
 After publishing, set the repository's `MORROW_BINARY_CATALOG_URL` variable to the printed catalog URL and build a signed release. Customer releases use this source automatically. For an existing development Mac, set an override with `morrow binary source <url>`. New catalog patch versions become available through Morrow's existing update checks; previous archives remain immutable.
 
-Large archives use multipart uploads and bounded parallel public byte-range downloads. Every public byte is hashed in archive order before the catalog changes; size and byte-range mismatches stop publication. Smaller archives and servers without byte-range support use a normal complete download.
+Large archives use multipart uploads and bounded parallel public byte-range downloads. Interrupted byte-range requests retry with a bounded delay. Every public byte is hashed in archive order before the catalog changes; size and byte-range mismatches stop publication. Smaller archives and servers without byte-range support use a normal complete download.
 
 Publication merges the current catalog and uses conditional writes. Returned ETags are normalized for Ceph/Contabo compatibility; concurrent catalog changes still stop publication. Storage failures name the operation and error category without printing credentials.
 

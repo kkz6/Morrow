@@ -3,6 +3,7 @@
 import argparse
 from concurrent.futures import ThreadPoolExecutor
 import hashlib
+import http.client
 import json
 import os
 from pathlib import Path
@@ -11,6 +12,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -64,15 +66,23 @@ def verify_public_archive(url, expected, size, temporary):
         step=16*1024*1024
         def fetch_chunk(index):
             start=index*step; end=min(start+step,size)-1
-            path=chunks/str(index); received=0
-            with open_request(headers={'Range':f'bytes={start}-{end}'}) as response, path.open('wb') as output:
-                if response.status!=206 or response.headers.get('Content-Range')!=f'bytes {start}-{end}/{size}': raise ValueError('Public archive byte range differs; the catalog was not changed.')
-                for block in iter(lambda:response.read(1024*1024),b''):
-                    received+=len(block)
-                    if received>end-start+1: raise ValueError('Public archive range exceeds the expected size.')
-                    output.write(block)
-            if received!=end-start+1: raise ValueError('Public archive byte range is incomplete.')
-            return path
+            path=chunks/str(index)
+            for attempt in range(4):
+                received=0
+                try:
+                    with open_request(headers={'Range':f'bytes={start}-{end}'}) as response, path.open('wb') as output:
+                        if response.status!=206 or response.headers.get('Content-Range')!=f'bytes {start}-{end}/{size}': raise ValueError('Public archive byte range differs; the catalog was not changed.')
+                        for block in iter(lambda:response.read(1024*1024),b''):
+                            received+=len(block)
+                            if received>end-start+1: raise ValueError('Public archive range exceeds the expected size.')
+                            output.write(block)
+                    if received!=end-start+1: raise http.client.IncompleteRead(b'')
+                    return path
+                except (OSError, urllib.error.URLError, http.client.HTTPException) as error:
+                    if isinstance(error,urllib.error.HTTPError) and error.code not in [408,429,500,502,503,504]: raise
+                    if attempt==3: raise
+                    print(f'Retrying interrupted public byte range {index+1}.',flush=True)
+                    time.sleep(2**attempt)
         with ThreadPoolExecutor(max_workers=8) as pool:
             for path in pool.map(fetch_chunk,range((size+step-1)//step)):
                 with path.open('rb') as source:
