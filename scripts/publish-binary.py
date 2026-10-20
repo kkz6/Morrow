@@ -98,7 +98,9 @@ try:
         if old and old['sha256']!=actual: raise ValueError('This release already exists with different contents. Publish a new revision instead.')
         if not old and release['archive']=='tar':
             sources=publish_sources(args.archive,release,aws,bucket,prefix,base,args.public_read)
-            if sources: release['sourceArchives']=sources
+            if sources:
+                release['sourceArchives']=sources
+                release['sourceURL']=sources[0]['upstreamURL']
         found=aws('head-object','--bucket',bucket,'--key',key,check=False)
         if found.returncode==0:
             if json.loads(found.stdout).get('Metadata',{}).get('sha256')!=actual: raise ValueError('The existing object has conflicting checksum metadata.')
