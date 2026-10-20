@@ -92,6 +92,9 @@ def build(recipe, arch, source, root, workspace, cache, fetch, extract):
         for name in [kind + '-server', kind + '-cli', kind + '-benchmark', kind + '-check-aof', kind + '-check-rdb']:
             shutil.copy2(source / 'src' / name, root / 'bin' / name)
     elif kind == 'memcached':
+        # Recent macOS SDKs removed the legacy named-sandbox constants. Do not
+        # compile that deprecated optional backend into the portable server.
+        environment['ac_cv_func_sandbox_init'] = 'no'
         run(['./configure', '--prefix=' + str(root), '--with-libevent=' + str(dependencies),
              '--disable-sasl', '--disable-tls', '--disable-extstore'])
         run(['/usr/bin/make', '-j4'])
@@ -162,6 +165,13 @@ def build(recipe, arch, source, root, workspace, cache, fetch, extract):
 
 def prepare_runtime(recipe, root):
     """Replace publisher-path shebangs without depending on the user's PATH."""
+    if recipe['package'] == 'go':
+        # The Go source tree includes deliberately malformed/foreign Mach-O
+        # inputs for compiler tests. They are data, not SDK executables; omit
+        # those fixtures from the signed runtime while retaining Go sources.
+        for directory in sorted(root.rglob('testdata'), key=lambda p: len(p.parts), reverse=True):
+            if directory.is_dir() and not directory.is_symlink():
+                shutil.rmtree(directory)
     if recipe['package'] == 'python':
         for binary in (root / 'bin').glob('pip*'):
             if binary.is_file() and not binary.is_symlink():
