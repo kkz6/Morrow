@@ -69,6 +69,13 @@ jobs:
             .build/portable-release/*-release.json
             .build/portable-release/notarization.json
           if-no-files-found: error
+      - name: Retain rejection diagnostics
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.package }}-${{ inputs.version }}-macos-${{ matrix.architecture }}-diagnostics
+          path: .build/portable-release/notarization*.json
+          if-no-files-found: ignore
       - name: Remove release credentials
         if: always()
         run: python3 scripts/release-keychain.py --cleanup

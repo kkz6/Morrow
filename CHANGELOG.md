@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Omitted Flutter's optional Pub preload archives containing unsigned example binaries while preserving SDK resources and dependency license notices. Pub retrieves original dependencies when needed; notarization failures retain Apple's detailed reports.
+
 - Preserved bundled SDK framework identities and sealed native macOS framework signatures after relocation, retaining upstream signatures for other target platforms.
 
 - Removed the app's remaining Homebrew availability trigger and obsolete shared-dependency warning. Update explanations follow portable download/validation before backup and restart; deprecated CLI help only advertises clearing the old preference.

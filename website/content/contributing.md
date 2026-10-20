@@ -90,6 +90,8 @@ Static PHP intl linking includes ICU's I/O library before its internationalizati
 
 Use the **Notarization diagnostics** workflow to retrieve Apple's rejection details through the existing temporary release profile. It uploads submission history and diagnostic JSON only; signing keys and passwords stay in GitHub's encrypted secrets and temporary keychain. A rejected package remains unpublished until a corrected submission is accepted.
 
+Flutter distributions omit the optional `.pub-preload-cache` archives, which contain unsigned example executables and encrypted parser fixtures. Keep their dependency license notices under `licenses/pub`; preserve the SDK, Dart, engine resources, and upstream target-platform signatures. Pub fetches original packages normally when needed, without changing their upstream checksums. The package workflow retains Apple's rejection JSON and detailed log on failure.
+
 The Nuxt toolchain currently reports upstream high-severity npm audit advisories involving its development dependencies. Patched Git parser versions are pinned through overrides. The published site contains static HTML, CSS, and client scripts; its development server stays on 127.0.0.1. Recheck advisories when updating dependencies rather than forcing an incompatible Nuxt downgrade.
 
 ## Customer distribution

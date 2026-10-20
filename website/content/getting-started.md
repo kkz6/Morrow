@@ -12,6 +12,8 @@ Install a full version of Xcode and its command line tools. The build script sel
 
 Morrow supports macOS 14 or newer. Individual runtime packages can require a newer system: Flutter 3.47.7 requires macOS 15 because of its bundled iPhone tooling. Version selectors filter incompatible packages automatically.
 
+Flutter includes its SDK, Dart, and engine resources. Its optional package-download cache is omitted; the first use of Dart dependencies can require network access to Pub, as normal project dependency installation does. Dependency license notices remain included.
+
 ```sh
 git clone https://github.com/kkz6/Morrow.git
 cd Morrow

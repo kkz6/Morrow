@@ -1,9 +1,10 @@
 """Publisher-only native builds and relocation for complete Morrow packages."""
 import os
-from pathlib import Path
+from pathlib import Path, PurePosixPath
 import shutil
 import subprocess
 import re
+import tarfile
 
 
 def command(arguments, cwd, environment):
@@ -173,6 +174,24 @@ def build(recipe, arch, source, root, workspace, cache, fetch, extract):
 
 def prepare_runtime(recipe, root):
     """Replace publisher-path shebangs without depending on the user's PATH."""
+    if recipe['package'] == 'flutter':
+        cache = root / '.pub-preload-cache'
+        if cache.is_dir():
+            # Pub cache archives include unsigned example programs and encrypted
+            # parser fixtures. Keep dependency notices, then let Pub retrieve its
+            # original checksum-verified packages when they are needed.
+            for package in cache.glob('*.tar.gz'):
+                with tarfile.open(package) as archive:
+                    for entry in archive:
+                        name = PurePosixPath(entry.name)
+                        if (entry.isfile() and not name.is_absolute() and '..' not in name.parts
+                                and len(name.parts) <= 3 and 0 <= entry.size <= 1048576
+                                and name.name.upper().startswith(('LICENSE', 'COPYING', 'NOTICE'))):
+                            destination = root / 'licenses/pub' / package.name.removesuffix('.tar.gz') / str(name)
+                            destination.parent.mkdir(parents=True, exist_ok=True)
+                            with archive.extractfile(entry) as source:
+                                destination.write_bytes(source.read())
+            shutil.rmtree(cache)
     if recipe['package'] in ['go', 'flutter']:
         # The Go source tree includes deliberately malformed/foreign Mach-O
         # inputs for compiler tests. They are data, not SDK executables; omit
