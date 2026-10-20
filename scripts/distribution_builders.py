@@ -16,6 +16,7 @@ def build(recipe, arch, source, root, workspace, cache, fetch, extract):
     environment.update({'SDKROOT': sdk, 'MACOSX_DEPLOYMENT_TARGET': recipe['minimumMacOS'],
                         'CC': '/usr/bin/clang', 'CXX': '/usr/bin/clang++', 'CFLAGS': flags,
                         'CXXFLAGS': flags, 'LDFLAGS': flags, 'PKG_CONFIG_PATH': '',
+                        'GIT_CEILING_DIRECTORIES': str(workspace),
                         'PKG_CONFIG_LIBDIR': str(workspace / 'dependency/lib/pkgconfig')})
     dependencies = workspace / 'dependency'
     dependencies.mkdir()
@@ -159,7 +160,7 @@ def build(recipe, arch, source, root, workspace, cache, fetch, extract):
         (root / 'bin').mkdir(exist_ok=True)
         tag = recipe['releaseTag']
         link = '-s -w -X github.com/minio/minio/cmd.Version=' + tag + ' -X github.com/minio/minio/cmd.ReleaseTag=' + tag
-        run(['go', 'build', '-mod=readonly', '-trimpath', '-tags', 'osusergo,netgo', '-ldflags', link,
+        run(['go', 'build', '-mod=readonly', '-buildvcs=false', '-trimpath', '-tags', 'osusergo,netgo', '-ldflags', link,
              '-o', root / 'bin/minio', '.'])
     else:
         raise ValueError('Unsupported source builder: ' + kind)

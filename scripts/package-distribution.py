@@ -114,6 +114,10 @@ def extract(path, target):
                 with archive.extractfile(entry) as source, destination.open('xb') as output:
                     shutil.copyfileobj(source, output)
                 destination.chmod(0o755 if entry.mode & 0o111 else 0o644)
+                # Released configure/parser files already have the right
+                # generation order. Preserve it instead of triggering host
+                # autotools solely because of archive entry order.
+                os.utime(destination, (entry.mtime, entry.mtime))
             elif entry.issym():
                 link = PurePosixPath(entry.linkname)
                 if link.is_absolute() or not inside(target, destination.parent / str(link)):
