@@ -139,6 +139,7 @@ def os_version(value):
 
 def sign_tree(root, arch, recipe, args, entitlements):
     count = 0
+    bundles = set()
     for binary in sorted(mach_files(root)):
         commands = run('/usr/bin/otool', '-l', str(binary))
         platforms = re.findall(r'\bplatform ([A-Za-z0-9_]+)', commands)
@@ -151,12 +152,14 @@ def sign_tree(root, arch, recipe, args, entitlements):
         if minimum is None or os_version(minimum.group(1)) > os_version(recipe['minimumMacOS']):
             required = minimum.group(1) if minimum else 'unknown'
             raise ValueError('An executable needs macOS ' + required + ', exceeding declared ' + recipe['minimumMacOS'] + ': ' + str(binary))
+        identities = {line.strip() for line in run('/usr/bin/otool', '-D', str(binary)).splitlines()
+                      if line.strip() and not line.endswith(':')}
         dependencies = run('/usr/bin/otool', '-L', str(binary)).splitlines()[1:]
         for line in dependencies:
             if not line[:1].isspace():
                 continue
             dependency = line.strip().split(' (compatibility version', 1)[0]
-            if dependency.startswith(('/usr/lib/', '/System/Library/')) or dependency == '@rpath/' + binary.name:
+            if dependency.startswith(('/usr/lib/', '/System/Library/')) or dependency in identities:
                 continue
             if dependency.startswith('@loader_path/'):
                 library = binary.parent / dependency.removeprefix('@loader_path/')
@@ -170,7 +173,22 @@ def sign_tree(root, arch, recipe, args, entitlements):
         if 'TeamIdentifier=' + args.team not in run('/usr/bin/codesign', '-dv', '--verbose=4', str(binary)):
             raise ValueError('The binary belongs to another signing team.')
         subprocess.run(['/usr/bin/codesign', '--verify', '--strict', str(binary)], check=True)
+        for parent in binary.parents:
+            if parent == root:
+                break
+            if parent.suffix in ['.framework', '.app']:
+                bundles.add(parent)
         count += 1
+    # Seal native macOS bundles after relocating/signing their contained code.
+    # Foreign target bundles never enter this set and retain upstream signing.
+    for bundle in sorted(bundles, key=lambda path: len(path.parts), reverse=True):
+        command = ['/usr/bin/codesign', '--force', '--sign', args.identity, '--options', 'runtime', '--timestamp']
+        if bundle.suffix == '.app':
+            command += ['--entitlements', str(entitlements)]
+        subprocess.run(command + [str(bundle)], check=True)
+        subprocess.run(['/usr/bin/codesign', '--verify', '--strict', str(bundle)], check=True)
+        if 'TeamIdentifier=' + args.team not in run('/usr/bin/codesign', '-dv', '--verbose=4', str(bundle)):
+            raise ValueError('The SDK bundle belongs to another signing team.')
     if count == 0:
         raise ValueError('No native executable was packaged.')
 

@@ -257,7 +257,10 @@ def relocate(root):
         if platforms and not any(value in ['1', 'MACOS', 'macos'] for value in platforms):
             continue
         ids = [line.strip() for line in subprocess.check_output(['/usr/bin/otool', '-D', str(binary)], text=True).splitlines() if line.strip() and not line.endswith(':')]
-        if ids:
+        framework = any(parent.suffix == '.framework' for parent in binary.parents if parent != root)
+        # Consumers embed frameworks by their existing @rpath bundle identity.
+        # Flattening that identity to a dylib basename breaks generated apps.
+        if ids and not (framework and all(value.startswith('@rpath/') for value in ids)):
             changes += ['-id', '@rpath/' + binary.name]
         libraries = subprocess.check_output(['/usr/bin/otool', '-L', str(binary)], text=True).splitlines()[1:]
         for line in libraries:

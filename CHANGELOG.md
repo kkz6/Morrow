@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Preserved bundled SDK framework identities and sealed native macOS framework signatures after relocation, retaining upstream signatures for other target platforms.
+
 - Removed the app's remaining Homebrew availability trigger and obsolete shared-dependency warning. Update explanations follow portable download/validation before backup and restart; deprecated CLI help only advertises clearing the old preference.
 
 - Recorded Flutter 3.47.7's macOS 15 requirement from its bundled native iPhone tools. Older Macs do not receive an incompatible SDK; Morrow's own macOS 14 minimum is unchanged.

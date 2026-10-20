@@ -82,6 +82,8 @@ Folder choices live in a separate private `project-runtimes.json` document so ol
 
 `BinaryInstaller` owns shared installation policy. Prefer validated existing copies and `ManagedBinaryStore` distributions; never execute a package manager. Legacy discovery may read existing installation paths but cannot install or update them. Catalog downloads require HTTPS, SHA-256, platform filtering, private staging, safe extraction, and actual version validation. Go has an official archive provider. Node uses the shared managed provider; nvm support is read-only discovery. Keep distribution libraries/resources relocatable; do not advertise an unpublished package as installable. See [Binary downloads](/docs/binary-downloads) for catalog fields and current availability.
 
+SDK packaging must preserve macOS framework bundle install names so generated applications can embed them normally. After relocating and signing contained native code, sign and verify the enclosing macOS frameworks and apps from the inside out. Keep iOS and other target-platform artifacts under their upstream signatures.
+
 The Nuxt toolchain currently reports upstream high-severity npm audit advisories involving its development dependencies. Patched Git parser versions are pinned through overrides. The published site contains static HTML, CSS, and client scripts; its development server stays on 127.0.0.1. Recheck advisories when updating dependencies rather than forcing an incompatible Nuxt downgrade.
 
 ## Customer distribution
