@@ -217,9 +217,6 @@ struct InstanceEditor: View {
         .onChange(of: engine) { _, _ in chooseVersion(resetPort: true) }
         .onChange(of: model.channels.map(\.id)) { _, _ in chooseVersion() }
         .onChange(of: model.installations.map(\.id)) { _, _ in chooseVersion() }
-        .onChange(of: model.homebrewAvailable) { _, available in
-            if existing == nil && available { model.loadChannels() }
-        }
         .task(id: "\(port):\(isRunning)") {
             do { try await Task.sleep(for: .milliseconds(250)) } catch { return }
             guard !model.preview else { return }

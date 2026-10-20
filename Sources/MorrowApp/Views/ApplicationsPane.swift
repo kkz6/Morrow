@@ -149,7 +149,7 @@ struct DatabaseUpgradeSheet: View {
         VStack(alignment: .leading, spacing: 16) {
             Text(recovering ? "Recover \(update.name)" : "Update \(update.name)").font(.system(size: 18, weight: .semibold))
             if !recovering { Text("\(update.currentVersion) → \(update.availableVersion ?? "")").font(.system(size: 13)).foregroundStyle(.secondary) }
-            Text(recovering ? "Recover the interrupted operation. Failed updates restore the saved instance; completed updates finish their setup. Files from failed updates are preserved separately." : "Morrow will stop this instance, back up its files, apply the maintenance update, and restart it if it was running. Homebrew may also update shared dependencies.")
+            Text(recovering ? "Recover the interrupted operation. Failed updates restore the saved instance; completed updates finish their setup. Files from failed updates are preserved separately." : "Morrow will download and verify the portable package, stop this instance, back up its files, apply the update, and restart it if it was running.")
                 .font(.system(size: 13)).fixedSize(horizontal: false, vertical: true)
             Text("Backups are kept in Morrow’s backups folder. Linked data or external tablespaces require a manual upgrade.")
                 .font(.system(size: 12)).foregroundStyle(.secondary)

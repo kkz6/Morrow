@@ -31,7 +31,7 @@ Choose **Update…** in an instance's action menu, review the backup and restart
 morrow db upgrade my-app
 ```
 
-Morrow serializes the operation across the app and CLI, stops its managed server, copies the instance directory into `backups`, installs a verified managed distribution , verifies the actual binary, and changes that instance's pinned path. An instance that was running is restarted and checked for readiness. A stopped instance stays stopped.
+Morrow serializes the operation across the app and CLI, downloads and validates the managed distribution, stops its managed server, copies the instance directory into `backups`, and changes that instance's pinned path. An instance that was running is restarted and checked for readiness. A stopped instance stays stopped.
 
 Other instances retain their pinned paths. Portable distributions include their required libraries and keep their previous directories. Morrow never modifies shared package-manager dependencies or removes external installations.
 

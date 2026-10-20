@@ -326,8 +326,8 @@ func binaryMain(_ args: [String], manager: DatabaseManager) throws {
         guard options.isEmpty else { throw MorrowError.message("Usage: morrow binary refresh") }
         try policy.refreshMetadata(); print("Binary metadata refreshed.")
     case "brew":
-        guard options.count == 1, ["on", "off"].contains(options[0]) else { throw MorrowError.message("Usage: morrow binary brew on|off") }
-        try policy.setHomebrewCompatibility(options[0] == "on"); print("Homebrew compatibility \(options[0]).")
+        guard options.count == 1, ["on", "off"].contains(options[0]) else { throw MorrowError.message("Usage: morrow binary brew off") }
+        try policy.setHomebrewCompatibility(options[0] == "on"); print("Legacy compatibility preference cleared.")
     default: throw MorrowError.message("Unknown binary command.")
     }
 }

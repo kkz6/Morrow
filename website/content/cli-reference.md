@@ -11,7 +11,7 @@ order: 6
 | `morrow binary source <https-url\|clear>` | Validate a custom distribution catalog, or return to the release's bundled source |
 | `morrow binary list` | List compatible published catalog releases |
 | `morrow binary refresh` | Refresh verified distribution metadata |
-| `morrow binary brew off` | Disable Homebrew mutations; existing installations remain usable |
+| `morrow binary brew off` | Clear the legacy compatibility preference; installation always uses portable packages |
 | `morrow background status` | Show native permission status for owned service jobs |
 | `morrow background clean` | Register the app, archive obsolete inactive registrations, and normalize retained definitions only with valid matching Apple signing teams |
 

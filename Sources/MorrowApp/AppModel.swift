@@ -69,7 +69,6 @@ final class AppModel {
     var error: String?
     var activity: String?
     var channelActivity = false
-    var homebrewAvailable = false
     var selection: SettingsSection = .instances {
         didSet {
             guard !preview else { return }
@@ -105,7 +104,6 @@ final class AppModel {
             }
         }
         if preview {
-            homebrewAvailable = true
             let pg = Installation(engine: .postgresql, formula: "postgresql@17", version: "17.6", prefix: "/opt/homebrew/Cellar/postgresql@17/17.6")
             let mysql = Installation(engine: .mysql, formula: "mysql@8.4", version: "8.4.6", prefix: "/opt/homebrew/Cellar/mysql@8.4/8.4.6")
             let mongo = Installation(engine: .mongodb, formula: "mongodb/brew/mongodb-community@8.0", version: "8.0.13", prefix: "/opt/homebrew/Cellar/mongodb-community@8.0/8.0.13")
@@ -175,7 +173,6 @@ final class AppModel {
         do {
             let snapshot = try await Task.detached {
                 let state = try manager.store.load()
-                let installer = try manager.installer()
                 let installations = state.instances.map(\.installation)
                 let statuses = Dictionary(uniqueKeysWithValues: state.instances.map { ($0.id, manager.status($0)) })
                 let mail = MailManager(store: manager.store, runner: manager.runner)
@@ -184,14 +181,14 @@ final class AppModel {
                 let webStatus = try SiteManager(store: manager.store, runner: manager.runner).status()
                 let storage = ObjectStorageManager(store: manager.store, runner: manager.runner)
                 let storageStatuses = Dictionary(uniqueKeysWithValues: state.objectStorage.map { ($0.id, storage.status($0)) })
-                return (state, installations, statuses, installer.executable != nil, report, mailStatuses, webStatus, storageStatuses)
+                return (state, installations, statuses, report, mailStatuses, webStatus, storageStatuses)
             }.value
             instances = snapshot.0.instances
             preferences = snapshot.0.preferences
             web = snapshot.0.web
-            webStatus = snapshot.6
+            webStatus = snapshot.5
             mailServices = snapshot.0.mailServices
-            mailStatuses = snapshot.5
+            mailStatuses = snapshot.4
             tools = snapshot.0.tools
             toolDefaults = snapshot.0.toolDefaults
             projectRuntimes = try ProjectRuntimeStore(store: manager.store).load()
@@ -200,11 +197,10 @@ final class AppModel {
             for item in snapshot.0.web.php where !inventory.runtimes.contains(where: { $0.id == item.id }) { inventory.runtimes.append(item) }
             for item in snapshot.0.tools where !inventory.runtimes.contains(where: { $0.id == item.id }) { inventory.runtimes.append(item) }
             installations = inventory.databases
-            objectStorage = snapshot.0.objectStorage; storageStatuses = snapshot.7
+            objectStorage = snapshot.0.objectStorage; storageStatuses = snapshot.6
             if previousInventory != inventory { try? InventoryStore(store: manager.store).save(inventory) }
             statuses = snapshot.2
-            homebrewAvailable = snapshot.3
-            if let report = snapshot.4 { syncReport = report }
+            if let report = snapshot.3 { syncReport = report }
         } catch { self.error = error.localizedDescription }
     }
     func perform(_ title: String, success: String? = nil, operation: @escaping @Sendable (DatabaseManager) throws -> Void, completion: (() -> Void)? = nil) {

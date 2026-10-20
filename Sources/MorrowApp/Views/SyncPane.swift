@@ -49,7 +49,7 @@ struct SyncPane: View {
                     .disabled(model.busy || !model.preferences.iCloudSyncEnabled)
             }
             SettingsNote(text: "New database instances start stopped, with their own empty data folders. Occupied ports use the next free port. Existing data and different release series require local review.")
-            SettingsNote(text: "Your database contents, logs, credentials, executable paths, and Homebrew location stay on this Mac. Automatic setup and the sync-folder selection are configured separately on each Mac.")
+            SettingsNote(text: "Your database contents, logs, credentials, and executable paths stay on this Mac. Automatic setup and the sync-folder selection are configured separately on each Mac.")
         }
     }
     private func chooseFolder() {
