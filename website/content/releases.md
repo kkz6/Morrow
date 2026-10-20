@@ -84,6 +84,8 @@ The **Complete portable distributions** workflow builds each architecture on a n
 
 Current PHP source recipes include CLI/FPM and pinned OpenSSL, Oniguruma, ICU, and libzip builds. They supply a trusted certificate bundle and a version-specific INI file; Morrow resolves its own configuration placeholder after download without running an installation script. The older PHP 8.0 StaticPHP workflow remains available for that legacy release.
 
+Ruby's native-extension configuration and PHP's `phpize`/`php-config` helpers use the installed package location rather than the publisher's SDK paths. Building native extensions can still require Xcode and the extension's own development headers; those are development prerequisites rather than a Homebrew requirement for running the packaged runtime.
+
 Signed Go packages retain the compiler, tools, standard library, headers, and source, but omit the compiler suite's `testdata` directories containing deliberately malformed or foreign executables. These fixtures are not required to build Go applications; use the upstream source archive for developing or running Go's own compiler suite.
 
 The **Signed service distributions** workflow uses reviewed recipes in `distributions/<package>/<version>.json`. Recipes cover Node 22.23.3 and 24.22.0 LTS, Caddy 2.11.7, Mailpit 1.31.6, and dnsmasq 2.93 for Apple silicon and Intel. Node includes npm, npx, headers, and its bundled licenses. Caddy and Mailpit use checksum-pinned official release archives. dnsmasq is built from pinned source using Xcode, with optional DHCP, TFTP, scripting, and external library integrations disabled for Morrow's loopback DNS use.

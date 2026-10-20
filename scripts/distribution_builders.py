@@ -3,6 +3,7 @@ import os
 from pathlib import Path
 import shutil
 import subprocess
+import re
 
 
 def command(arguments, cwd, environment):
@@ -189,6 +190,12 @@ def prepare_runtime(recipe, root):
         if not (root / 'bin/pip').exists() and (root / 'bin/pip3').exists():
             (root / 'bin/pip').symlink_to('pip3')
     if recipe['package'] == 'ruby':
+        dependency = root.parents[2] / ('work-' + root.parent.name) / 'dependency'
+        for configuration in (root / 'lib').rglob('rbconfig.rb'):
+            text = configuration.read_text()
+            text = re.sub(r'\s*-isysroot\s+[^\s"\']+', '', text)
+            text = text.replace('-I' + str(dependency / 'include'), '').replace('-L' + str(dependency / 'lib'), '')
+            configuration.write_text(text)
         for binary in (root / 'bin').iterdir():
             if binary.is_symlink() or not binary.is_file():
                 continue
@@ -201,6 +208,22 @@ def prepare_runtime(recipe, root):
                 binary.write_text('#!/bin/sh\nMORROW_RUBY_BIN="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"\n'
                                   'exec "$MORROW_RUBY_BIN/ruby" -x "$0" "$@"\n#!/usr/bin/env ruby\n'
                                   + ''.join(lines[1:]))
+    if recipe['package'] == 'php':
+        dependency = root.parents[2] / ('work-' + root.parent.name) / 'dependency'
+        for name in ['phpize', 'php-config']:
+            binary = root / 'bin' / name
+            if not binary.exists():
+                continue
+            text = re.sub(r'\s*-isysroot\s+[^\s"\']+', '', binary.read_text())
+            text = text.replace('-I' + str(dependency / 'include'), '').replace('-L' + str(dependency / 'lib'), '')
+            lines = text.splitlines(keepends=True)
+            lines.insert(1, 'MORROW_PHP_PREFIX="$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)"\n')
+            for index, line in enumerate(lines):
+                match = re.match(r'^(prefix|exec_prefix|phpdir|includedir|extension_dir|libdir|php_binary|builddir)=(.+)$', line)
+                if match:
+                    value = match.group(2).strip().strip('"\'').replace(str(root), '${MORROW_PHP_PREFIX}')
+                    lines[index] = match.group(1) + '="' + value.replace('"', '\\"') + '"\n'
+            binary.write_text(''.join(lines))
 
 
 def mach_files(root):
@@ -230,7 +253,6 @@ def relocate(root):
     for binary in files:
         changes = []
         commands = subprocess.check_output(['/usr/bin/otool', '-l', str(binary)], text=True)
-        import re
         platforms = re.findall(r'\bplatform ([A-Za-z0-9_]+)', commands)
         if platforms and not any(value in ['1', 'MACOS', 'macos'] for value in platforms):
             continue
