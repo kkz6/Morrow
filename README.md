@@ -6,7 +6,8 @@ processes managed by macOS launchd.
 
 ## Build and open
 
-Requires macOS 14 or later, Xcode, and Homebrew to install database binaries.
+Building requires macOS 14 or later and Xcode. Customer downloads use verified
+portable distributions; Homebrew compatibility is optional and off by default.
 Morrow has no third-party Swift package dependencies and bundles no database
 servers, browser runtime, container engine, or VM.
 
@@ -34,11 +35,11 @@ it directly. A standalone CLI build is available through `scripts/build-cli.sh`.
 ```
 
 Supported native providers: PostgreSQL, MySQL, MariaDB, MongoDB, Redis,
-Valkey, and Memcached. MongoDB uses its official `mongodb/brew` tap; it is
-added when MongoDB is installed. Morrow discovers Homebrew's available
-release channels and all supported installed kegs, including existing installs.
-Homebrew installs can download dependencies and run formula post-install steps;
-Morrow never starts or stops Homebrew's shared service jobs.
+Valkey, and Memcached. Missing versions need complete distributions in the
+configured catalog or explicit Homebrew compatibility. Existing native binaries
+and Homebrew installations remain usable. When compatibility is enabled,
+MongoDB uses its official tap. Morrow never starts or stops Homebrew’s shared
+service jobs.
 
 **Create Instance** is the main workflow in both the menu and Settings. Select
 an engine and release, then create it. Morrow detects Homebrew kegs and native
@@ -55,9 +56,9 @@ checked with a real socket bind. Port availability is checked again after
 installation and on startup. Existing data and external service processes are
 not adopted or overwritten when reusing a server binary.
 
-**Version management:** installable versions follow Homebrew's available
-channels, such as `postgresql@17` or `mysql@8.4`. Each instance records its exact
-installed keg path and patch version. Creating another instance supports
+**Version management:** installable versions follow the hosted catalog and,
+when explicitly enabled, Homebrew’s available channels. Each instance records
+its exact installation path and patch version. Creating another instance supports
 another version with separate data and a separate port. Arbitrary historical
 patch downloads, major-version data migration, and uninstalling shared
 Homebrew packages are not implemented in this preview. External Homebrew
@@ -72,7 +73,7 @@ later feature.
 
 ## Updates and development runtimes
 
-Settings → Databases → Check Updates compares pinned software releases and package revisions with Homebrew metadata. Compatible maintenance updates use an explicit backup, upgrade, and recovery workflow. Different release series require migration. Homebrew can update shared dependencies; this is not an isolated package environment.
+Settings → Databases → Check Updates compares pinned releases with compatible catalog packages and optional Homebrew metadata. Compatible maintenance updates use an explicit backup, upgrade, and recovery workflow. Different release series require migration. Homebrew can update shared dependencies; this is not an isolated package environment.
 
 ```sh
 morrow db updates --refresh
@@ -80,7 +81,7 @@ morrow db upgrade my-project
 morrow db recover my-project # only for an interrupted update
 ```
 
-Settings → Runtimes manages PHP, Go, Flutter, Node.js, Python, and Ruby. Select a version to reuse or install it and set its Morrow default. Existing binaries are detected before installation. Node uses nvm and the official Node release catalog; other missing runtimes use Homebrew. Version discovery is cached on disk so changing pages does not rescan installations. Runtime cards expose configuration files and PHP-FPM logs. Morrow provides optional PATH wrappers, without changing Homebrew links or shell files. Flutter SDK selections are copied into Morrow storage to preserve them across cask upgrades.
+Settings → Runtimes manages PHP, Go, Flutter, Node.js, Python, and Ruby. Select a version to reuse or install it and set its Morrow default. Existing binaries are detected before installation. Missing runtimes use complete hosted distributions; Go also supports official archives. Existing nvm versions are discovered without changing their aliases. Homebrew installation is an explicit compatibility opt-in. Version discovery is cached on disk so changing pages does not rescan installations. Runtime cards expose configuration files and PHP-FPM logs. Morrow provides optional PATH wrappers, without changing Homebrew links or shell files. Flutter SDK selections are copied into Morrow storage to preserve them across cask upgrades.
 
 ```sh
 morrow tool install php 8.4
@@ -90,11 +91,25 @@ morrow tool updates --refresh
 morrow tool shell
 ```
 
-See the [update guide](https://kkz6.github.io/Morrow/docs/updates) and [runtime guide](https://kkz6.github.io/Morrow/docs/applications). Historical Homebrew patches and project-specific runtime files remain limited by the selected provider. Node supports exact versions through nvm; PHP web hosting is managed in Sites.
+See the [update guide](https://kkz6.github.io/Morrow/docs/updates) and [runtime guide](https://kkz6.github.io/Morrow/docs/applications). Historical Homebrew patches and project-specific runtime files remain limited by the selected provider. Node supports published exact versions and Latest LTS through the shared catalog; PHP web hosting is managed in Sites.
+
+## Hosted binary distributions
+
+Contabo serves immutable HTTPS packages with SHA-256 checksums. Hosted packages
+include Node 22.23.3 and 24.22.0 LTS (with npm/npx), PHP 8.0.30 CLI/FPM, Caddy
+2.11.7, Mailpit 1.31.6, and dnsmasq 2.93 for Apple silicon and Intel, plus Go for
+Apple silicon. New packages are signed and notarized in GitHub Actions before
+publication. Other database and SDK packages are still being prepared; existing
+services keep their current binaries and data.
+
+Maintainers use reviewed recipes in `distributions/` and the locally configured
+Contabo AWS CLI profile. Customer downloads need no storage credentials, AWS
+CLI, Homebrew, or nvm. See the [distribution guide](https://kkz6.github.io/Morrow/docs/binary-downloads)
+and [publishing guide](https://kkz6.github.io/Morrow/docs/releases).
 
 ## Sites and parked projects
 
-Settings → Sites manages parked project directories, PHP-FPM hosting, static roots, project HTTPS, and app-port links. Caddy and dnsmasq are native Homebrew dependencies. Folder discovery continues through a managed watcher after the menu bar app closes.
+Settings → Sites manages parked project directories, PHP-FPM hosting, static roots, project HTTPS, and app-port links. Caddy and dnsmasq use hosted native distributions or compatible existing installations. Folder discovery continues through a managed watcher after the menu bar app closes.
 
 ```sh
 morrow site park "$HOME/Projects"
