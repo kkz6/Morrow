@@ -62,20 +62,22 @@ struct GeneralOptionsPane: View {
                     }
                 }
             }
-            SettingsGroup(header: "Node Version Manager") {
-                VStack(alignment: .leading, spacing: 10) {
-                    Text("nvm directory").font(.system(size: 13))
-                    HStack {
-                        SettingsInput(placeholder: "Automatic (existing nvm or Morrow-managed)", text: $nvmPath)
-                        Button("Save") {
-                            let path = nvmPath.trimmingCharacters(in: .whitespacesAndNewlines)
-                            guard path.isEmpty || path.hasPrefix("/") else { model.notify("Choose an absolute nvm directory path.", error: true); return }
-                            var preferences = model.preferences; preferences.nvmDirectory = path
-                            model.savePreferences(preferences); model.notify("nvm directory saved")
-                            Task { await model.loadInventory(force: true) }
-                        }.settingsButton().disabled(model.busy)
-                    }
-                }.settingsCellPadding()
+            if !nvmPath.isEmpty || model.inventory.runtimes.contains(where: { $0.source == "nvm" }) {
+                SettingsGroup(header: "Existing Node Installations") {
+                    VStack(alignment: .leading, spacing: 10) {
+                        Text("Existing nvm directory").font(.system(size: 13))
+                        HStack {
+                            SettingsInput(placeholder: "Automatic (existing nvm directory)", text: $nvmPath)
+                            Button("Save") {
+                                let path = nvmPath.trimmingCharacters(in: .whitespacesAndNewlines)
+                                guard path.isEmpty || path.hasPrefix("/") else { model.notify("Choose an absolute nvm directory path.", error: true); return }
+                                var preferences = model.preferences; preferences.nvmDirectory = path
+                                model.savePreferences(preferences); model.notify("nvm directory saved")
+                                Task { await model.loadInventory(force: true) }
+                            }.settingsButton().disabled(model.busy)
+                        }
+                    }.settingsCellPadding()
+                }
             }
             SettingsNote(text: "Database startup is configured per instance. Morrow uses macOS launchd so services continue running independently of the menu bar app.")
             SettingsGroup {

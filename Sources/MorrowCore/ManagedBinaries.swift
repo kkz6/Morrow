@@ -20,6 +20,9 @@ public struct BinaryRelease: Codable, Equatable, Identifiable, Sendable {
     public let archive: String
     public let rootDirectory: String
     public let executables: [String]
+    /// Optional upstream designation; old catalogs and installation receipts
+    /// remain valid when they do not contain Node LTS metadata.
+    public var lts: Bool? = nil
     public var id: String { "\(package):\(version):\(architecture):\(sha256.lowercased())" }
     public var channel: String { "managed:\(package)@\(version)" }
 }
@@ -103,12 +106,14 @@ public struct ManagedBinaryStore: Sendable {
     public func release(package: String, request: String) throws -> BinaryRelease? {
         let values = try releases(package: package)
         if ["automatic", "latest", "current"].contains(request) { return values.first }
+        if package == "node", request == "lts" { return values.first { $0.lts == true } }
         let wanted = Self.requestedVersion(request, package: package)
         if request.hasPrefix("managed:") { return values.first { $0.version == wanted } }
         return values.first { $0.version == wanted } ?? values.first { $0.version.hasPrefix(wanted + ".") }
     }
     public static func requestedVersion(_ request: String, package: String) -> String {
-        for prefix in ["managed:\(package)@", "\(package)@"] where request.hasPrefix(prefix) { return String(request.dropFirst(prefix.count)) }
+        let prefixes = ["managed:\(package)@", "\(package)@"] + (package == "node" ? ["nvm@"] : [])
+        for prefix in prefixes where request.hasPrefix(prefix) { return String(request.dropFirst(prefix.count)) }
         return request
     }
     public static func matches(_ version: String, request: String, package: String) -> Bool {

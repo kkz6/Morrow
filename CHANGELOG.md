@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Node installation, channels, same-series updates, folder selections, and iCloud restoration now use complete hosted distributions with npm/npx. Latest LTS uses explicit catalog metadata. Existing nvm installations remain usable without bootstrapping nvm, requiring Git, or changing external aliases.
+
 - Added reproducible distribution recipes and a signed GitHub Actions workflow for complete Node 22/24 LTS, Caddy, Mailpit, and DNS-only dnsmasq packages on Apple silicon and Intel. Packages include pinned sources, license notices, dependency/architecture checks, and Apple notarization before Contabo publication.
 
 - Added hosted PHP 8.0.30 CLI/FPM distributions for Apple silicon and Intel, with pinned source archives, signing, notarization, license notices, and PHP web extensions. PHP 8.0 can be installed or assigned to a folder without Homebrew or changing the global default.

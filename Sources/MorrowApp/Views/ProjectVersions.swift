@@ -75,7 +75,7 @@ struct ProjectVersionEditor: View {
         let channels = (model.inventory.channels[engine.rawValue] ?? []).filter { channel in !versions.contains { $0.version == channel.version } }
             .prefix(60).map { SelectOption(value: $0.formula, title: $0.version, symbol: engine.symbol) }
         return [.init(value: "", title: "Inherit Default", symbol: "gearshape")] + installed
-            + (engine == .node ? [.init(value: "lts", title: "Latest LTS · nvm", symbol: engine.symbol)] : []) + channels
+            + (engine == .node ? [.init(value: "lts", title: "Latest LTS", symbol: engine.symbol)] : []) + channels
             + [.init(value: "__custom__", title: "Other Version…", symbol: "square.and.pencil")]
     }
     var body: some View {

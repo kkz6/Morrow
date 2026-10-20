@@ -8,7 +8,7 @@ order: 4.9
 
 Open **Settings → General → iCloud Sync**, choose a folder inside iCloud Drive, and enable **Sync workspace with iCloud Drive**. The default is **iCloud Drive/Morrow**. Use the corresponding folder on your other Mac and enable sync there too.
 
-Enable **Set up missing services automatically** on a Mac that should recreate the shared setup with the same binary policy as normal creation (nvm for Node, official Go archives, configured distributions for other software). This switch covers missing Node versions too. This permission is local to each Mac and is off by default. Morrow checks the folder approximately every 30 seconds while the app is running and idle. **Sync and Retry Setup** starts a check immediately and retries unresolved recipes.
+Enable **Set up missing services automatically** on a Mac that should recreate the shared setup with the same binary policy as normal creation (configured distributions for Node and other software, with official Go archives as a fallback). This switch covers missing Node versions too. This permission is local to each Mac and is off by default. Morrow checks the folder approximately every 30 seconds while the app is running and idle. **Sync and Retry Setup** starts a check immediately and retries unresolved recipes.
 
 This developer preview uses a user-accessible iCloud Drive folder, with coordinated file access. It does not depend on CloudKit or an app-specific iCloud entitlement, and works with the shared CLI. Apple handles the folder's delivery between devices; Morrow's status confirms local file reconciliation, not completion of Apple's upload or another Mac's download. For a different folder, make sure it is actually inside iCloud Drive.
 
@@ -27,7 +27,7 @@ Database contents, captured mail/attachments, logs, credentials, executable path
 
 ## Automatic setup
 
-When enabled, Morrow verifies existing installations and reuses a compatible release series before downloading. Missing Node versions are installed through nvm; other missing versions use the configured binary provider, with the same validation as normal creation. Catalog source and Homebrew opt-in are local to each Mac. A historical patch that is unavailable may be recreated using an available patch in the same series. The setup report shows the version actually used.
+When enabled, Morrow verifies existing installations and reuses a compatible release series before downloading. Missing Node and other runtime versions use the configured binary provider, with the same validation as normal creation. Existing nvm versions can be reused without changing their alias. Catalog source and Homebrew opt-in are local to each Mac. A historical patch that is unavailable may be recreated using an available patch in the same series. The setup report shows the version actually used.
 
 A new database or mail service starts stopped. Its launch-at-login choice is retained. If its preferred port is occupied, Morrow chooses the next available engine port and reports it. Existing instances keep their machine's local port and data. Settings changes require stopping a running instance; a different engine or release series is reported for local review rather than automatically migrated.
 
@@ -59,4 +59,4 @@ For an explicitly chosen folder:
 morrow sync enable --folder "$HOME/Library/Mobile Documents/com~apple~CloudDocs/Morrow" --auto-install
 ```
 
-The CLI reconciles once per `sync now` invocation. Keep the macOS app open for periodic checks. A compatible distribution must be available from the configured provider for missing database, mail, and runtime software; Node uses nvm and Go has an official provider. Homebrew compatibility is optional. iCloud Drive must be enabled and the chosen folder available on both Macs. Automatic setup can download large SDKs, especially Flutter.
+The CLI reconciles once per `sync now` invocation. Keep the macOS app open for periodic checks. A compatible distribution must be available from the configured provider for missing database, mail, and runtime software; Node uses complete hosted distributions and Go also has an official provider. Homebrew compatibility is optional. iCloud Drive must be enabled and the chosen folder available on both Macs. Automatic setup can download large SDKs, especially Flutter.

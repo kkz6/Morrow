@@ -17,7 +17,7 @@ struct ApplicationsPane: View {
         let existing = versions.map { SelectOption(value: $0.id, title: $0.version, symbol: "square.stack.3d.up") }
         let missing = (model.inventory.channels[engine.rawValue] ?? []).filter { channel in !versions.contains { $0.formula == channel.formula || $0.version == channel.version } }
             .map { SelectOption(value: $0.formula, title: $0.formula.hasPrefix("managed:") ? $0.version : "\($0.version) · \($0.formula)", symbol: "square.stack.3d.up") }
-        return (engine == .node ? [SelectOption(value: "lts", title: "Latest LTS · nvm", symbol: "morrow.node")] : []) + existing + missing
+        return (engine == .node ? [SelectOption(value: "lts", title: "Latest LTS", symbol: "morrow.node")] : []) + existing + missing
     }
     var body: some View {
         SettingsPane(section: SettingsSection.applications) {
@@ -67,9 +67,6 @@ struct ApplicationsPane: View {
                 }.frame(maxWidth: .infinity, alignment: .leading).settingsCellPadding()
             }
             if engine == .flutter { SettingsNote(text: "Flutter SDKs are kept separately by version. Target platforms may require Xcode, Android SDK, or other Flutter prerequisites.") }
-            if engine == .node {
-                Text("nvm: " + NodeVersionManager(store: model.manager.store).directory.path).font(.system(size: 11, design: .monospaced)).foregroundStyle(.secondary).textSelection(.enabled)
-            }
             SettingsNote(text: "Version selection applies to Morrow commands and its optional PATH setup. Managed distributions stay separate by version; Homebrew compatibility can update shared dependencies when enabled.")
         }
         .onAppear { engine = RuntimeEngine.parse(model.preferences.lastRuntime) ?? .php }
@@ -85,7 +82,7 @@ struct ApplicationsPane: View {
                     pendingUpdate = nil
                 }
             }
-        } message: { Text(pendingUpdate?.engine == .node ? "nvm will install the latest Node release in this series, keeping the existing version. If this is your selected version, Morrow will select the new release." : "Homebrew will update this channel and may update shared dependencies. If this is your selected version, Morrow will select the new release.") }
+        } message: { Text("Managed updates are installed beside the existing version. Homebrew compatibility may update shared packages. Morrow selects the update only if this version is your default.") }
         .confirmationDialog("Remove from Morrow?", isPresented: Binding(get: { pendingRemoval != nil }, set: { if !$0 { pendingRemoval = nil } }), titleVisibility: .visible) {
             if let item = pendingRemoval {
                 Button("Remove Selection", role: .destructive) {

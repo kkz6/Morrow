@@ -12,12 +12,12 @@ Morrow handles binary downloads automatically during service creation or runtime
 
 | Software | Source for missing versions |
 | --- | --- |
-| Node.js | nvm and the official Node release catalog |
+| Node.js | Complete Node distributions from Morrow’s catalog, including npm and npx |
 | Go | Official Go macOS archives and published SHA-256 checksums, unless your catalog supplies Go |
 | Databases, PHP, Flutter, Python, Ruby | Complete compatible distributions in your configured catalog |
 | Caddy, dnsmasq, Mailpit, MinIO | Complete compatible distributions in your configured catalog |
 
-Release builds can include a default Morrow-hosted catalog, delivered over public HTTPS from object storage. A saved custom source takes precedence. Hosted packages include Go for Apple silicon and PHP 8.0.30 with CLI/FPM for Apple silicon and Intel; other packages still need complete portable distributions. Without a published package, Morrow explains that it is unavailable instead of installing another release or silently invoking Homebrew. See [Release signing and hosting](/docs/releases) for the publishing workflow.
+Release builds can include a default Morrow-hosted catalog, delivered over public HTTPS from object storage. A saved custom source takes precedence. Hosted packages include Go for Apple silicon; PHP 8.0.30 CLI/FPM, Node 22.23.3 and 24.22.0 LTS, Caddy 2.11.7, Mailpit 1.31.6, and dnsmasq 2.93 for Apple silicon and Intel. Other packages still need complete portable distributions. Without a published package, Morrow explains that it is unavailable instead of installing another release or silently invoking Homebrew. See [Release signing and hosting](/docs/releases) for the publishing workflow.
 
 When the catalog has no Go release compatible with this Mac, Go can still use its official archive provider. A catalog containing only Apple silicon Go does not block that fallback on an Intel Mac.
 
@@ -56,7 +56,7 @@ A catalog contains `schemaVersion: 1` and a `releases` array. This illustrative 
 }
 ```
 
-Supported package identifiers are the database and runtime names from `morrow db catalog`/`morrow tool catalog`, plus `caddy`, `dnsmasq`, `mailpit`, and `minio`. Architectures are `arm64`, `x86_64`, and `universal`. `archive` accepts `tar` (including compressed tar archives), `zip`, or `binary`. Use an empty `rootDirectory` when files are already at archive root. Raw binary downloads need one executable and an empty root directory.
+Supported package identifiers are the database and runtime names from `morrow db catalog`/`morrow tool catalog`, plus `caddy`, `dnsmasq`, `mailpit`, and `minio`. Architectures are `arm64`, `x86_64`, and `universal`. `archive` accepts `tar` (including compressed tar archives), `zip`, or `binary`. Use an empty `rootDirectory` when files are already at archive root. Raw binary downloads need one executable and an empty root directory. Node releases can include the optional Boolean `lts` field; `lts: true` makes a published release eligible for the Latest LTS selector. Older catalogs and receipts without this field remain valid.
 
 Database executables and auxiliary services use `bin/<executable>`. PHP needs its CLI and PHP-FPM; Flutter needs complete SDK metadata. Package all required libraries and resources with relocatable paths. A Homebrew bottle referencing another machine's Cellar is not a portable distribution. Publishing and redistribution rights, build signing/notarization, dependency packaging, and minimum-system support are the publisher's responsibility.
 

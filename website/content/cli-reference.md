@@ -104,7 +104,7 @@ Read [Database updates](/docs/updates) for compatibility, shared dependency beha
 | Command | Purpose |
 | --- | --- |
 | `morrow tool catalog` | List supported runtimes |
-| `morrow tool channels <runtime>` | Show official Node/nvm, Go, catalog, or optional Homebrew releases |
+| `morrow tool channels <runtime>` | Show hosted distributions, official Go archives, or optional Homebrew releases |
 | `morrow tool versions [runtime]` | Discover existing binaries |
 | `morrow tool install <runtime> [version-or-channel]` | Reuse or install a runtime; defaults to automatic reuse |
 | `morrow tool use <runtime> <version>` | Select a default and create Morrow-owned command wrappers |
@@ -117,7 +117,7 @@ Read [Database updates](/docs/updates) for compatibility, shared dependency beha
 
 Supported runtime names: `php`, `go`, `flutter`, `node`, `python`, `ruby`. Aliases: `nodejs`, `python3`.
 
-For `install` and `use`, numeric release series, existing exact versions, and available formula names are accepted. PHP 8.0.30 is a hosted CLI/FPM package for both Mac architectures: `morrow tool install php 8.0` adds it without changing the current default; `morrow project use php 8.0 --path <folder>` assigns it to a folder. Node installs use nvm and accept `lts` as well as numeric release series/exact versions. Go uses official archives; other missing runtimes require a configured distribution catalog or explicit Homebrew compatibility. `current` and `latest` choose the current release; they are installation selectors, not aliases for a saved default.
+For `install` and `use`, numeric release series, existing exact versions, and available formula names are accepted. PHP 8.0.30 is a hosted CLI/FPM package for both Mac architectures: `morrow tool install php 8.0` adds it without changing the current default; `morrow project use php 8.0 --path <folder>` assigns it to a folder. Node installs use complete hosted distributions and accept `lts` as well as numeric release series/exact versions. `lts` requires a published release marked LTS; existing nvm versions can be reused without changing nvm’s default alias. Go uses official archives; other missing runtimes require a configured distribution catalog or explicit Homebrew compatibility. `current` and `latest` choose the current release; they are installation selectors, not aliases for a saved default.
 
 ```sh
 morrow tool install go

@@ -74,8 +74,8 @@ public struct RuntimeUpdate: Codable, Identifiable, Sendable {
     public let message: String
 }
 
-/// Runtimes share database state and validation. Node uses nvm; other missing
-/// runtimes use verified distributions, with optional Homebrew compatibility.
+/// Runtimes share database state, validation, and verified distributions, with
+/// optional Homebrew compatibility. Existing nvm versions remain discoverable.
 /// Selecting a version affects only Morrow's commands, never brew link or shell files.
 public struct RuntimeManager: Sendable {
     public let store: StateStore
@@ -84,7 +84,6 @@ public struct RuntimeManager: Sendable {
     func installer() throws -> HomebrewInstaller { HomebrewInstaller(runner: runner, configuredPath: try store.load().preferences.homebrewPath) }
     public var shimDirectory: URL { store.root.appendingPathComponent("bin") }
     public func channels(_ engine: RuntimeEngine, refresh: Bool = false) throws -> [RuntimeChannel] {
-        if engine == .node { return try NodeVersionManager(store: store, runner: runner).channels() }
         let policy = BinaryInstaller(store: store, runner: runner)
         let managed = try policy.managed.releases(package: engine.rawValue, refresh: refresh).map { RuntimeChannel(engine: engine, formula: $0.channel, version: $0.version) }
         if !policy.allowsHomebrew || policy.executable == nil { return managed }
@@ -142,7 +141,7 @@ public struct RuntimeManager: Sendable {
     @discardableResult public func install(_ engine: RuntimeEngine, version: String = "automatic") throws -> RuntimeInstallation {
         try store.operation { try installUnlocked(engine, version: version) }
     }
-    private func installUnlocked(_ engine: RuntimeEngine, version: String, preserveNodeDefault: Bool = false) throws -> RuntimeInstallation {
+    private func installUnlocked(_ engine: RuntimeEngine, version: String) throws -> RuntimeInstallation {
         let found = try installations().filter { $0.engine == engine }
         if version == "automatic", let existing = found.first {
             let valid = try validate(existing); try register(valid); return valid
@@ -150,12 +149,6 @@ public struct RuntimeManager: Sendable {
         if !["current", "latest", "automatic"].contains(version), let existing = found.first(where: { matches($0, request: version) }) {
             let valid = try validate(existing)
             try register(valid); return valid
-        }
-        if engine == .node {
-            let requested = version.replacingOccurrences(of: "nvm@", with: "")
-            if let existing = found.first(where: { $0.version == requested }) { let valid = try validate(existing); try register(valid); return valid }
-            let installed = try NodeVersionManager(store: store, runner: runner).install(version, preserveDefault: preserveNodeDefault)
-            let valid = try validate(installed); try register(valid); return valid
         }
         let policy = BinaryInstaller(store: store, runner: runner)
         if let release = try policy.managed.release(package: engine.rawValue, request: version) {
@@ -165,6 +158,7 @@ public struct RuntimeManager: Sendable {
             try register(valid); return valid
         }
         guard !version.hasPrefix("managed:") else { throw MorrowError.message("That exact managed release is unavailable. No other release was substituted.") }
+        if engine == .node, version == "lts" { throw MorrowError.message("No compatible Node LTS distribution is published. Refresh available versions or choose an existing installation.") }
         _ = try policy.requireHomebrew()
         guard ["current", "latest", "automatic"].contains(version) || engine.allows(version) || SoftwareVersion(version) != nil else { throw MorrowError.message("Invalid runtime version or channel.") }
         let catalog = try channels(engine)
@@ -194,7 +188,6 @@ public struct RuntimeManager: Sendable {
             let actual = try validate(installation)
             let valid = actual.engine == .flutter && actual.source != "managed" ? try retainFlutter(actual) : actual
             guard FileManager.default.isExecutableFile(atPath: cli.path) else { throw MorrowError.message("The morrow CLI is missing. Rebuild or reinstall the app.") }
-            if valid.engine == .node { try NodeVersionManager(store: store, runner: runner).selectDefault(valid) }
             try writeShims(valid, cli: cli.resolvingSymlinksInPath())
             try register(valid)
             try store.update { $0.toolDefaults[valid.engine.rawValue] = valid.id }
@@ -221,7 +214,7 @@ public struct RuntimeManager: Sendable {
             guard FileManager.default.isExecutableFile(atPath: cli.path) else { throw MorrowError.message("Morrow's command launcher is missing.") }
             let projects = ProjectRuntimeStore(store: store)
             let before = try projects.load()
-            let item = try installUnlocked(engine, version: version, preserveNodeDefault: true)
+            let item = try installUnlocked(engine, version: version)
             try writeShims(item, cli: cli.resolvingSymlinksInPath())
             var after = before
             if let index = after.firstIndex(where: { $0.path == path }) { after[index].runtimes[engine.rawValue] = item }
@@ -259,14 +252,7 @@ public struct RuntimeManager: Sendable {
         let policy = BinaryInstaller(store: store, runner: runner)
         let tracked = try store.load().tools
         if refresh { try policy.refreshMetadata() }
-        let nodeChannels = tracked.contains(where: { $0.engine == .node }) ? try? NodeVersionManager(store: store, runner: runner).channels() : nil
         return tracked.map { item in
-            if item.engine == .node {
-                let major = SoftwareVersion(item.version)?.components.first
-                let latest = nodeChannels?.first { SoftwareVersion($0.version)?.components.first == major }
-                let newer = latest.flatMap { SoftwareVersion($0.version) }.map { $0 > (SoftwareVersion(item.version) ?? SoftwareVersion("0")!) } ?? false
-                return RuntimeUpdate(installationID: item.id, engine: item.engine, currentVersion: item.version, availableVersion: latest?.version, canUpgrade: newer, message: latest == nil ? "Node catalog unavailable; retry the update check." : newer ? "nvm update available" : "Up to date")
-            }
             do {
                 if let release = try managedUpdate(item) {
                     return RuntimeUpdate(installationID: item.id, engine: item.engine, currentVersion: item.version, availableVersion: release.version, canUpgrade: true, message: "Managed update available")
@@ -284,7 +270,7 @@ public struct RuntimeManager: Sendable {
         }
     }
     @discardableResult public func upgrade(_ item: RuntimeInstallation, cli: URL) throws -> RuntimeInstallation {
-        if item.engine != .node, let release = try managedUpdate(item) {
+        if let release = try managedUpdate(item) {
             return try store.operation {
                 let wasDefault = try store.load().toolDefaults[item.engine.rawValue] == item.id
                 let installed = try installUnlocked(item.engine, version: release.channel)
@@ -296,24 +282,7 @@ public struct RuntimeManager: Sendable {
                 return installed
             }
         }
-        if item.engine != .node { _ = try BinaryInstaller(store: store, runner: runner).requireHomebrew() }
-        if item.engine == .node {
-            return try store.operation {
-                let major = SoftwareVersion(item.version)?.components.first
-                let node = NodeVersionManager(store: store, runner: runner)
-                guard let release = try node.channels().first(where: { SoftwareVersion($0.version)?.components.first == major }),
-                      let next = SoftwareVersion(release.version), let old = SoftwareVersion(item.version), next > old else { throw MorrowError.message("No newer Node release is available in this series.") }
-                let wasDefault = try store.load().toolDefaults[item.engine.rawValue] == item.id
-                let installed = try installUnlocked(.node, version: release.formula)
-                if wasDefault {
-                    guard FileManager.default.isExecutableFile(atPath: cli.path) else { throw MorrowError.message("The morrow CLI is missing. Rebuild or reinstall the app.") }
-                    try node.selectDefault(installed)
-                    try writeShims(installed, cli: cli.resolvingSymlinksInPath())
-                    try store.update { $0.toolDefaults[item.engine.rawValue] = installed.id }
-                }
-                return installed
-            }
-        }
+        _ = try BinaryInstaller(store: store, runner: runner).requireHomebrew()
         return try store.operation {
             guard item.engine.allows(item.formula) else { throw MorrowError.message("Update external runtimes with their original installer.") }
             let package = try installer().package(item.formula, cask: item.engine.isCask)

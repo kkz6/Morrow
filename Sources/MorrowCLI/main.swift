@@ -137,7 +137,7 @@ Morrow — databases and development runtimes.
   morrow settings                        Open the macOS Settings window
 
 Database instances listen on 127.0.0.1 with local development accounts.
-S3 servers use private generated credentials; Node versions are managed by nvm.
+S3 servers use private generated credentials; Node versions use complete verified distributions.
 Versions are installed separately from the app. MORROW_HOME overrides data storage.
 """
 
@@ -321,7 +321,7 @@ func binaryMain(_ args: [String], manager: DatabaseManager) throws {
         guard options.isEmpty else { throw MorrowError.message("Usage: morrow binary list") }
         let releases = try policy.managed.releases()
         for release in releases { print("\(release.package) \(release.version) · \(release.architecture) · macOS \(release.minimumMacOS)+") }
-        if releases.isEmpty { print("No hosted catalog configured. Go uses official downloads; Node uses nvm. Existing installations remain available.") }
+        if releases.isEmpty { print("No hosted catalog configured. Go uses official downloads. Other missing versions need published distributions. Existing installations remain available.") }
     case "refresh":
         guard options.isEmpty else { throw MorrowError.message("Usage: morrow binary refresh") }
         try policy.refreshMetadata(); print("Binary metadata refreshed.")

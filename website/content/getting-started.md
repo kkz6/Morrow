@@ -8,7 +8,7 @@ Morrow is a native macOS menu bar app and CLI. Both use the same databases, deve
 
 ## Build the app and CLI
 
-Install a full version of Xcode and its command line tools. The build script selects the newest full Xcode in `/Applications` and uses its macOS SDK. Homebrew is optional. Missing software uses a configured verified binary catalog; Go can use official archives and Node uses nvm. Read [Binary downloads](/docs/binary-downloads) before creating services on a fresh Mac.
+Install a full version of Xcode and its command line tools. The build script selects the newest full Xcode in `/Applications` and uses its macOS SDK. Homebrew is optional. Missing software uses a configured verified binary catalog; Go can also use official archives. Read [Binary downloads](/docs/binary-downloads) before creating services on a fresh Mac.
 
 ```sh
 git clone https://github.com/kkz6/Morrow.git
@@ -68,7 +68,7 @@ Copy the returned address into your application’s database settings. For Postg
 
 ## Manage development runtimes
 
-Open **Settings → Runtimes** to select PHP, Go, Flutter, Node.js, Python, or Ruby. Existing versions are reused. Morrow handles downloads automatically: Node versions use nvm, Go uses official archives, and other missing releases use its bundled distribution source. Advanced Homebrew compatibility is an explicit CLI opt-in. Installation discovery is cached rather than repeated on each navigation. See [Applications and runtimes](/docs/applications) for Terminal setup and companion commands.
+Open **Settings → Runtimes** to select PHP, Go, Flutter, Node.js, Python, or Ruby. Existing versions are reused. Morrow handles downloads automatically: Node and other missing releases use its bundled distribution source; Go can also use official archives. Advanced Homebrew compatibility is an explicit CLI opt-in. Installation discovery is cached rather than repeated on each navigation. See [Applications and runtimes](/docs/applications) for Terminal setup and companion commands.
 
 ## Set up another Mac
 

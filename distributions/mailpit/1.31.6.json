@@ -10,7 +10,7 @@
   ],
   "versionArguments": [
     "version",
-    "--disable-version-check"
+    "--no-release-check"
   ],
   "versionPattern": "1\\.31\\.6\\b",
   "license": "MIT",

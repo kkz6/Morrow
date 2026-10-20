@@ -37,7 +37,7 @@ public struct ConfigurationAccess: Sendable {
         }
         if runtime.engine == .node && runtime.source == "nvm" {
             let url = NodeVersionManager(store: store, runner: runner).directory.appendingPathComponent("alias/default")
-            return FileManager.default.fileExists(atPath: url.path) ? [ConfigurationFile(title: "nvm default alias", url: url, editable: false, readOnlyReason: "Managed by nvm. Select a Node version in Runtimes to change the default.")] : []
+            return FileManager.default.fileExists(atPath: url.path) ? [ConfigurationFile(title: "nvm default alias", url: url, editable: false, readOnlyReason: "Managed by your external nvm installation. Morrow keeps its own default and folder selections.")] : []
         }
         return []
     }
