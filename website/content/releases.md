@@ -64,6 +64,8 @@ For complete source-build recipes and recipes declaring corresponding sources, t
 
 After publishing, set the repository's `MORROW_BINARY_CATALOG_URL` variable to the printed catalog URL and build a signed release. Customer releases use this source automatically. For an existing development Mac, set an override with `morrow binary source <url>`. New catalog patch versions become available through Morrow's existing update checks; previous archives remain immutable.
 
+Large archives use multipart uploads and bounded parallel public byte-range downloads. Every public byte is hashed in archive order before the catalog changes; size and byte-range mismatches stop publication. Smaller archives and servers without byte-range support use a normal complete download.
+
 Publication merges the current catalog and uses conditional writes. Returned ETags are normalized for Ceph/Contabo compatibility; concurrent catalog changes still stop publication. Storage failures name the operation and error category without printing credentials.
 
 The hosted catalog covers all 17 supported service and runtime families on Apple silicon (arm64). The [published version table](/docs/binary-downloads) lists exact releases. Newly prepared packages pass native dependency and version checks, Developer ID signing, and Apple notarization before publication. The original checksum-verified official Go archive for Apple silicon remains immutable. Existing services and data continue using their current binaries during this transition.

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Publish prepared native archives through AWS CLI; credentials stay in its profile."""
 import argparse
+from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
 import os
@@ -38,6 +39,49 @@ def digest(path):
     with path.open('rb') as source:
         for block in iter(lambda:source.read(1024*1024),b''): result.update(block)
     return result.hexdigest()
+
+class HTTPSRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self,request,fp,code,msg,headers,newurl):
+        if urllib.parse.urlparse(newurl).scheme!='https': raise ValueError('Public downloads must remain on HTTPS.')
+        return super().redirect_request(request,fp,code,msg,headers,newurl)
+
+def verify_public_archive(url, expected, size, temporary):
+    """Hash every public byte; large archives use bounded parallel byte ranges."""
+    def open_request(method='GET', headers=None):
+        request=urllib.request.Request(url,method=method,headers={'User-Agent':'Morrow-Publisher/1',**(headers or {})})
+        response=urllib.request.build_opener(HTTPSRedirect()).open(request,timeout=60)
+        if urllib.parse.urlparse(response.url).scheme!='https':
+            response.close(); raise ValueError('Public downloads must remain on HTTPS.')
+        return response
+    parallel=False
+    if size>=128*1024*1024:
+        with open_request('HEAD') as response:
+            if int(response.headers.get('Content-Length','-1'))!=size: raise ValueError('Public archive size differs; the catalog was not changed.')
+            parallel=response.headers.get('Accept-Ranges','').lower()=='bytes'
+    downloaded=hashlib.sha256()
+    if parallel:
+        chunks=Path(temporary)/'verification'; chunks.mkdir()
+        step=16*1024*1024
+        def fetch_chunk(index):
+            start=index*step; end=min(start+step,size)-1
+            path=chunks/str(index); received=0
+            with open_request(headers={'Range':f'bytes={start}-{end}'}) as response, path.open('wb') as output:
+                if response.status!=206 or response.headers.get('Content-Range')!=f'bytes {start}-{end}/{size}': raise ValueError('Public archive byte range differs; the catalog was not changed.')
+                for block in iter(lambda:response.read(1024*1024),b''):
+                    received+=len(block)
+                    if received>end-start+1: raise ValueError('Public archive range exceeds the expected size.')
+                    output.write(block)
+            if received!=end-start+1: raise ValueError('Public archive byte range is incomplete.')
+            return path
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            for path in pool.map(fetch_chunk,range((size+step-1)//step)):
+                with path.open('rb') as source:
+                    for block in iter(lambda:source.read(1024*1024),b''): downloaded.update(block)
+                path.unlink()
+    else:
+        with open_request() as response:
+            for block in iter(lambda:response.read(1024*1024),b''): downloaded.update(block)
+    if downloaded.hexdigest()!=expected: raise ValueError('Public archive checksum failed; the catalog was not changed.')
 
 try:
     config=json.loads(args.config.read_text())
@@ -107,20 +151,17 @@ try:
             if json.loads(found.stdout).get('Metadata',{}).get('sha256')!=actual: raise ValueError('The existing object has conflicting checksum metadata.')
         elif 'Not Found' in found.stderr or '404' in found.stderr or 'NoSuchKey' in found.stderr:
             acl=['--acl','public-read'] if args.public_read else []
-            aws('put-object','--bucket',bucket,'--key',key,'--body',str(args.archive.resolve()),'--metadata',json.dumps({'sha256':actual}),'--content-type','application/octet-stream','--cache-control','public, max-age=31536000, immutable',*acl)
+            if args.archive.stat().st_size>=128*1024*1024:
+                print('Uploading the complete archive using multipart transfers.',flush=True)
+                upload=subprocess.run(command[:-1]+['s3','cp',str(args.archive.resolve()),f's3://{bucket}/{key}','--only-show-errors','--metadata',json.dumps({'sha256':actual}),'--content-type','application/octet-stream','--cache-control','public, max-age=31536000, immutable',*acl],capture_output=True,text=True,env=environment)
+                if upload.returncode: raise RuntimeError('Object storage multipart upload failed. The catalog was not changed; credentials were not printed.')
+            else:
+                aws('put-object','--bucket',bucket,'--key',key,'--body',str(args.archive.resolve()),'--metadata',json.dumps({'sha256':actual}),'--content-type','application/octet-stream','--cache-control','public, max-age=31536000, immutable',*acl)
         else: raise RuntimeError('The immutable archive key could not be checked; nothing was replaced.')
         # Read the public object before advertising it. Object ACLs/public access
         # are configured by the owner; this tool never changes bucket policy.
-        request=urllib.request.Request(release['url'],headers={'User-Agent':'Morrow-Publisher/1'})
-        class HTTPSRedirect(urllib.request.HTTPRedirectHandler):
-            def redirect_request(self,request,fp,code,msg,headers,newurl):
-                if urllib.parse.urlparse(newurl).scheme!='https': raise ValueError('Public downloads must remain on HTTPS.')
-                return super().redirect_request(request,fp,code,msg,headers,newurl)
-        with urllib.request.build_opener(HTTPSRedirect()).open(request,timeout=60) as response:
-            if urllib.parse.urlparse(response.url).scheme!='https': raise ValueError('Public downloads must remain on HTTPS.')
-            downloaded=hashlib.sha256()
-            for block in iter(lambda:response.read(1024*1024),b''): downloaded.update(block)
-        if downloaded.hexdigest()!=actual: raise ValueError('Public archive checksum failed; the catalog was not changed.')
+        print('Verifying every byte of the public archive before updating the catalog.',flush=True)
+        verify_public_archive(release['url'],actual,args.archive.stat().st_size,temporary)
         if not old: catalog['releases'].append(release)
         remote.write_text(json.dumps(catalog,indent=2)+'\n')
         latest=aws('head-object','--bucket',bucket,'--key',catalog_key,check=False)

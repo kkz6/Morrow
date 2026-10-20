@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Accelerated large distribution publication with multipart uploads and bounded parallel public byte-range verification, retaining complete SHA-256 verification and conditional catalog writes.
+
 - Focused new app and binary releases on Apple silicon. Distribution recipes, signing jobs, publication, and the active catalog use arm64 only; existing Intel archive URLs remain available and running services are not changed.
 
 - Omitted Flutter's optional Pub preload archives containing unsigned example binaries while preserving SDK resources and dependency license notices. Pub retrieves original dependencies when needed; notarization failures retain Apple's detailed reports.
