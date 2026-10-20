@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added native build and relocation pipelines for the remaining database engines, Python, Ruby, Flutter, Go, and MinIO, with separate Apple silicon/Intel jobs, complete package resources, pinned source dependencies, and signing/notarization.
+
 - Node installation, channels, same-series updates, folder selections, and iCloud restoration now use complete hosted distributions with npm/npx. Latest LTS uses explicit catalog metadata and reuses an existing exact matching version before downloading. Existing nvm installations remain usable without bootstrapping nvm, requiring Git, or changing external aliases. Old nvm channel caches refresh automatically while installed inventory is retained.
 
 - Added reproducible distribution recipes and a signed GitHub Actions workflow for complete Node 22/24 LTS, Caddy, Mailpit, and DNS-only dnsmasq packages on Apple silicon and Intel. Packages include pinned sources, license notices, dependency/architecture checks, and Apple notarization before Contabo publication.

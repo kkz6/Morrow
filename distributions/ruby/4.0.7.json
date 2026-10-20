@@ -1,0 +1,44 @@
+{
+  "schemaVersion": 1,
+  "package": "ruby",
+  "version": "4.0.7",
+  "minimumMacOS": "14.0",
+  "layout": "source",
+  "executables": [
+    "bin/ruby",
+    "bin/gem",
+    "bin/irb",
+    "bin/bundle"
+  ],
+  "versionArguments": [
+    "--version"
+  ],
+  "versionPattern": "ruby 4\\.0\\.7",
+  "license": "See licenses/ and bundled upstream notices",
+  "provider": "https://github.com/ruby/ruby",
+  "sources": {
+    "arm64": {
+      "url": "https://cache.ruby-lang.org/pub/ruby/4.0/ruby-4.0.7.tar.gz",
+      "sha256": "911ace20f90d068ca0e4dda6d0e4f0f81e52e52f2dd4f4004c721e253412e82d",
+      "rootDirectory": "ruby-4.0.7"
+    },
+    "x86_64": {
+      "url": "https://cache.ruby-lang.org/pub/ruby/4.0/ruby-4.0.7.tar.gz",
+      "sha256": "911ace20f90d068ca0e4dda6d0e4f0f81e52e52f2dd4f4004c721e253412e82d",
+      "rootDirectory": "ruby-4.0.7"
+    }
+  },
+  "build": "ruby",
+  "dependencies": {
+    "openssl": {
+      "url": "https://github.com/openssl/openssl/releases/download/openssl-3.5.9/openssl-3.5.9.tar.gz",
+      "sha256": "603f5602e2eef00d77fbd429d34dcd5822bb301757a1bc9cdb24c670f1eb859a",
+      "rootDirectory": "openssl-3.5.9"
+    },
+    "libyaml": {
+      "url": "https://github.com/yaml/libyaml/releases/download/0.2.5/yaml-0.2.5.tar.gz",
+      "sha256": "c642ae9b75fee120b2d96c712538bd2cf283228d2337df2cf2988e3c02678ef4",
+      "rootDirectory": "yaml-0.2.5"
+    }
+  }
+}

@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "package": "valkey",
+  "version": "9.1.2",
+  "minimumMacOS": "14.0",
+  "layout": "source",
+  "executables": [
+    "bin/valkey-server"
+  ],
+  "versionArguments": [
+    "--version"
+  ],
+  "versionPattern": "v=9\\.1\\.2",
+  "license": "See licenses/ and bundled upstream notices",
+  "provider": "https://github.com/valkey/valkey",
+  "sources": {
+    "arm64": {
+      "url": "https://github.com/valkey-io/valkey/archive/refs/tags/9.1.2.tar.gz",
+      "sha256": "19c23908e7d57e8d91ef85b41f5646307582f10f4f0fb999bbf89ed24ec9c983",
+      "rootDirectory": "valkey-9.1.2"
+    },
+    "x86_64": {
+      "url": "https://github.com/valkey-io/valkey/archive/refs/tags/9.1.2.tar.gz",
+      "sha256": "19c23908e7d57e8d91ef85b41f5646307582f10f4f0fb999bbf89ed24ec9c983",
+      "rootDirectory": "valkey-9.1.2"
+    }
+  },
+  "build": "valkey",
+  "dependencies": {}
+}

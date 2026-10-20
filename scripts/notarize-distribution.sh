@@ -20,5 +20,5 @@ for path in output.glob('*-release.json'):
     release = json.loads(path.read_text())
     release['notarizationID'] = result['id']
     path.write_text(json.dumps(release, indent=2) + '\n')
-print('Apple accepted both signed distribution packages.')
+print('Apple accepted the signed distribution packages.')
 PY

@@ -16,7 +16,10 @@ import shlex
 import shutil
 import subprocess
 import tarfile
+import zipfile
+import stat
 from urllib.parse import urlparse
+from distribution_builders import build, prepare_runtime, relocate
 
 
 def run(*command, **kwargs):
@@ -45,7 +48,7 @@ def fetch(source, cache):
         temporary = path.with_suffix('.part')
         subprocess.run(['/usr/bin/curl', '--fail', '--silent', '--show-error', '--location',
                         '--proto', '=https', '--proto-redir', '=https', '--retry', '3',
-                        '--retry-all-errors', '--max-time', '300', source['url'], '-o', str(temporary)], check=True)
+                        '--retry-all-errors', '--max-time', '1800', source['url'], '-o', str(temporary)], check=True)
         temporary.rename(path)
     if digest(path) != checksum:
         raise ValueError('Upstream checksum mismatch; publication stopped.')
@@ -59,6 +62,34 @@ def inside(root, path):
 def extract(path, target):
     """Extract regular files first so an archive link can never redirect a write."""
     target.mkdir(parents=True)
+    if zipfile.is_zipfile(path):
+        links, total = [], 0
+        with zipfile.ZipFile(path) as archive:
+            seen = set()
+            for entry in archive.infolist():
+                name = PurePosixPath(entry.filename)
+                if name.is_absolute() or '..' in name.parts or str(name) in seen or len(seen) >= 100000:
+                    raise ValueError('Unsafe ZIP layout.')
+                seen.add(str(name)); destination = target / str(name)
+                mode = entry.external_attr >> 16
+                total += entry.file_size
+                if total > 8 * 1024**3:
+                    raise ValueError('The SDK is too large.')
+                if entry.is_dir():
+                    destination.mkdir(parents=True, exist_ok=True)
+                elif stat.S_ISLNK(mode):
+                    link = archive.read(entry).decode()
+                    if link.startswith('/') or not inside(target, destination.parent / link):
+                        raise ValueError('A ZIP link escapes its archive.')
+                    links.append((destination, link))
+                else:
+                    destination.parent.mkdir(parents=True, exist_ok=True)
+                    with archive.open(entry) as source, destination.open('xb') as output:
+                        shutil.copyfileobj(source, output)
+                    destination.chmod(0o755 if mode & 0o111 else 0o644)
+            for destination, link in links:
+                destination.parent.mkdir(parents=True, exist_ok=True); destination.symlink_to(link)
+        return
     links, seen, total = [], set(), 0
     with tarfile.open(path) as archive:
         for index, entry in enumerate(archive):
@@ -109,17 +140,28 @@ def sign_tree(root, arch, recipe, args, entitlements):
             magic = source.read(4)
         if magic not in [b'\xcf\xfa\xed\xfe', b'\xfe\xed\xfa\xcf', b'\xca\xfe\xba\xbe', b'\xca\xfe\xba\xbf']:
             continue
-        if run('/usr/bin/lipo', '-archs', str(binary)).strip() != arch:
-            raise ValueError('The executable architecture differs from the recipe: ' + str(binary))
         commands = run('/usr/bin/otool', '-l', str(binary))
+        platforms = re.findall(r'\bplatform ([A-Za-z0-9_]+)', commands)
+        if recipe['package'] == 'flutter' and platforms and not any(v in ['1', 'MACOS', 'macos'] for v in platforms):
+            # iOS/Android target artifacts are kept with their upstream signing.
+            continue
+        if arch not in run('/usr/bin/lipo', '-archs', str(binary)).split() and recipe['package'] != 'flutter':
+            raise ValueError('The executable architecture differs from the recipe: ' + str(binary))
         minimum = re.search(r'\bminos ([0-9.]+)', commands) or re.search(r'LC_VERSION_MIN_MACOSX\s+cmdsize \d+\s+version ([0-9.]+)', commands)
         if minimum is None or os_version(minimum.group(1)) > os_version(recipe['minimumMacOS']):
             raise ValueError('An executable needs a newer macOS than declared: ' + str(binary))
         dependencies = run('/usr/bin/otool', '-L', str(binary)).splitlines()[1:]
-        if any(not line.strip().startswith(('/usr/lib/', '/System/Library/')) for line in dependencies):
-            raise ValueError('A package depends on libraries outside macOS: ' + str(binary))
+        for line in dependencies:
+            dependency = line.strip().split(' (compatibility version', 1)[0]
+            if dependency.startswith(('/usr/lib/', '/System/Library/')) or dependency == '@rpath/' + binary.relative_to(root).as_posix():
+                continue
+            if dependency.startswith('@loader_path/'):
+                library = binary.parent / dependency.removeprefix('@loader_path/')
+                if library.is_file() and inside(root, library):
+                    continue
+            raise ValueError('A package depends on libraries outside its archive: ' + dependency + ' in ' + str(binary))
         command = ['/usr/bin/codesign', '--force', '--sign', args.identity, '--options', 'runtime', '--timestamp']
-        if recipe['package'] == 'node':
+        if recipe['package'] in ['node', 'python', 'ruby', 'flutter', 'php']:
             command += ['--entitlements', str(entitlements)]
         subprocess.run(command + [str(binary)], check=True)
         if 'TeamIdentifier=' + args.team not in run('/usr/bin/codesign', '-dv', '--verbose=4', str(binary)):
@@ -133,8 +175,8 @@ def sign_tree(root, arch, recipe, args, entitlements):
 def prepare(args):
     recipe = json.loads(args.recipe.read_text())
     package, version = recipe['package'], recipe['version']
-    if (recipe['schemaVersion'] != 1 or package not in ['node', 'caddy', 'mailpit', 'dnsmasq']
-            or not re.fullmatch(r'[0-9]+(?:\.[0-9]+){1,2}', version)):
+    if (recipe['schemaVersion'] != 1 or package not in ['node', 'caddy', 'mailpit', 'dnsmasq', 'postgresql', 'mysql', 'mariadb', 'mongodb', 'redis', 'valkey', 'memcached', 'python', 'ruby', 'flutter', 'go', 'minio']
+            or not re.fullmatch(r'[A-Za-z0-9][A-Za-z0-9._-]{0,95}', version)):
         raise ValueError('Unsupported distribution recipe.')
     if args.identity == '-' or not re.fullmatch(r'[A-Z0-9]{10}', args.team):
         raise ValueError('Use a Developer ID signing identity and its Apple team.')
@@ -149,6 +191,8 @@ def prepare(args):
         'com.apple.security.cs.disable-library-validation': True,
     }))
     for arch, source in recipe['sources'].items():
+        if args.arch and arch != args.arch:
+            continue
         if arch not in ['arm64', 'x86_64']:
             raise ValueError('Unsupported CPU architecture.')
         workspace = output / ('work-' + arch)
@@ -159,7 +203,9 @@ def prepare(args):
         root = packages / arch / (package + '-' + version)
         if root.exists():
             raise ValueError('Use a fresh output directory; existing packages are preserved.')
-        if recipe['layout'] == 'tree':
+        if recipe['layout'] == 'source':
+            build(recipe, arch, upstream, root, workspace, cache, fetch, extract)
+        elif recipe['layout'] == 'tree':
             shutil.copytree(upstream, root, symlinks=True)
         else:
             (root / 'bin').mkdir(parents=True)
@@ -197,6 +243,8 @@ def prepare(args):
             if not inside(root, binary) or not binary.is_file():
                 raise ValueError('A required executable is missing: ' + name)
             binary.chmod(0o755)
+        prepare_runtime(recipe, root)
+        relocate(root)
         (root / 'SOURCES.json').write_text(json.dumps(recipe, indent=2) + '\n')
         sign_tree(root, arch, recipe, args, entitlements)
         if platform.machine() == arch:
@@ -227,4 +275,5 @@ if __name__ == '__main__':
     parser.add_argument('--output', type=Path, required=True)
     parser.add_argument('--identity', required=True)
     parser.add_argument('--team', required=True)
+    parser.add_argument('--arch', choices=['arm64', 'x86_64'])
     prepare(parser.parse_args())

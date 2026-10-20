@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "package": "flutter",
+  "version": "3.47.7",
+  "minimumMacOS": "14.0",
+  "layout": "tree",
+  "executables": [
+    "bin/flutter",
+    "bin/dart"
+  ],
+  "versionArguments": [
+    "--version"
+  ],
+  "versionPattern": "3\\.47\\.7",
+  "license": "BSD-3-Clause and bundled third-party licenses",
+  "provider": "https://docs.flutter.dev/install/archive",
+  "sources": {
+    "x86_64": {
+      "url": "https://storage.googleapis.com/flutter_infra_release/releases/stable/macos/flutter_macos_3.47.7-stable.zip",
+      "sha256": "17d39b000a5d0681e3f7b61a105a36f6f31dd41ab9073f625fd466f38035f901",
+      "rootDirectory": "flutter"
+    },
+    "arm64": {
+      "url": "https://storage.googleapis.com/flutter_infra_release/releases/stable/macos/flutter_macos_arm64_3.47.7-stable.zip",
+      "sha256": "dd9da574c3168460550117eb0e8dd0313ae934fabf64a82a6d557fff5fd1422e",
+      "rootDirectory": "flutter"
+    }
+  }
+}

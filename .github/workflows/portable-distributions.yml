@@ -1,0 +1,68 @@
+name: Complete portable distributions
+on:
+  workflow_dispatch:
+    inputs:
+      package:
+        description: Complete service or runtime package
+        type: choice
+        options: [postgresql, mysql, mariadb, mongodb, redis, valkey, memcached, python, ruby, flutter, go, minio]
+        required: true
+      version:
+        description: Exact checked-in recipe version
+        required: true
+permissions:
+  contents: read
+concurrency:
+  group: portable-${{ inputs.package }}-${{ inputs.version }}
+  cancel-in-progress: false
+jobs:
+  package:
+    if: github.ref == 'refs/heads/main'
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - architecture: arm64
+            runner: xcode-27
+          - architecture: x86_64
+            runner: macos-26-intel
+    runs-on: ${{ matrix.runner }}
+    timeout-minutes: 180
+    environment: release
+    env:
+      MORROW_EXPECTED_TEAM: ${{ vars.MORROW_APPLE_TEAM_ID }}
+      MORROW_PACKAGE: ${{ inputs.package }}
+      MORROW_PACKAGE_VERSION: ${{ inputs.version }}
+      MORROW_ARCHITECTURE: ${{ matrix.architecture }}
+    steps:
+      - uses: actions/checkout@v7
+      - name: Select the current full macOS SDK
+        run: |
+          source scripts/toolchain.sh
+          echo "DEVELOPER_DIR=$DEVELOPER_DIR" >> "$GITHUB_ENV"
+      - name: Import release credentials into a temporary keychain
+        env:
+          MORROW_CERTIFICATE_P12_BASE64: ${{ secrets.MORROW_CERTIFICATE_P12_BASE64 }}
+          MORROW_CERTIFICATE_PASSWORD: ${{ secrets.MORROW_CERTIFICATE_PASSWORD }}
+          MORROW_NOTARY_KEY_BASE64: ${{ secrets.MORROW_NOTARY_KEY_BASE64 }}
+          MORROW_NOTARY_KEY_ID: ${{ secrets.MORROW_NOTARY_KEY_ID }}
+          MORROW_NOTARY_ISSUER_ID: ${{ secrets.MORROW_NOTARY_ISSUER_ID }}
+        run: python3 scripts/release-keychain.py
+      - name: Build, relocate, validate, and sign the native package
+        run: |
+          python3 scripts/package-distribution.py --recipe "distributions/$MORROW_PACKAGE/$MORROW_PACKAGE_VERSION.json" --output .build/portable-release --arch "$MORROW_ARCHITECTURE" --identity "$MORROW_SIGNING_IDENTITY" --team "$MORROW_EXPECTED_TEAM"
+      - name: Submit the complete package to Apple
+        run: scripts/notarize-distribution.sh .build/portable-release
+      - name: Upload the accepted package
+        uses: actions/upload-artifact@v7
+        with:
+          name: ${{ inputs.package }}-${{ inputs.version }}-macos-${{ matrix.architecture }}
+          compression-level: 0
+          path: |
+            .build/portable-release/*-macos-*.tar.gz
+            .build/portable-release/*-release.json
+            .build/portable-release/notarization.json
+          if-no-files-found: error
+      - name: Remove release credentials
+        if: always()
+        run: python3 scripts/release-keychain.py --cleanup

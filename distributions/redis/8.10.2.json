@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "package": "redis",
+  "version": "8.10.2",
+  "minimumMacOS": "14.0",
+  "layout": "source",
+  "executables": [
+    "bin/redis-server"
+  ],
+  "versionArguments": [
+    "--version"
+  ],
+  "versionPattern": "v=8\\.10\\.2",
+  "license": "See licenses/ and bundled upstream notices",
+  "provider": "https://github.com/redis/redis",
+  "sources": {
+    "arm64": {
+      "url": "https://github.com/redis/redis/releases/download/8.10.2/redis-full.tar.gz",
+      "sha256": "ae6973de9b6ad8e6cf21b1e764abccab59200689af6aabce10d4cf6bbb2e253f",
+      "rootDirectory": "redis-8.10.2"
+    },
+    "x86_64": {
+      "url": "https://github.com/redis/redis/releases/download/8.10.2/redis-full.tar.gz",
+      "sha256": "ae6973de9b6ad8e6cf21b1e764abccab59200689af6aabce10d4cf6bbb2e253f",
+      "rootDirectory": "redis-8.10.2"
+    }
+  },
+  "build": "redis",
+  "dependencies": {}
+}

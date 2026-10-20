@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "package": "postgresql",
+  "version": "17.11",
+  "minimumMacOS": "14.0",
+  "layout": "source",
+  "executables": [
+    "bin/postgres",
+    "bin/initdb",
+    "bin/pg_ctl",
+    "bin/psql",
+    "bin/pg_dump"
+  ],
+  "versionArguments": [
+    "--version"
+  ],
+  "versionPattern": "PostgreSQL\\) 17\\.11\\b",
+  "license": "See licenses/ and bundled upstream notices",
+  "provider": "https://www.postgresql.org/ftp/source/v17.11/",
+  "sources": {
+    "arm64": {
+      "url": "https://ftp.postgresql.org/pub/source/v17.11/postgresql-17.11.tar.bz2",
+      "sha256": "dd27f2b3c59e73ed14aa3324901242bf69a032a6347805f274e6260322d42979",
+      "rootDirectory": "postgresql-17.11"
+    },
+    "x86_64": {
+      "url": "https://ftp.postgresql.org/pub/source/v17.11/postgresql-17.11.tar.bz2",
+      "sha256": "dd27f2b3c59e73ed14aa3324901242bf69a032a6347805f274e6260322d42979",
+      "rootDirectory": "postgresql-17.11"
+    }
+  },
+  "build": "postgresql",
+  "dependencies": {
+    "openssl": {
+      "url": "https://github.com/openssl/openssl/releases/download/openssl-3.5.9/openssl-3.5.9.tar.gz",
+      "sha256": "603f5602e2eef00d77fbd429d34dcd5822bb301757a1bc9cdb24c670f1eb859a",
+      "rootDirectory": "openssl-3.5.9"
+    }
+  }
+}

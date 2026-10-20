@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "package": "mongodb",
+  "version": "8.0.34",
+  "minimumMacOS": "14.0",
+  "layout": "tree",
+  "executables": [
+    "bin/mongod",
+    "bin/mongos"
+  ],
+  "versionArguments": [
+    "--version"
+  ],
+  "versionPattern": "db version v8\\.0\\.34",
+  "license": "SSPL-1.0; see LICENSE-Community.txt and THIRD-PARTY-NOTICES",
+  "provider": "https://www.mongodb.com/try/download/community",
+  "sources": {
+    "arm64": {
+      "url": "https://fastdl.mongodb.org/osx/mongodb-macos-arm64-8.0.34.tgz",
+      "sha256": "3255cbf2e70cc5de04220046e006067d20068656d1bfa674828768a51d20d5a6",
+      "rootDirectory": "mongodb-macos-arm64-8.0.34"
+    },
+    "x86_64": {
+      "url": "https://fastdl.mongodb.org/osx/mongodb-macos-x86_64-8.0.34.tgz",
+      "sha256": "3d391b8c41df069671afaa88ca21def057178aecce1813437539143b71f28152",
+      "rootDirectory": "mongodb-macos-x86_64-8.0.34"
+    }
+  }
+}

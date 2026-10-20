@@ -1,0 +1,29 @@
+{
+  "schemaVersion": 1,
+  "package": "python",
+  "version": "3.15.0",
+  "minimumMacOS": "14.0",
+  "layout": "tree",
+  "executables": [
+    "bin/python3",
+    "bin/pip3"
+  ],
+  "versionArguments": [
+    "--version"
+  ],
+  "versionPattern": "Python 3\\.15\\.0",
+  "license": "See licenses/ and bundled upstream notices",
+  "provider": "https://github.com/astral-sh/python-build-standalone",
+  "sources": {
+    "arm64": {
+      "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261013/cpython-3.15.0%2B20261013-aarch64-apple-darwin-install_only.tar.gz",
+      "sha256": "f5d1d82e2f5660d4decae5d2b7470631850bcd7bd39595d9c3cca3c5ee54eae7",
+      "rootDirectory": "python"
+    },
+    "x86_64": {
+      "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261013/cpython-3.15.0%2B20261013-x86_64-apple-darwin-install_only.tar.gz",
+      "sha256": "c4adbda246262a55920ec0804f5a6a9a3a1e5948f3423da71926320b2489e50e",
+      "rootDirectory": "python"
+    }
+  }
+}
