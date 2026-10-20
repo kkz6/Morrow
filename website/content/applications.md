@@ -94,6 +94,8 @@ Morrow does not edit your shell files or run `brew link`. Commands already insta
 
 ## Updates
 
+Existing external runtimes can show **Portable distribution available** for the same release. The update action installs Morrow's complete package without modifying the external copy. A selected global default follows the change; folder choices retain their exact installation until you select the portable runtime for those folders. Do this before removing an external package manager yourself.
+
 Choose **Check Updates** and **Update…** in a tracked application's menu, or run:
 
 ```sh

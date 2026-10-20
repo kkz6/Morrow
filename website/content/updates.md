@@ -23,6 +23,8 @@ PostgreSQL 10 and later stay within the same major release. Older PostgreSQL rel
 
 ## Apply an update
 
+An existing external installation can show **Portable distribution available** when Morrow publishes the same engine version. The existing update action downloads that package, then uses the same backup and restart procedure to move this instance to its private installation. Publication itself never changes a running service. Downloads and binary validation finish before the service is stopped. External packages and their libraries remain on disk for other applications.
+
 Choose **Update…** in an instance's action menu, review the backup and restart information, and choose **Back Up and Update**. The CLI equivalent is:
 
 ```sh

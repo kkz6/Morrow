@@ -185,17 +185,21 @@ def prepare_runtime(recipe, root):
                 binary.write_text('#!/bin/sh\nMORROW_PYTHON_BIN="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"\n'
                                   'exec "$MORROW_PYTHON_BIN/python3" -m pip "$@"\n')
                 binary.chmod(0o755)
+        if not (root / 'bin/pip').exists() and (root / 'bin/pip3').exists():
+            (root / 'bin/pip').symlink_to('pip3')
     if recipe['package'] == 'ruby':
         for binary in (root / 'bin').iterdir():
             if binary.is_symlink() or not binary.is_file():
                 continue
             data = binary.read_bytes()
             if data.startswith(b'#!') and b'ruby' in data.split(b'\n', 1)[0]:
-                # Ruby's own relocatable loader keeps gems/library paths local.
                 text = data.decode()
                 lines = text.splitlines(keepends=True)
-                lines[0] = '#!/usr/bin/env ruby\n'
-                binary.write_text(''.join(lines))
+                # Ruby -x skips the shell preamble and preserves __FILE__ and
+                # companion-script locations while using this package's Ruby.
+                binary.write_text('#!/bin/sh\nMORROW_RUBY_BIN="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"\n'
+                                  'exec "$MORROW_RUBY_BIN/ruby" -x "$0" "$@"\n#!/usr/bin/env ruby\n'
+                                  + ''.join(lines[1:]))
 
 
 def mach_files(root):

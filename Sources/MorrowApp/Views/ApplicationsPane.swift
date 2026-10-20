@@ -99,7 +99,7 @@ struct ApplicationsPane: View {
                 Text(item.engine.title).font(.system(size: 13, weight: .semibold))
                 Text(item.version + " · " + item.source).font(.system(size: 11)).foregroundStyle(.secondary)
                 if let update = model.runtimeUpdates.first(where: { $0.id == item.id }) {
-                    Text(update.canUpgrade ? "Update available: \(update.availableVersion ?? "")" : update.message)
+                    Text(update.message == "Portable distribution available" ? update.message : update.canUpgrade ? "Update available: \(update.availableVersion ?? "")" : update.message)
                         .font(.system(size: 11)).foregroundStyle(update.canUpgrade ? .orange : .secondary).lineLimit(2)
                 }
             }

@@ -31,10 +31,13 @@ extension DatabaseManager {
                 let releases = try installer.managed.releases(package: instance.engine.rawValue)
                 if let old = SoftwareVersion(current), let release = releases.first,
                    let next = SoftwareVersion(release.version) {
+                    let candidate = releases.first { SoftwareVersion($0.version).map { $0 > old && $0.isMaintenanceRelease(of: old, engine: instance.engine) } == true }
+                    if let candidate { return row(candidate.version, formula: candidate.channel, allowed: true, "Maintenance update available") }
+                    if !formula.hasPrefix("managed:"), let portable = releases.first(where: { SoftwareVersion($0.version)?.components == old.components }) {
+                        return row(portable.version, formula: portable.channel, allowed: true, "Portable distribution available")
+                    }
                     if next > old {
                         let compatible = next.isMaintenanceRelease(of: old, engine: instance.engine)
-                        let candidate = releases.first { SoftwareVersion($0.version).map { $0 > old && $0.isMaintenanceRelease(of: old, engine: instance.engine) } == true }
-                        if let candidate { return row(candidate.version, formula: candidate.channel, allowed: true, "Maintenance update available") }
                         return row(release.version, formula: release.channel, allowed: compatible, "New release series — create an instance and migrate your data.")
                     }
                     if formula.hasPrefix("managed:") { return row(release.version, formula: release.channel, "Up to date") }
@@ -56,6 +59,11 @@ extension DatabaseManager {
             if let expectedVersion, expectedVersion != available { throw MorrowError.message("The available release changed. Check updates again before upgrading.") }
             let binaryInstaller = try installer()
             guard let release = try binaryInstaller.managed.release(package: original.engine.rawValue, request: formula), release.version == available else { throw MorrowError.message("Release metadata changed. Check updates again.") }
+            // Download and validate before stopping the service. The explicit
+            // backup/restart step is the only period of service downtime.
+            let managed = try binaryInstaller.managed.install(release)
+            let selected = try NativeInstallationDetector(runner: runner).validate(Installation(engine: original.engine, formula: release.channel, version: release.version, prefix: managed.prefix))
+            guard selected.version == available else { throw MorrowError.message("The downloaded server reports another version. The existing service was preserved.") }
             // A local copy cannot cover external tablespaces or linked data.
             try validateBackupSource(original)
             let active = [.running, .starting].contains(status(original))
@@ -72,8 +80,7 @@ extension DatabaseManager {
                 try FileManager.default.createDirectory(at: backup.deletingLastPathComponent(), withIntermediateDirectories: true, attributes: [.posixPermissions: 0o700])
                 try FileManager.default.copyItem(at: store.instanceDirectory(original), to: backup)
                 journal.phase = "backedUp"; try saveJournal(journal)
-                let managed = try binaryInstaller.managed.install(release)
-                let installed = Installation(engine: original.engine, formula: release.channel, version: release.version, prefix: managed.prefix)
+                let installed = selected
                 let validated = try NativeInstallationDetector(runner: runner).validate(installed)
                 guard validated.version == available else { throw MorrowError.message("The upgraded binary reports an unexpected version.") }
                 var upgraded = original; upgraded.installation = validated

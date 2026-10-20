@@ -143,7 +143,7 @@ public struct RuntimeManager: Sendable {
         if let release = try policy.managed.release(package: engine.rawValue, request: version) {
             // Selectors such as LTS need catalog metadata first. Reuse a
             // complete matching installation once their exact version is known.
-            if let existing = found.first(where: { $0.version == release.version }) {
+            if let existing = found.first(where: { $0.version == release.version && (!version.hasPrefix("managed:") || $0.source == "managed") }) {
                 let valid = try validate(existing); try register(valid); return valid
             }
             let installed = try policy.managed.install(release)
@@ -226,7 +226,7 @@ public struct RuntimeManager: Sendable {
         return tracked.map { item in
             do {
                 if let release = try managedUpdate(item) {
-                    return RuntimeUpdate(installationID: item.id, engine: item.engine, currentVersion: item.version, availableVersion: release.version, canUpgrade: true, message: "Managed update available")
+                    return RuntimeUpdate(installationID: item.id, engine: item.engine, currentVersion: item.version, availableVersion: release.version, canUpgrade: true, message: SoftwareVersion(release.version)?.components == SoftwareVersion(item.version)?.components ? "Portable distribution available" : "Managed update available")
                 }
                 if item.source == "managed" { return RuntimeUpdate(installationID: item.id, engine: item.engine, currentVersion: item.version, availableVersion: nil, canUpgrade: false, message: "No newer compatible catalog release") }
             } catch { return RuntimeUpdate(installationID: item.id, engine: item.engine, currentVersion: item.version, availableVersion: nil, canUpgrade: false, message: error.localizedDescription) }
@@ -237,7 +237,10 @@ public struct RuntimeManager: Sendable {
         if let release = try managedUpdate(item) {
             return try store.operation {
                 let wasDefault = try store.load().toolDefaults[item.engine.rawValue] == item.id
-                let installed = try installUnlocked(item.engine, version: release.channel)
+                let managed = try ManagedBinaryStore(store: store, runner: runner).install(release)
+                let installed = try probe(item.engine, prefix: managed.prefix, formula: release.channel, source: "managed", packageVersion: release.version)
+                guard installed.version == release.version else { throw MorrowError.message("The downloaded runtime reports another version. The current selection was preserved.") }
+                try register(installed)
                 if wasDefault {
                     guard FileManager.default.isExecutableFile(atPath: cli.path) else { throw MorrowError.message("The morrow CLI is missing.") }
                     try writeShims(installed, cli: cli.resolvingSymlinksInPath())
@@ -279,13 +282,17 @@ public struct RuntimeManager: Sendable {
         process.standardInput = FileHandle.standardInput; process.standardOutput = FileHandle.standardOutput; process.standardError = FileHandle.standardError
         try process.run(); process.waitUntilExit(); return process.terminationStatus
     }
-    private func matches(_ item: RuntimeInstallation, request: String) -> Bool { item.id == request || item.formula == request || ManagedBinaryStore.matches(item.version, request: request, package: item.engine.rawValue) }
+    private func matches(_ item: RuntimeInstallation, request: String) -> Bool {
+        if request.hasPrefix("managed:") { return item.source == "managed" && ManagedBinaryStore.matches(item.version, request: request, package: item.engine.rawValue) }
+        return item.id == request || item.formula == request || ManagedBinaryStore.matches(item.version, request: request, package: item.engine.rawValue)
+    }
     private func managedUpdate(_ item: RuntimeInstallation) throws -> BinaryRelease? {
         guard let old = SoftwareVersion(item.version) else { return nil }
         let width = [.php, .python, .ruby].contains(item.engine) ? 2 : 1
         return try ManagedBinaryStore(store: store, runner: runner).releases(package: item.engine.rawValue).first { release in
             guard let next = SoftwareVersion(release.version) else { return false }
-            return next > old && next.components.prefix(width) == old.components.prefix(width)
+            return next.components.prefix(width) == old.components.prefix(width)
+                && (next > old || (item.source != "managed" && next.components == old.components))
         }
     }
     private static func versionMatches(_ installed: String, _ requested: String) -> Bool {

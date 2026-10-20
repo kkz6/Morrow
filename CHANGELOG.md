@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added explicit transitions from existing external installations to same-version portable packages through the normal update actions. Database downloads and validation finish before the existing backup/restart procedure begins; runtime defaults can switch while folder pins and external files remain preserved.
+
 - Removed Homebrew installation, metadata refresh, and update execution from shared app/CLI management. Existing installations are discovered without executing or requiring the Homebrew command; legacy compatibility settings cannot re-enable it. Catalog-only updates and iCloud restoration preserve existing data and services.
 
 - Added native build and relocation pipelines for the remaining database engines, Python, Ruby, Flutter, Go, and MinIO, with separate Apple silicon/Intel jobs, complete package resources, pinned source dependencies, and signing/notarization.
