@@ -5,9 +5,9 @@ on:
   workflow_dispatch:
     inputs:
       version:
-        description: Version matching Resources/Info.plist (for example 0.2.1)
+        description: Version matching Resources/Info.plist (for example 0.2.2)
         required: true
-        default: '0.2.1'
+        default: '0.2.2'
       publish:
         description: Publish the notarized app and signed update feed
         type: boolean

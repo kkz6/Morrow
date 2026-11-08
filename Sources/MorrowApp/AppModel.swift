@@ -395,7 +395,7 @@ final class AppModel {
             guard let current = self.web.sites.first(where: { $0.id == site.id }), current.https == enabled else { return }
             // The switch and padlock communicate the saved setting. Verify an
             // active route quietly; only failures need a separate message.
-            guard enabled, !current.ignored, self.web.enabled, self.webStatus?.httpsTrusted == true else { return }
+            guard enabled, !current.isIgnoredForHosting, self.web.enabled, self.webStatus?.httpsTrusted == true else { return }
             let sites = self.sites
             Task {
                 do {
@@ -548,7 +548,7 @@ final class AppModel {
             httpsMessage = try await Task.detached {
                 let web = try sites.store.load().web
                 guard SiteSystemSetup.isConfigured(http: web.httpPort, https: web.httpsPort, dns: web.dnsPort, suffixes: web.suffixes) else { throw MorrowError.message("Permission is allowed, but local routing still needs setup. Retry Set Up in Sites.") }
-                if web.sites.contains(where: { $0.https && !$0.ignored }) { try sites.trustCertificate(); return try sites.httpsSummary() }
+                if web.sites.contains(where: { $0.https && !$0.isIgnoredForHosting }) { try sites.trustCertificate(); return try sites.httpsSummary() }
                 return "Local domains ready. HTTP uses 80 and HTTPS uses 443."
             }.value
             domainFailure = false

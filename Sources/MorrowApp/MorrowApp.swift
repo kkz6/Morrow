@@ -176,6 +176,19 @@ private final class AppearanceTrackingView: NSView {
                 setup.layoutSubtreeIfNeeded()
                 save(view: setup, to: directory.appendingPathComponent("onboarding.png"))
             }
+            if args.contains("--snapshot-directories") {
+                model.web.directories = [ProjectDirectory(path: "/Users/developer/Projects", includeWorktrees: false)]
+                let directories = NSHostingView(rootView: ProjectDirectoriesSheet().environment(model)
+                    .tint(.morrowAccent).preferredColorScheme(model.colorScheme ?? .light)
+                    .background(Color(nsColor: .windowBackgroundColor)))
+                directories.frame = NSRect(origin: .zero, size: directories.fittingSize)
+                let directoriesWindow = NSWindow(contentRect: directories.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+                directoriesWindow.appearance = NSAppearance(named: model.colorScheme == .dark ? .darkAqua : .aqua)
+                directoriesWindow.contentView = directories
+                directoriesWindow.orderFront(nil)
+                directories.layoutSubtreeIfNeeded()
+                save(view: directories, to: directory.appendingPathComponent("directories.png"))
+            }
             NSApplication.shared.terminate(nil)
         }
     }

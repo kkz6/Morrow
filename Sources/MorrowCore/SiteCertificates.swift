@@ -24,7 +24,7 @@ extension SiteManager {
     }
 
     func secureSites(_ web: WebWorkspace) -> [LocalSite] {
-        web.sites.filter { $0.https && !$0.ignored && $0.issue == nil }
+        web.sites.filter { $0.https && !$0.isIgnoredForHosting && $0.issue == nil }
     }
 
     static func certificateExpiration(_ file: URL) -> Date? {

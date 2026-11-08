@@ -116,7 +116,7 @@ struct SitesPane: View {
         return hasPreviousResolver ? "Replace Setup" : "Set Up"
     }
     private func siteRow(_ site: LocalSite) -> some View {
-        let status = site.ignored ? "Ignored for .\(model.web.suffix) hosting" : site.issue ?? model.webStatus?.sites[site.id]?.rawValue ?? "Stopped"
+        let status = site.worktreeExcluded ? SiteStatus.worktreeExcluded.rawValue : site.ignored ? "Ignored for .\(model.web.suffix) hosting" : site.issue ?? model.webStatus?.sites[site.id]?.rawValue ?? "Stopped"
         let expiry = model.webStatus?.certificateExpirations[site.domain]
         let validUntil = expiry.map { " · \($0 > Date() ? "Valid until" : "Expired") \($0.formatted(date: .abbreviated, time: .omitted))" } ?? ""
         return HStack(spacing: 12) {
@@ -132,20 +132,23 @@ struct SitesPane: View {
                     }
                 }
                 Text(site.mode == .proxy ? "127.0.0.1:\(site.proxyPort.map(String.init) ?? "—")" : site.documentRoot).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
-                Text(status + validUntil).font(.system(size: 11)).foregroundStyle(site.issue == nil ? Color.secondary : Color.orange).lineLimit(2)
+                Text(status + (site.isIgnoredForHosting ? "" : validUntil)).font(.system(size: 11)).foregroundStyle(site.issue == nil || site.isIgnoredForHosting ? Color.secondary : Color.orange).lineLimit(2)
             }
             Spacer()
             Toggle("HTTPS for \(site.domain)", isOn: Binding(get: { site.https }, set: { value in
                 model.setSiteHTTPS(site, enabled: value)
-            })).labelsHidden().toggleStyle(.switch).controlSize(.small).disabled(model.busy || site.issue != nil)
+            })).labelsHidden().toggleStyle(.switch).controlSize(.small).disabled(model.busy || site.issue != nil || site.worktreeExcluded)
             ServiceActionButton(kind: .logs, title: "Open site routing logs") { model.showSiteLogs() }
             Menu {
+                if site.worktreeExcluded {
+                    Button("Manage Worktree Hosting…") { directories = true }
+                }
                 Button(site.ignored ? "Include in .\(model.web.suffix) hosting" : "Ignore for .\(model.web.suffix) hosting") {
                     let ignore = !site.ignored
                     model.perform(ignore ? "Ignoring project…" : "Including project…", success: ignore ? "Project ignored for local domains; folder preserved" : "Project included in local hosting") { try SiteManager(store: $0.store, runner: $0.runner).ignore(site.id, ignored: ignore) }
-                }
-                Button("Open Site") { NSWorkspace.shared.open(model.sites.url(site, web: model.web)) }
-                if site.https && !site.ignored && site.issue == nil {
+                }.disabled(site.worktreeExcluded)
+                Button("Open Site") { NSWorkspace.shared.open(model.sites.url(site, web: model.web)) }.disabled(site.isIgnoredForHosting)
+                if site.https && !site.isIgnoredForHosting && site.issue == nil {
                     Button("Renew HTTPS Certificate") { model.renewSiteHTTPS(site) }
                         .disabled(model.webStatus?.proxy != .running).help("Briefly restarts the local web server.")
                 }
@@ -156,6 +159,7 @@ struct SitesPane: View {
         }.settingsCellPadding()
     }
     private func httpsIssue(_ site: LocalSite) -> String? {
+        if site.worktreeExcluded { return "Git worktrees are excluded in Project Directories. HTTPS preferences are saved." }
         if site.ignored { return "HTTPS is enabled; this project is ignored for local hosting." }
         if let failure = model.siteHTTPSFailures[site.id], failure.domain == site.domain { return failure.message }
         if !model.web.enabled { return "HTTPS is enabled; start local hosting to use it." }
@@ -165,13 +169,13 @@ struct SitesPane: View {
     }
 }
 
-private struct ProjectDirectoriesSheet: View {
+struct ProjectDirectoriesSheet: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Project Directories").font(.system(size: 18, weight: .semibold))
-            Text("Each immediate project folder receives a domain. Removing a directory removes its discovered routes and preserves the folders.").font(.system(size: 12)).foregroundStyle(.secondary)
+            Text("Choose which folders receive local domains. Excluding worktrees or removing a directory keeps your project files.").font(.system(size: 12)).foregroundStyle(.secondary)
             ScrollView {
                 SettingsGroup {
                     ForEach(Array(model.web.directories.enumerated()), id: \.element.id) { index, directory in
@@ -184,6 +188,13 @@ private struct ProjectDirectoriesSheet: View {
                             })).labelsHidden().settingsToggle()
                             ServiceActionButton(kind: .remove, title: "Unpark directory; preserve its project folders") { let path = directory.path; model.perform("Removing directory…", success: "Directory unparked; project folders preserved") { try SiteManager(store: $0.store, runner: $0.runner).unpark(path) } }
                         }.settingsCellPadding().disabled(model.busy)
+                        SettingsDivider()
+                        SettingRow(title: "Include Git worktrees", subtitle: "Automatically host linked worktree folders in this directory") {
+                            Toggle("Include Git worktrees in \(directory.path)", isOn: Binding(get: { directory.includeWorktrees }, set: { include in
+                                let cli = model.cliURL
+                                model.perform("Updating worktree hosting…") { try SiteManager(store: $0.store, runner: $0.runner).setDirectory(directory.id, includeWorktrees: include, cli: cli) }
+                            })).settingsToggle()
+                        }.disabled(model.busy)
                         if index < model.web.directories.count - 1 { SettingsDivider() }
                     }
                     if model.web.directories.isEmpty { Text("No directories parked yet.").font(.system(size: 12)).foregroundStyle(.secondary).padding(16) }
@@ -195,6 +206,7 @@ private struct ProjectDirectoriesSheet: View {
                     }.disabled(model.busy)
                 }
             }.frame(maxHeight: 330)
+            SettingsNote(text: "Manually linked sites stay enabled. Excluded worktrees retain their domains, HTTPS, and folder versions.")
             if let error = model.error { ErrorCard(message: error) { model.error = nil } }
             HStack { Spacer(); Button("Done") { dismiss() }.settingsButton().keyboardShortcut(.defaultAction).disabled(model.busy) }
         }.padding(20).frame(width: 540)

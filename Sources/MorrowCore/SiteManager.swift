@@ -49,12 +49,28 @@ public struct SiteManager: Sendable {
             try saveAndApply(web)
         }
     }
-    public func setDirectory(_ id: UUID, enabled: Bool) throws {
+    public func setDirectory(_ id: UUID, enabled: Bool? = nil, includeWorktrees: Bool? = nil, cli: URL? = nil) throws {
         try store.operation {
             var web = try store.load().web
             guard let index = web.directories.firstIndex(where: { $0.id == id }) else { throw MorrowError.message("This directory was removed.") }
-            web.directories[index].enabled = enabled
-            try saveAndApply(discovered(web))
+            if let enabled { web.directories[index].enabled = enabled }
+            if let includeWorktrees { web.directories[index].includeWorktrees = includeWorktrees }
+            web = try discovered(web)
+            // An older running watcher cannot preserve this new preference.
+            // Replace only the directory monitor before saving the policy.
+            let replaceWatcher = includeWorktrees != nil && web.enabled
+            if replaceWatcher {
+                guard let cli, FileManager.default.isExecutableFile(atPath: cli.path) else {
+                    throw MorrowError.message("Use the current Morrow app or CLI to change worktree hosting while Sites is running.")
+                }
+                web.cliPath = cli.resolvingSymlinksInPath().path
+                try launchd.unload(label("watch", web: web))
+            }
+            do { try saveAndApply(web) }
+            catch {
+                if replaceWatcher, let saved = try? store.load().web { try? writeWatcher(saved) }
+                throw error
+            }
         }
     }
     @discardableResult public func link(path: String, port: Int? = nil, domain: String? = nil, https: Bool? = nil, phpID: String? = nil) throws -> LocalSite {
@@ -82,6 +98,9 @@ public struct SiteManager: Sendable {
         try store.operation {
             var web = try store.load().web
             guard let index = web.sites.firstIndex(where: { $0.id == id }) else { throw MorrowError.message("This project was removed.") }
+            guard ignored || !web.sites[index].worktreeExcluded else {
+                throw MorrowError.message("Enable Include Git worktrees in Project Directories, or explicitly link this worktree to host it.")
+            }
             web.sites[index].ignored = ignored
             try saveAndApply(web)
         }
@@ -229,6 +248,7 @@ public struct SiteManager: Sendable {
                 let generated = try Self.domain(for: child.path, suffix: web.suffix)
                 let existing = previous.sites.first { $0.directoryID == directory.id && $0.path == canonical.path }
                 var site = try existing ?? detected(canonical, domain: generated, web: web, directory: directory.id)
+                site.worktreeExcluded = !directory.includeWorktrees && GitWorktree.isLinked(at: canonical)
                 if let selected = ProjectRuntimeStore.selection(.php, directory: canonical.path, projects: projects) {
                     site.phpID = selected.id
                     if Self.fpmExecutable(selected) != nil, !web.php.contains(where: { $0.id == selected.id }) { web.php.append(selected) }
@@ -238,7 +258,7 @@ public struct SiteManager: Sendable {
                     site.issue = site.mode == .proxy && site.proxyPort == nil ? "Link the development server port with morrow site link --port <port>." : nil
                 }
                 if next.contains(where: { $0.directoryID == nil && $0.path == site.path && $0.domain == site.domain }) { continue }
-                if !names.insert(site.domain).inserted { site.issue = "This domain is claimed by another project directory. Set a unique domain." }
+                if !site.worktreeExcluded && !names.insert(site.domain).inserted { site.issue = "This domain is claimed by another project directory. Set a unique domain." }
                 else if site.issue == "This domain is claimed by another project directory. Set a unique domain." { site.issue = nil }
                 next.append(site)
             }
@@ -251,7 +271,7 @@ public struct SiteManager: Sendable {
     }
     private func saveAndApply(_ proposed: WebWorkspace) throws {
         var web = proposed
-        if web.defaultPHPID == nil && web.sites.contains(where: { $0.mode == .php && $0.issue == nil && !$0.ignored }), let php = try availablePHP().first {
+        if web.defaultPHPID == nil && web.sites.contains(where: { $0.mode == .php && $0.issue == nil && !$0.isIgnoredForHosting }), let php = try availablePHP().first {
             if !web.php.contains(where: { $0.id == php.id }) { web.php.append(php) }
             web.defaultPHPID = php.id
         }
@@ -270,7 +290,7 @@ public struct SiteManager: Sendable {
             guard FileManager.default.isExecutableFile(atPath: web.cliPath!) else { throw MorrowError.message("The morrow CLI is missing.") }
             web.caddyPath = try nativeTool("caddy", preferred: web.caddyPath)
             web.dnsmasqPath = try nativeTool("dnsmasq", preferred: web.dnsmasqPath)
-            if web.sites.contains(where: { $0.mode == .php && $0.issue == nil && !$0.ignored }) && web.defaultPHPID == nil {
+            if web.sites.contains(where: { $0.mode == .php && $0.issue == nil && !$0.isIgnoredForHosting }) && web.defaultPHPID == nil {
                 let php = try RuntimeManager(store: store, runner: runner).installations().first { $0.engine == .php && Self.fpmExecutable($0) != nil }
                 if let php { web.php.append(php); web.defaultPHPID = php.id }
                 // Other routes can run while PHP projects show 'PHP unavailable'.
@@ -330,7 +350,7 @@ public struct SiteManager: Sendable {
         }
     }
     private func startPHP(_ web: WebWorkspace) throws {
-        let used = Set(web.sites.filter { $0.mode == .php && $0.issue == nil && !$0.ignored }.compactMap { $0.phpID ?? web.defaultPHPID })
+        let used = Set(web.sites.filter { $0.mode == .php && $0.issue == nil && !$0.isIgnoredForHosting }.compactMap { $0.phpID ?? web.defaultPHPID })
         for item in web.php where !used.contains(item.id) {
             try launchd.unload(label(phpComponent(item), web: web))
             let login = store.loginAgentURL(label: label(phpComponent(item), web: web))
@@ -387,7 +407,8 @@ public struct SiteManager: Sendable {
         let message = configured ? "Local domain routing is installed." : SiteSystemSetup.setupIssue(suffixes: web.suffixes) ?? "Enable Local Domains to use URLs without listener ports."
         var statuses: [UUID: SiteStatus] = [:]
         for site in web.sites {
-            if site.ignored { statuses[site.id] = .ignored }
+            if site.worktreeExcluded { statuses[site.id] = .worktreeExcluded }
+            else if site.ignored { statuses[site.id] = .ignored }
             else if !FileManager.default.fileExists(atPath: site.path) { statuses[site.id] = .missingFolder }
             else if site.issue != nil { statuses[site.id] = .configurationIssue }
             else if !proxy { statuses[site.id] = .stopped }
@@ -512,7 +533,7 @@ public struct SiteManager: Sendable {
     }
     public func verifyHTTPS(_ site: LocalSite) throws -> String {
         let web = try store.load().web
-        guard let current = web.sites.first(where: { $0.id == site.id && $0.domain == site.domain }), current.https, !current.ignored, current.issue == nil else {
+        guard let current = web.sites.first(where: { $0.id == site.id && $0.domain == site.domain }), current.https, !current.isIgnoredForHosting, current.issue == nil else {
             throw MorrowError.message("Enable HTTPS on an active project route before checking it.")
         }
         guard web.enabled else { throw MorrowError.message("Start Sites before checking HTTPS for \(current.domain).") }

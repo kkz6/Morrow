@@ -5,7 +5,18 @@ public struct ProjectDirectory: Codable, Identifiable, Equatable, Sendable {
     public let id: UUID
     public let path: String
     public var enabled: Bool
-    public init(id: UUID = UUID(), path: String, enabled: Bool = true) { self.id = id; self.path = path; self.enabled = enabled }
+    public var includeWorktrees: Bool
+    public init(id: UUID = UUID(), path: String, enabled: Bool = true, includeWorktrees: Bool = true) {
+        self.id = id; self.path = path; self.enabled = enabled; self.includeWorktrees = includeWorktrees
+    }
+    enum CodingKeys: String, CodingKey { case id, path, enabled, includeWorktrees }
+    public init(from decoder: Decoder) throws {
+        let v = try decoder.container(keyedBy: CodingKeys.self)
+        id = try v.decode(UUID.self, forKey: .id); path = try v.decode(String.self, forKey: .path)
+        enabled = try v.decode(Bool.self, forKey: .enabled)
+        // Preserve hosting for directories saved before this preference existed.
+        includeWorktrees = try v.decodeIfPresent(Bool.self, forKey: .includeWorktrees) ?? true
+    }
 }
 public struct LocalSite: Codable, Identifiable, Equatable, Sendable {
     public let id: UUID
@@ -20,11 +31,13 @@ public struct LocalSite: Codable, Identifiable, Equatable, Sendable {
     public let directoryID: UUID?
     public var issue: String?
     public var ignored = false
+    public var worktreeExcluded = false
+    public var isIgnoredForHosting: Bool { ignored || worktreeExcluded }
     public init(id: UUID = UUID(), domain: String, path: String, documentRoot: String, mode: SiteMode, proxyPort: Int? = nil, https: Bool = false, phpID: String? = nil, directoryID: UUID? = nil, issue: String? = nil, automaticDomain: Bool = true) {
         self.id = id; self.domain = domain; self.automaticDomain = automaticDomain; self.path = path; self.documentRoot = documentRoot; self.mode = mode
         self.proxyPort = proxyPort; self.https = https; self.phpID = phpID; self.directoryID = directoryID; self.issue = issue
     }
-    enum CodingKeys: String, CodingKey { case id, domain, automaticDomain, path, documentRoot, mode, proxyPort, https, phpID, directoryID, issue, ignored }
+    enum CodingKeys: String, CodingKey { case id, domain, automaticDomain, path, documentRoot, mode, proxyPort, https, phpID, directoryID, issue, ignored, worktreeExcluded }
     public init(from decoder: Decoder) throws {
         let v = try decoder.container(keyedBy: CodingKeys.self)
         id = try v.decode(UUID.self, forKey: .id); domain = try v.decode(String.self, forKey: .domain)
@@ -34,6 +47,7 @@ public struct LocalSite: Codable, Identifiable, Equatable, Sendable {
         https = try v.decode(Bool.self, forKey: .https); phpID = try v.decodeIfPresent(String.self, forKey: .phpID)
         directoryID = try v.decodeIfPresent(UUID.self, forKey: .directoryID); issue = try v.decodeIfPresent(String.self, forKey: .issue)
         ignored = try v.decodeIfPresent(Bool.self, forKey: .ignored) ?? false
+        worktreeExcluded = try v.decodeIfPresent(Bool.self, forKey: .worktreeExcluded) ?? false
     }
 
 }
@@ -57,6 +71,7 @@ public struct WebWorkspace: Codable, Equatable, Sendable {
     public init() {}
 }
 public enum SiteStatus: String, Sendable {
+    case worktreeExcluded = "Worktree excluded from local hosting"
     case ignored = "Ignored for local hosting", serving = "Serving", stopped = "Stopped", missingFolder = "Folder missing", needsPHP = "PHP unavailable", waitingForApp = "Waiting for app", configurationIssue = "Needs attention"
 }
 public struct WebStatus: Sendable {
@@ -76,6 +91,6 @@ extension WebWorkspace {
 extension MorrowState {
     var webReservedPorts: [Int] {
         guard web.caddyPath != nil || !web.sites.isEmpty || !web.directories.isEmpty else { return [] }
-        return [web.httpPort, web.httpsPort, web.dnsPort] + web.sites.filter { $0.mode == .proxy && !$0.ignored }.compactMap(\.proxyPort)
+        return [web.httpPort, web.httpsPort, web.dnsPort] + web.sites.filter { $0.mode == .proxy && !$0.isIgnoredForHosting }.compactMap(\.proxyPort)
     }
 }

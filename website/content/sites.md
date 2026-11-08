@@ -25,6 +25,22 @@ morrow site unpark "$HOME/Projects"
 
 Folder names are converted to lowercase DNS labels; spaces and unsupported characters become hyphens. Duplicate domains across directories show a conflict instead of silently choosing a project. Use **Project Settings** to choose a unique hostname. Hidden folders, `node_modules`, `vendor`, `build`, and `dist` are skipped during automatic discovery.
 
+## Git worktree hosting
+
+Under **Sites → + → Project Directories**, each directory has an **Include Git worktrees** switch. Turn it off to exclude linked Git worktree folders from automatic local hosting. The choice is saved per directory and also applies to worktrees discovered later. It starts enabled so existing sites keep working after an update.
+
+Excluded worktrees stay listed as **Worktree excluded from local hosting**. Their files, custom domains, HTTPS preferences, folder runtime selections, and individual ignore choices are preserved. Turn the switch back on to restore their routes. Regular repositories and submodules are unaffected. Detection reads [Git's worktree metadata](https://git-scm.com/docs/gitrepository-layout); it does not run Git or require Git to be installed.
+
+```sh
+morrow site directory "$HOME/Projects" --worktrees off
+morrow site directory "$HOME/Projects" --worktrees on
+morrow site directories
+```
+
+This switch controls automatically discovered sites only. To host one worktree explicitly while excluding the rest, use **Link Project** or `morrow site link /path/to/worktree`. Explicit links stay independent of the directory preference. Morrow only discovers immediate child folders of a parked directory; it does not search every worktree registered with a repository.
+
+Changing this preference while Sites is running reloads the affected routes and updates the directory monitor to the current Morrow CLI. Your project files and unrelated services remain intact.
+
 ## Ignore folders for local hosting
 
 For a folder that should not receive a local domain, open its project menu and choose **Ignore for .test hosting** (the label follows your configured suffix). Morrow keeps the project settings and folder, removes its route from the web server, and shows **Ignored for local hosting**. Directory refreshes retain this choice. Choose **Include in .test hosting** to restore it.

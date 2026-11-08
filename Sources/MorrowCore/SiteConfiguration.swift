@@ -57,7 +57,7 @@ extension SiteManager {
         }
 
         """
-        for site in web.sites where site.issue == nil && !site.ignored {
+        for site in web.sites where site.issue == nil && !site.isIgnoredForHosting {
             let secure = site.https
             result += "\(secure ? "https" : "http")://\(site.domain):\(secure ? web.httpsPort : web.httpPort) {\n    bind 127.0.0.1\n"
             if secure {

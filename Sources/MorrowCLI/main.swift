@@ -56,7 +56,8 @@ Morrow — databases and development runtimes.
   morrow site park <directory>            Discover folder-name.test projects
   morrow site unpark <directory>          Remove parked routes; preserve files
   morrow site directories                 List parked directories
-  morrow site directory <path> on|off     Enable or pause directory discovery
+  morrow site directory <path> [on|off] [--worktrees on|off]
+                                         Manage discovery and worktree hosting
   morrow site link [path] --port <port>   Link a local app port to its folder domain
       --domain <name> --https             Optional custom name and HTTPS
   morrow site unlink <domain>             Remove an explicit project link
@@ -511,13 +512,20 @@ func siteMain(_ args: [String], manager: SiteManager) throws {
         print(action == "park" ? "Project directory parked." : "Directory routes removed; files preserved.")
     case "directories":
         guard remaining.isEmpty else { throw MorrowError.message("Usage: morrow site directories") }
-        for item in try manager.store.load().web.directories { print("\(item.enabled ? "Enabled" : "Paused") · \(item.path)") }
+        for item in try manager.store.load().web.directories { print("\(item.enabled ? "Enabled" : "Paused") · Worktrees \(item.includeWorktrees ? "included" : "excluded") · \(item.path)") }
     case "directory":
-        let options = try Options(remaining); try options.requireCount(2, usage: "morrow site directory <path> on|off")
-        guard ["on", "off"].contains(options.positional[1]) else { throw MorrowError.message("Use on or off.") }
+        let options = try Options(remaining, allowedValues: ["--worktrees"])
+        guard (1...2).contains(options.positional.count), options.positional.count == 2 || options.values["--worktrees"] != nil else {
+            throw MorrowError.message("Usage: morrow site directory <path> [on|off] [--worktrees on|off]")
+        }
+        let enabled = options.positional.count == 2 ? options.positional[1] : nil
+        let worktrees = options.values["--worktrees"]
+        guard [enabled, worktrees].compactMap({ $0 }).allSatisfy({ ["on", "off"].contains($0) }) else {
+            throw MorrowError.message("Use on or off for directory discovery and --worktrees.")
+        }
         let path = URL(fileURLWithPath: options.positional[0]).standardizedFileURL.resolvingSymlinksInPath().path
         guard let item = try manager.store.load().web.directories.first(where: { $0.path == path }) else { throw MorrowError.message("That directory is not parked.") }
-        try manager.setDirectory(item.id, enabled: options.positional[1] == "on")
+        try manager.setDirectory(item.id, enabled: enabled.map { $0 == "on" }, includeWorktrees: worktrees.map { $0 == "on" }, cli: cli)
     case "link":
         let options = try Options(remaining, allowedValues: ["--port", "--domain"], allowedFlags: ["--https"])
         guard options.positional.count <= 1 else { throw MorrowError.message("Usage: morrow site link [path] [--port <port>] [--domain <name>] [--https]") }

@@ -177,8 +177,8 @@ Configuration options: `--smtp-port <port>`, `--http-port <port>`, `--name <name
 | --- | --- |
 | `morrow site park <directory>` | Discover immediate project folders |
 | `morrow site unpark <directory>` | Remove automatic routes, preserving folders |
-| `morrow site directories` | List parked directories |
-| `morrow site directory <path> on|off` | Enable or pause discovery |
+| `morrow site directories` | List parked directories, discovery status, and worktree policy |
+| `morrow site directory <path> [on\|off] [--worktrees on\|off]` | Enable/pause discovery and include/exclude automatically discovered Git worktrees; supply at least one setting |
 | `morrow site link [path] [--port <port>] [--domain <name>] [--https]` | Link a project or an app port; omitted path means the working directory |
 | `morrow site unlink <domain>` | Remove an explicit link |
 | `morrow site list [--json]` | List routes; text includes status, JSON includes route records |

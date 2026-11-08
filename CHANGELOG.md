@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Added a saved **Include Git worktrees** preference for each project directory, shared by the app and CLI. Excluding worktrees removes their automatic hosting routes while preserving folders, site settings, and manual links. Existing directories keep their current hosting behavior until the preference is changed.
+
+## 0.2.1
+
 - Matched inset button curves to their outer cards using the card radius minus the shared inset. Unified border weights and standalone control corners, aligned action labels with the content gutter, and removed overlapping shadows inside grouped action rows.
 
 ## 0.2.0
