@@ -370,6 +370,20 @@ final class AppModel {
             catch { domainFailure = true; httpsMessage = error.localizedDescription }
         }
     }
+    func renewSiteHTTPS(_ site: LocalSite) {
+        guard !busy, !preview else { return }
+        domainActivity = "Renewing certificate for \(site.domain)…"; domainFailure = false
+        let sites = sites
+        Task {
+            defer { domainActivity = nil }
+            do {
+                let certificates = try await Task.detached { try sites.renewHTTPS(site.domain) }.value
+                httpsMessage = certificates.first?.summary ?? "Certificate renewed."
+                siteHTTPSFailures[site.id] = nil
+                await refresh()
+            } catch { domainFailure = true; httpsMessage = error.localizedDescription }
+        }
+    }
     func setSiteHTTPS(_ site: LocalSite, enabled: Bool) {
         let context = FeedbackContext(section: .sites, sheet: feedbackContext.sheet)
         siteHTTPSFailures[site.id] = nil

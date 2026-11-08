@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Local HTTPS now issues 368-day site certificates, displays their expiry in Sites and the CLI, and can renew certificates on demand while preserving the trusted root. Automatic renewal still runs while Sites is active.
+- Kept local HTTPS on HTTP/1.1 and HTTP/2 to match the native TCP gateway, and clear cached HTTP/3 alternate routes to private listener ports.
+- Fixed command-launcher resolution when invoking `morrow` through PATH from a project folder.
+
 - Accelerated large distribution publication with multipart uploads and bounded parallel public byte-range verification, retaining complete SHA-256 verification, retries for interrupted ranges, and conditional catalog writes.
 
 - Focused new app and binary releases on Apple silicon. Distribution recipes, signing jobs, publication, and the active catalog use arm64 only; existing Intel archive URLs remain available and running services are not changed.

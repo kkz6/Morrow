@@ -198,7 +198,9 @@ Configuration options: `--smtp-port <port>`, `--http-port <port>`, `--name <name
 | `morrow site configure [options]` | Change suffix, listener ports, and new-site HTTPS/login defaults |
 | `morrow site setup [options] [--remove]` | Administrator setup/removal of scoped DNS and localhost gateway sockets |
 | `morrow site trust` | Trust and verify Morrow's local CA in this user's login keychain |
-| `morrow site check-https [domain]` | Check native CA trust and TLS for a selected route; with no domain, check the first enabled HTTPS route |
+| `morrow site check-https [domain]` | Check native CA trust and TLS and report the certificate expiry; with no domain, check the first enabled HTTPS route |
+| `morrow site certificates` | List active HTTPS sites and when their certificates expire |
+| `morrow site renew-https [domain]` | Issue a fresh certificate for one site or all active HTTPS sites, briefly restarting the web server and keeping the trusted root |
 | `morrow site open <domain>` | Open the project URL |
 | `morrow site logs <domain>` | Print recent routing output |
 
@@ -228,3 +230,5 @@ Read [Sites and project directories](/docs/sites) for PHP roots, development-scr
 Creation options: `--api-port <port>`, `--console-port <port>`, `--autostart`, `--start`. Configuration options: `--name <name>`, `--api-port <port>`, `--console-port <port>`, `--autostart on\|off`. Missing creation ports select free ports beginning at 9000.
 
 Read [Local S3 storage](/docs/object-storage) for buckets, SDK settings, credentials, and data preservation.
+
+Morrow resolves its own launcher independently of the current working directory, so commands invoked through PATH use the same installation from any project folder.

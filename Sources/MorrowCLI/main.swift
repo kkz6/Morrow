@@ -74,6 +74,8 @@ Morrow — databases and development runtimes.
       --replace-resolvers                Back up and replace previous resolver files
   morrow site trust                      Trust this Mac's local CA in the login keychain
   morrow site check-https [domain]       Verify trust and the selected HTTPS route
+  morrow site certificates               List local HTTPS certificate expiry dates
+  morrow site renew-https [domain]        Renew one or all active HTTPS certificates
   morrow site open|logs <domain>          Open a site or print its routing log
   morrow mail create <name>               Create a local SMTP testing server
       --smtp-port <port>                 Default: next free port from 1025
@@ -159,7 +161,7 @@ func main() throws {
     }
     if command == "settings" {
         guard args.isEmpty else { throw MorrowError.message("Usage: morrow settings") }
-        let binary = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath()
+        let binary = try ExecutableLocation.current()
         let bundle = binary.deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
         if bundle.pathExtension == "app" {
             try CommandRunner().run("/usr/bin/open", [bundle.path, "--args", "--settings"]).checked()
@@ -178,7 +180,7 @@ func main() throws {
         print("Data:      \(manager.store.root.path)")
         print("Catalog:   \(installer.managed.catalogURL.isEmpty ? "Not configured (direct Go downloads available)" : installer.managed.catalogURL)")
         print("Installer: Portable distributions; no package manager required")
-        print("Grouping:  \(BackgroundAttribution(launcher: URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath()).message)")
+        print("Grouping:  \(BackgroundAttribution(launcher: try ExecutableLocation.current()).message)")
         print("Versions:  \(try installer.installations().count) native installations")
         print("Instances: \(try manager.store.load().instances.count)")
         return
@@ -187,7 +189,7 @@ func main() throws {
     if command == "background" {
         guard args.count == 1, ["status", "clean"].contains(args[0]) else { throw MorrowError.message("Usage: morrow background status|clean") }
         let registrations = BackgroundRegistrations(store: manager.store, runner: manager.runner)
-        if args[0] == "clean" { print(try registrations.clean(cli: URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath())) }
+        if args[0] == "clean" { print(try registrations.clean(cli: try ExecutableLocation.current())) }
         else {
             for file in registrations.permissionFiles() {
                 let status = SMAppService.statusForLegacyPlist(at: file)
@@ -335,7 +337,7 @@ func binaryMain(_ args: [String], manager: DatabaseManager) throws {
 func toolsMain(_ args: [String], manager: RuntimeManager) throws {
     guard let action = args.first else { throw MorrowError.message("Run morrow tool catalog or morrow --help.") }
     let remaining = Array(args.dropFirst())
-    let cli = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath()
+    let cli = try ExecutableLocation.current()
     func runtime(_ value: String) throws -> RuntimeEngine {
         guard let selected = RuntimeEngine.parse(value) else { throw MorrowError.message("Unknown runtime. Run morrow tool catalog.") }; return selected
     }
@@ -405,7 +407,7 @@ func projectMain(_ args: [String], manager: RuntimeManager) throws {
         let options = try Options(remaining, allowedValues: ["--path"])
         try options.requireCount(2, usage: "morrow project use <runtime> <version> [--path <folder>]")
         let path = options.values["--path"] ?? FileManager.default.currentDirectoryPath
-        let item = try manager.useForProject(engine(options.positional[0]), version: options.positional[1], directory: path, cli: URL(fileURLWithPath: CommandLine.arguments[0]))
+        let item = try manager.useForProject(engine(options.positional[0]), version: options.positional[1], directory: path, cli: try ExecutableLocation.current())
         print("\(item.engine.title) \(item.version) selected for \(try ProjectRuntimeStore.directory(path)) and its subfolders.")
     case "list":
         let options = try Options(remaining, allowedFlags: ["--json"])
@@ -487,7 +489,7 @@ func mailMain(_ args: [String], manager: MailManager) throws {
 func siteMain(_ args: [String], manager: SiteManager) throws {
     guard let action = args.first else { throw MorrowError.message("Run morrow site --help or morrow --help.") }
     let remaining = Array(args.dropFirst())
-    let cli = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath()
+    let cli = try ExecutableLocation.current()
     switch action {
     case "setup-service":
         guard remaining.isEmpty else { throw MorrowError.message("The setup service has no command arguments.") }
@@ -538,6 +540,18 @@ func siteMain(_ args: [String], manager: SiteManager) throws {
         guard options.positional.count <= 1 else { throw MorrowError.message("Usage: morrow site check-https [domain]") }
         if let domain = options.positional.first { print(try manager.verifyHTTPS(manager.resolve(domain))) }
         else { print(try manager.httpsSummary()) }
+    case "certificates", "renew-https":
+        let options = try Options(remaining)
+        let certificates: [LocalHTTPSCertificate]
+        if action == "certificates" {
+            try options.requireCount(0, usage: "morrow site certificates")
+            certificates = try manager.httpsCertificates()
+        } else {
+            guard options.positional.count <= 1 else { throw MorrowError.message("Usage: morrow site renew-https [domain]") }
+            certificates = try manager.renewHTTPS(options.positional.first)
+        }
+        if certificates.isEmpty { print("No active HTTPS sites.") }
+        else { for certificate in certificates { print(certificate.summary) } }
     case "start", "stop", "refresh", "watch", "trust", "reload-watcher":
         guard remaining.isEmpty else { throw MorrowError.message("Usage: morrow site \(action)") }
         switch action {
@@ -656,7 +670,7 @@ func syncMain(_ args: [String], manager: WorkspaceSync) throws {
     case "now":
         let options = try Options(remaining, allowedFlags: ["--retry", "--json"])
         try options.requireCount(0, usage: "morrow sync now [--retry] [--json]")
-        let cli = URL(fileURLWithPath: CommandLine.arguments[0]).resolvingSymlinksInPath()
+        let cli = try ExecutableLocation.current()
         let report = try manager.synchronize(cli: cli, retry: options.flags.contains("--retry"))
         if options.flags.contains("--json") { try printJSON(report) }
         else {

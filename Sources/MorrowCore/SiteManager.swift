@@ -397,7 +397,8 @@ public struct SiteManager: Sendable {
                 else { statuses[site.id] = .needsPHP }
             } else { statuses[site.id] = .serving }
         }
-        return WebStatus(proxy: proxyStatus, dns: dnsStatus, systemConfigured: configured, setupMessage: message, sites: statuses, httpsTrusted: certificateTrusted())
+        let expirations = httpsCertificates(web).reduce(into: [String: Date]()) { $0[$1.domain] = $1.validUntil }
+        return WebStatus(proxy: proxyStatus, dns: dnsStatus, systemConfigured: configured, setupMessage: message, sites: statuses, httpsTrusted: certificateTrusted(), certificateExpirations: expirations)
     }
     public func runtimeLogURL(_ runtime: RuntimeInstallation) -> URL? {
         guard runtime.engine == .php else { return nil }
@@ -432,11 +433,82 @@ public struct SiteManager: Sendable {
     }
     public func httpsSummary() throws -> String {
         let web = try store.load().web
-        let secure = web.sites.filter { $0.https && !$0.ignored && $0.issue == nil }
+        let secure = secureSites(web)
         guard !secure.isEmpty else { return "Enable HTTPS on a project card first. The default toggle only applies to new projects." }
         guard web.enabled else { return "Start Sites to issue local HTTPS certificates." }
         guard certificateTrusted() else { return "The certificate is not trusted yet. Choose Finish Setup for local HTTPS." }
         return try verifyHTTPS(secure[0])
+    }
+    public func renewHTTPS(_ domain: String? = nil) throws -> [LocalHTTPSCertificate] {
+        try store.operation {
+            let web = try store.load().web
+            let targets = try domain.map { name -> [LocalSite] in
+                let site = try resolve(name)
+                return secureSites(web).filter { $0.id == site.id }
+            } ?? secureSites(web)
+            guard !targets.isEmpty else { throw MorrowError.message("Enable HTTPS on an active project before renewing its certificate.") }
+            guard web.enabled, let caddy = web.caddyPath, live("caddy", web: web) else {
+                throw MorrowError.message("Start local hosting before renewing HTTPS certificates.")
+            }
+            for site in targets where try Self.validateDomain(site.domain, web: web) != site.domain {
+                throw MorrowError.message("This project has an invalid local hostname.")
+            }
+            let cutoff = Date().addingTimeInterval(Double(Self.siteCertificateDays) * 86_400)
+            guard let rootExpiry = Self.certificateExpiration(certificateURL), rootExpiry > cutoff else {
+                throw MorrowError.message("Morrow needs a local root valid for at least another \(Self.siteCertificateDays) days to renew these certificates.")
+            }
+            var files = targets.map(siteCertificateDirectory)
+            if (Self.certificateExpiration(intermediateCertificateURL) ?? .distantPast) <= cutoff {
+                files += [intermediateCertificateURL, intermediateCertificateURL.deletingPathExtension().appendingPathExtension("key")]
+            }
+            let previous = try String(contentsOf: configurationURL, encoding: .utf8)
+            let updated = try caddyConfiguration(web)
+            let candidate = base.appendingPathComponent("Caddyfile.next")
+            try writeFile(updated, to: candidate)
+            try runner.run(caddy, ["validate", "--config", candidate.path, "--adapter", "caddyfile"], environment: [:]).checked()
+
+            let backup = base.appendingPathComponent("certificate-renewal-\(UUID().uuidString)")
+            let fm = FileManager.default
+            try fm.createDirectory(at: backup, withIntermediateDirectories: false, attributes: [.posixPermissions: 0o700])
+            var keepBackup = false
+            defer { if !keepBackup { try? fm.removeItem(at: backup) } }
+            try launchd.unload(label("caddy", web: web))
+            var moved: [(original: URL, saved: URL?)] = []
+            do {
+                for (index, file) in files.enumerated() {
+                    let saved = backup.appendingPathComponent(String(index))
+                    if fm.fileExists(atPath: file.path) {
+                        try fm.moveItem(at: file, to: saved)
+                        moved.append((file, saved))
+                    } else { moved.append((file, nil)) }
+                }
+                try writeFile(updated, to: configurationURL)
+                try launchd.bootstrap(job("caddy", web: web))
+                try waitFor("caddy", web: web, port: web.httpPort)
+                let domains = Set(targets.map(\.domain))
+                for _ in 0..<50 {
+                    let issued = httpsCertificates(web).filter { domains.contains($0.domain) }
+                    if issued.count == domains.count, issued.allSatisfy({ ($0.validUntil ?? .distantPast) >= cutoff.addingTimeInterval(-60) }) { return issued }
+                    Thread.sleep(forTimeInterval: 0.1)
+                }
+                throw MorrowError.message("Caddy did not issue the renewed certificates. Check the Sites routing log.")
+            } catch {
+                do {
+                    try launchd.unload(label("caddy", web: web))
+                    for (original, saved) in moved.reversed() {
+                        if fm.fileExists(atPath: original.path) { try fm.removeItem(at: original) }
+                        if let saved { try fm.moveItem(at: saved, to: original) }
+                    }
+                    try writeFile(previous, to: configurationURL)
+                    try launchd.bootstrap(job("caddy", web: web))
+                    try waitFor("caddy", web: web, port: web.httpPort)
+                } catch {
+                    keepBackup = true
+                    throw MorrowError.message("Could not restore local hosting after renewal. Remaining certificate backups are in \(backup.path). \(error.localizedDescription)")
+                }
+                throw error
+            }
+        }
     }
     public func verifyHTTPS(_ site: LocalSite) throws -> String {
         let web = try store.load().web
@@ -448,15 +520,16 @@ public struct SiteManager: Sendable {
         let domain = current.domain
         let configured = SiteSystemSetup.isConfigured(http: web.httpPort, https: web.httpsPort, dns: web.dnsPort, suffixes: web.suffixes)
         let address = "https://\(domain)\(configured ? "" : ":\(web.httpsPort)")/"
-        var arguments = ["--silent", "--show-error", "--max-time", "8", "--noproxy", "*", "--cacert", certificateURL.path, "--output", "/dev/null", "--write-out", "%{http_code}"]
+        var arguments = ["--silent", "--show-error", "--max-time", "8", "--noproxy", "*", "--cacert", certificateURL.path, "--output", "/dev/null", "--write-out", "%{http_code}\n%{certs}"]
         if !configured { arguments += ["--resolve", "\(domain):\(web.httpsPort):127.0.0.1"] }
         let response = try runner.run("/usr/bin/curl", arguments + [address], environment: [:])
         guard response.status == 0 else {
             throw MorrowError.message("HTTPS could not connect to \(domain). \(String(response.errorOutput.suffix(350)))")
         }
-        if !configured {
-            return "HTTPS verified for \(domain):\(web.httpsPort). Finish local-domain setup to use port 443."
-        }
-        return "HTTPS verified for \(domain) on port 443 (HTTP \(response.output))."
+        let code = response.output.split(whereSeparator: \.isNewline).first ?? "unknown"
+        let endpoint = configured ? "\(domain) on port 443" : "\(domain):\(web.httpsPort)"
+        let expiry = Self.certificateExpiration(pem: response.output).map { " Valid until \($0.formatted(date: .abbreviated, time: .shortened))." } ?? ""
+        let setup = configured ? "" : " Finish local-domain setup to use port 443."
+        return "HTTPS verified for \(endpoint) (HTTP \(code))." + expiry + setup
     }
 }

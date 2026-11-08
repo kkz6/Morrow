@@ -164,7 +164,9 @@ morrow site unsecure shop.test
 morrow site configure --https on
 ```
 
-The global setting controls new sites. Caddy's internal CA issues and renews certificates for explicitly configured project hostnames. It does not request public certificates for these development domains.
+The global setting controls new sites. Caddy's internal CA issues and automatically renews certificates for explicitly configured project hostnames. New site certificates are valid for up to 368 days. Existing certificates adopt the new lifetime when renewed, subject to the remaining validity of the certificate chain. Morrow does not request public certificates for these development domains.
+
+Local hosting uses HTTP/1.1 and HTTP/2. The clean-port gateway forwards TCP, so Morrow does not advertise HTTP/3 on its private HTTPS listener. HTTPS responses also clear previously cached alternate-service routes, keeping browsers on the displayed project address.
 
 The project's HTTPS switch and a small padlock beside its domain show that HTTPS is enabled. Enabling or disabling it does not show a success toast or confirmation card. An enabled, active route with a trusted certificate is checked quietly; connection failures show an actionable error card on Sites. A padlock with an amber accent explains missing setup, stopped hosting, ignored hosting, or a failed connection in its tooltip. The menu dropdown contains no toast notifications.
 
@@ -181,9 +183,15 @@ morrow site trust
 ```sh
 morrow site check-https
 morrow site check-https shop.test
+morrow site certificates
+morrow site renew-https shop.test
 ```
 
-After routing is configured, validation checks the normal project hostname and HTTPS port 443, including system DNS and forwarding. Before setup, it checks the private listener directly and explains the remaining setup step. HTTP redirects such as 302 still establish a working TLS connection; the check does not verify an application's business logic.
+The project row shows its certificate expiry date. Use **Renew HTTPS Certificate** in the project’s **…** menu to issue a fresh certificate immediately. Renewal briefly restarts the web server and keeps the existing trusted root, so it does not ask for trust again. Run `morrow site renew-https` without a hostname to renew every active HTTPS site in one restart.
+
+After routing is configured, validation checks the normal project hostname and HTTPS port 443, including system DNS and forwarding, and shows the expiry of the certificate served there. Before setup, it checks the private listener directly and explains the remaining setup step. HTTP redirects such as 302 still establish a working TLS connection; the check does not verify an application's business logic.
+
+If HTTPS connects but your app sends you back to sign in or returns a session or CSRF error, check the application's session lifetime and cookie settings for the displayed HTTPS hostname. Renewing the site's certificate does not change that application's session or cookie lifetime.
 
 Before system routing is enabled, use the displayed address such as `https://shop.test:8443`. The default HTTPS switch applies only to new sites; existing projects have their own HTTPS toggles.
 

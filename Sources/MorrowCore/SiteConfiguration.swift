@@ -35,12 +35,18 @@ extension SiteManager {
             auto_https disable_redirects
             http_port \(web.httpPort)
             https_port \(web.httpsPort)
+            renew_interval 1m
+            servers {
+                protocols h1 h2
+            }
             storage file_system {
                 root \(try Self.quote(base.appendingPathComponent("caddy-data").path))
             }
             pki {
                 ca local {
                     name "Morrow Development CA"
+                    intermediate_lifetime 1460d
+                    renewal_window_ratio 0.3
                 }
             }
         }
@@ -54,7 +60,9 @@ extension SiteManager {
         for site in web.sites where site.issue == nil && !site.ignored {
             let secure = site.https
             result += "\(secure ? "https" : "http")://\(site.domain):\(secure ? web.httpsPort : web.httpPort) {\n    bind 127.0.0.1\n"
-            if secure { result += "    tls internal\n" }
+            if secure {
+                result += "    tls {\n        issuer internal {\n            lifetime \(Self.siteCertificateDays)d\n        }\n    }\n    header Alt-Svc clear\n"
+            }
             // Bind each hostname explicitly; unknown folders are never served.
             result += "    log\n"
             if site.mode == .proxy {

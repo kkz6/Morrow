@@ -116,7 +116,10 @@ struct SitesPane: View {
         return hasPreviousResolver ? "Replace Setup" : "Set Up"
     }
     private func siteRow(_ site: LocalSite) -> some View {
-        HStack(spacing: 12) {
+        let status = site.ignored ? "Ignored for .\(model.web.suffix) hosting" : site.issue ?? model.webStatus?.sites[site.id]?.rawValue ?? "Stopped"
+        let expiry = model.webStatus?.certificateExpirations[site.domain]
+        let validUntil = expiry.map { " · \($0 > Date() ? "Valid until" : "Expired") \($0.formatted(date: .abbreviated, time: .omitted))" } ?? ""
+        return HStack(spacing: 12) {
             IconTile(symbol: site.mode == .proxy ? "arrow.triangle.branch" : "globe", color: .blue, size: 30)
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 5) {
@@ -129,7 +132,7 @@ struct SitesPane: View {
                     }
                 }
                 Text(site.mode == .proxy ? "127.0.0.1:\(site.proxyPort.map(String.init) ?? "—")" : site.documentRoot).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
-                Text(site.ignored ? "Ignored for .\(model.web.suffix) hosting" : site.issue ?? model.webStatus?.sites[site.id]?.rawValue ?? "Stopped").font(.system(size: 11)).foregroundStyle(site.issue == nil ? Color.secondary : Color.orange).lineLimit(2)
+                Text(status + validUntil).font(.system(size: 11)).foregroundStyle(site.issue == nil ? Color.secondary : Color.orange).lineLimit(2)
             }
             Spacer()
             Toggle("HTTPS for \(site.domain)", isOn: Binding(get: { site.https }, set: { value in
@@ -142,6 +145,10 @@ struct SitesPane: View {
                     model.perform(ignore ? "Ignoring project…" : "Including project…", success: ignore ? "Project ignored for local domains; folder preserved" : "Project included in local hosting") { try SiteManager(store: $0.store, runner: $0.runner).ignore(site.id, ignored: ignore) }
                 }
                 Button("Open Site") { NSWorkspace.shared.open(model.sites.url(site, web: model.web)) }
+                if site.https && !site.ignored && site.issue == nil {
+                    Button("Renew HTTPS Certificate") { model.renewSiteHTTPS(site) }
+                        .disabled(model.webStatus?.proxy != .running).help("Briefly restarts the local web server.")
+                }
                 Button("Project Settings…") { editing = site }
                 Button("Reveal Project") { NSWorkspace.shared.open(URL(fileURLWithPath: site.path)) }
                 if site.directoryID == nil { Button("Unlink", role: .destructive) { model.perform("Removing route…") { try SiteManager(store: $0.store, runner: $0.runner).unlink(site.id) } } }
@@ -153,6 +160,7 @@ struct SitesPane: View {
         if let failure = model.siteHTTPSFailures[site.id], failure.domain == site.domain { return failure.message }
         if !model.web.enabled { return "HTTPS is enabled; start local hosting to use it." }
         if model.webStatus?.httpsTrusted != true { return "HTTPS is enabled; finish Local Domains setup to trust its certificate." }
+        if let expiry = model.webStatus?.certificateExpirations[site.domain], expiry <= Date() { return "The certificate expired. Choose Renew HTTPS Certificate in the project menu." }
         return nil
     }
 }
