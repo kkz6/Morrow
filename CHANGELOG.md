@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Updated the shared settings layout with native macOS window controls, consistent section spacing, a pane-owned floating header, visible appearance choices, and full-row About links. Warm-gray cards, shared action corners, and the existing window size are preserved.
+- Added Sparkle app updates with manual checks and an automatic-check preference in About. Signed releases verify update archives with Morrow's own Ed25519 key; local development builds never replace themselves through the updater.
+- Release tags and the manual release workflow now build Apple silicon packages, sign the app and updater helpers, notarize and staple the app, verify the signed update feed, and publish the complete download to GitHub Releases. Failed or older releases cannot replace the stable feed.
+
 - Local HTTPS now issues 368-day site certificates, displays their expiry in Sites and the CLI, and can renew certificates on demand while preserving the trusted root. Automatic renewal still runs while Sites is active.
 - Kept local HTTPS on HTTP/1.1 and HTTP/2 to match the native TCP gateway, and clear cached HTTP/3 alternate routes to private listener ports.
 - Fixed command-launcher resolution when invoking `morrow` through PATH from a project folder.

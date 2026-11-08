@@ -26,6 +26,7 @@ from urllib.parse import urlparse
 path=sys.argv[1]
 with open(path,'rb') as source: info=plistlib.load(source)
 version=os.environ.get('MORROW_RELEASE_VERSION','')
+info['MorrowEnableUpdater'] = bool(version and os.environ.get('MORROW_SIGNING_IDENTITY', '-') not in ('', '-'))
 if version:
     if not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+',version): raise SystemExit('Invalid release version.')
     info['CFBundleShortVersionString']=version
@@ -39,6 +40,30 @@ with open(path,'wb') as destination: plistlib.dump(info,destination)
 PY
 /usr/libexec/PlistBuddy -c "Add :DTSDKName string macosx$MORROW_SDK_VERSION" "$app/Contents/Info.plist"
 cp -R "$binary_directory/Morrow_MorrowApp.bundle" "$app/Contents/Resources/"
+mkdir -p "$app/Contents/Frameworks"
+# SwiftPM links the binary framework; the bundle must also contain it at runtime.
+sparkle_source=".build/artifacts/sparkle/Sparkle/Sparkle.xcframework/macos-arm64_x86_64/Sparkle.framework"
+test -d "$sparkle_source"
+rm -rf "$app/Contents/Frameworks/Sparkle.framework"
+ditto "$sparkle_source" "$app/Contents/Frameworks/Sparkle.framework"
+cp .build/artifacts/sparkle/Sparkle/LICENSE "$app/Contents/Resources/Sparkle-LICENSE.txt"
+# Distribute only Apple silicon code, including the updater's nested helpers.
+python3 - "$app/Contents/Frameworks/Sparkle.framework" <<'PY'
+from pathlib import Path
+import os, subprocess, sys
+for path in Path(sys.argv[1]).rglob('*'):
+    if path.is_symlink() or not path.is_file(): continue
+    with path.open('rb') as source: magic=source.read(4)
+    if magic not in (b'\xca\xfe\xba\xbe', b'\xca\xfe\xba\xbf', b'\xcf\xfa\xed\xfe'): continue
+    archs=subprocess.check_output(['lipo','-archs',str(path)],text=True).split()
+    if 'arm64' not in archs: raise SystemExit('Updater binary is missing Apple silicon support.')
+    if archs != ['arm64']:
+        mode=path.stat().st_mode
+        temporary=path.with_name(path.name+'.arm64')
+        subprocess.run(['lipo',str(path),'-thin','arm64','-output',str(temporary)],check=True)
+        temporary.chmod(mode)
+        os.replace(temporary,path)
+PY
 cp Resources/ThirdPartyNotices.txt "$app/Contents/Resources/"
 mkdir -p "$app/Contents/Library/LaunchDaemons"
 cp Resources/dev.morrow.setup.plist "$app/Contents/Library/LaunchDaemons/"
@@ -57,6 +82,18 @@ for morrow_binary in "$app/Contents/MacOS/MorrowMenuBar" "$app/Contents/MacOS/mo
     fi
 done
 morrow_signing_identity="${MORROW_SIGNING_IDENTITY:--}"
+sparkle_framework="$app/Contents/Frameworks/Sparkle.framework"
+sparkle_current="$sparkle_framework/Versions/Current"
+sparkle_signing_args=(--force --sign "$morrow_signing_identity")
+if [[ "$morrow_signing_identity" != "-" ]]; then
+    sparkle_signing_args+=(--options runtime --timestamp)
+fi
+# Sign from the inside out, preserving the downloader's own entitlements.
+codesign "${sparkle_signing_args[@]}" "$sparkle_current/XPCServices/Installer.xpc"
+codesign "${sparkle_signing_args[@]}" --preserve-metadata=entitlements "$sparkle_current/XPCServices/Downloader.xpc"
+codesign "${sparkle_signing_args[@]}" "$sparkle_current/Autoupdate"
+codesign "${sparkle_signing_args[@]}" "$sparkle_current/Updater.app"
+codesign "${sparkle_signing_args[@]}" "$sparkle_framework"
 if [[ "$morrow_signing_identity" == "-" ]]; then
     codesign --force --sign - "$app/Contents/MacOS/morrow"
 else
@@ -89,7 +126,7 @@ else
         exit 1
     fi
     codesign --verify --strict "$app/Contents/MacOS/morrow"
-    codesign --verify --strict "$app"
+    codesign --verify --deep --strict "$app"
 fi
 if [[ "$app" == "build/Morrow.app" ]]; then
     ln -sfn Morrow.app/Contents/MacOS/morrow build/morrow

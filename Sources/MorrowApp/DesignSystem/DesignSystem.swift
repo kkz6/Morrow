@@ -23,7 +23,7 @@ enum DS {
     }
 
     enum Size {
-        static let rowHeight: CGFloat = 44
+        static let rowHeight: CGFloat = 46
         static let tile: CGFloat = 26
         static let popoverWidth: CGFloat = MenuLayout.width
     }
@@ -140,6 +140,7 @@ struct SettingsCard<Content: View>: View {
             RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
                 .fill(DS.Surface.card(colorScheme))
         )
+        .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
                 .strokeBorder(DS.borderColor, lineWidth: 1)

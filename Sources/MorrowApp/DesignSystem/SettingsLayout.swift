@@ -15,10 +15,10 @@ enum SettingsLayout {
     static let detailTopInset: CGFloat = 13
     static let detailBottomInset: CGFloat = 22
     static let detailHeaderHeight: CGFloat = 26
-    static let detailSectionSpacing: CGFloat = 12
+    static let detailSectionSpacing: CGFloat = 14
     static let groupHeaderSpacing: CGFloat = 6
     static let cardHorizontalInset: CGFloat = 14
-    static let cardVerticalInset: CGFloat = 12
+    static let cardVerticalInset: CGFloat = 10
     static let actionLabelInset: CGFloat = 11
     static let actionInset: CGFloat = 4
     static let actionSpacing: CGFloat = 6
@@ -59,7 +59,6 @@ struct SettingsShell<Destination: SettingsDestination, Detail: View>: View {
     @Binding var selection: Destination
     let groups: [SettingsSidebarGroup<Destination>]
     @ViewBuilder let detail: (Destination) -> Detail
-    @State private var scrolled = false
 
     var body: some View {
         HStack(spacing: 0) {
@@ -73,17 +72,9 @@ struct SettingsShell<Destination: SettingsDestination, Detail: View>: View {
 
             Divider()
 
-            ScrollView {
-                detail(selection)
-                    .background(SettingsScrollObserver(scrolled: $scrolled))
-            }
-            .scrollContentBackground(.hidden)
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .id(selection)
-            .overlay(alignment: .topLeading) {
-                FloatingSettingsHeader(section: selection, scrolled: scrolled)
-                    .frame(height: FloatingHeaderMetrics.height).allowsHitTesting(false)
-            }
+            detail(selection)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .id(selection)
         }
         // Match the fixed frame owned by SettingsWindowController. The hosting
         // controller has intrinsic sizing disabled, so this is a content layout
@@ -94,7 +85,6 @@ struct SettingsShell<Destination: SettingsDestination, Detail: View>: View {
         )
         .background(VisualEffectView(material: .underWindowBackground).ignoresSafeArea())
         .ignoresSafeArea()
-        .onChange(of: selection) { _, _ in scrolled = false }
     }
 }
 

@@ -72,16 +72,7 @@ struct SettingsWindow: View {
     var body: some View {
         @Bindable var model = model
         SettingsShell(selection: $model.selection, groups: groups) { section in
-            VStack(spacing: 0) {
-                detail(section)
-                if let activity = model.activity {
-                    HStack(spacing: 8) { ProgressView().controlSize(.small); Text(activity).font(.system(size: 12)) }
-                        .frame(maxWidth: .infinity, alignment: .leading).padding(16)
-                }
-                if let error = model.error, model.toast?.text != error {
-                    ErrorCard(message: error) { model.error = nil }.padding(.horizontal, 16).padding(.bottom, 16)
-                }
-            }
+            detail(section)
         }
         .feedbackSheet(item: $model.logRequest) { ServiceLogSheet(request: $0).environment(model) }
         .feedbackSheet(item: $model.configurationRequest) { ConfigurationEditorSheet(request: $0).environment(model) }
@@ -115,20 +106,60 @@ struct SettingsPane<Destination: SettingsDestination, Content: View>: View {
     let section: Destination
     var embedded = false
     @ViewBuilder var content: Content
+    @Environment(AppModel.self) private var model
+    @State private var hasScrolled = false
+
     var body: some View {
+        if embedded {
+            paneContent
+        } else {
+            ZStack(alignment: .top) {
+                ScrollView {
+                    paneContent
+                        .padding(.horizontal, SettingsLayout.detailHorizontalInset)
+                        .padding(.top, FloatingHeaderMetrics.height)
+                        .padding(.bottom, SettingsLayout.detailBottomInset)
+                        .background(SettingsScrollObserver(scrolled: $hasScrolled))
+                }
+                .scrollContentBackground(.hidden)
+
+                FloatingSettingsHeader(section: section, scrolled: hasScrolled)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+        }
+    }
+
+    private var paneContent: some View {
         VStack(alignment: .leading, spacing: SettingsLayout.detailSectionSpacing) {
-            // The floating shell draws the title. Retain its exact space so
-            // the first content group stays on the existing 53pt top grid.
-            if !embedded {
-                Color.clear.frame(height: SettingsLayout.detailHeaderHeight).accessibilityHidden(true)
-                if let section = section as? SettingsSection { SettingsPageFeedback(section: section) }
+            if !embedded, let section = section as? SettingsSection {
+                SettingsPageFeedback(section: section)
             }
             content
+            if !embedded {
+                if let activity = model.activity {
+                    HStack(spacing: DS.Spacing.sm) {
+                        ProgressView().controlSize(.small)
+                        Text(activity).font(.system(size: 12))
+                    }
+                }
+                if let error = model.error, model.toast?.text != error {
+                    ErrorCard(message: error) { model.error = nil }
+                }
+            }
         }
-        .padding(.horizontal, embedded ? 0 : SettingsLayout.detailHorizontalInset)
-        .padding(.top, embedded ? 0 : SettingsLayout.detailTopInset)
-        .padding(.bottom, embedded ? 0 : SettingsLayout.detailBottomInset)
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+}
+
+/// A section title stays close to its content, including embedded preferences.
+struct SettingsSubsection<Content: View>: View {
+    var header: LocalizedStringKey?
+    @ViewBuilder var content: Content
+    var body: some View {
+        VStack(alignment: .leading, spacing: SettingsLayout.groupHeaderSpacing) {
+            if let header { SectionHeader(title: header) }
+            content
+        }
     }
 }
 
@@ -136,8 +167,7 @@ struct SettingsGroup<Content: View>: View {
     var header: LocalizedStringKey?
     @ViewBuilder var content: Content
     var body: some View {
-        VStack(alignment: .leading, spacing: SettingsLayout.groupHeaderSpacing) {
-            if let header { SectionHeader(title: header) }
+        SettingsSubsection(header: header) {
             SettingsCard { content }
         }
     }

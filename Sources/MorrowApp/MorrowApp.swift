@@ -6,11 +6,13 @@ import MorrowCore
 struct MorrowApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @State private var model: AppModel
+    @State private var updater: AppUpdater
     private let settingsController: SettingsWindowController
 
     init() {
         let snapshot = CommandLine.arguments.contains("--snapshot")
         let model = AppModel(preview: snapshot)
+        let updater = AppUpdater(startingUpdater: snapshot ? false : nil)
         if CommandLine.arguments.contains("--logs") { model.selection = .logs }
         if CommandLine.arguments.contains("--about") { model.selection = .about }
         if snapshot && CommandLine.arguments.contains("--snapshot-installed") {
@@ -41,22 +43,23 @@ struct MorrowApp: App {
             size: SettingsLayout.windowSize, trafficLightLeading: SettingsLayout.trafficLightLeading,
             trafficLightCenterFromTop: SettingsLayout.titlebarControlCenterFromTop))
         _model = State(initialValue: model)
+        _updater = State(initialValue: updater)
         settingsController = controller
         AppDelegate.onLaunch = {
             if snapshot {
-                SnapshotRenderer.render(model: model, controller: controller)
+                SnapshotRenderer.render(model: model, updater: updater, controller: controller)
             } else {
                 model.startMonitoring()
                 if CommandLine.arguments.contains("--settings") {
-                    controller.show(SettingsRoot(model: model))
+                    controller.show(SettingsRoot(model: model, updater: updater))
                 }
-                if model.onboardingPresented { controller.show(SettingsRoot(model: model)) }
+                if model.onboardingPresented { controller.show(SettingsRoot(model: model, updater: updater)) }
                 if CommandLine.arguments.contains("--setup-domains") { model.selection = .sites; model.installSiteSystemSetup(repair: true) }
                 if CommandLine.arguments.contains("--repair-background") { model.cleanupBackgroundItems() }
                 if CommandLine.arguments.contains("--refresh-setup-helper") { model.refreshSetupHelper() }
             }
         }
-        AppDelegate.onReopen = { controller.show(SettingsRoot(model: model)) }
+        AppDelegate.onReopen = { controller.show(SettingsRoot(model: model, updater: updater)) }
         AppDelegate.onActivate = { Task { model.refreshPermissions(); await model.refresh() } }
     }
     var body: some Scene {
@@ -76,13 +79,14 @@ struct MorrowApp: App {
             }
         }
     }
-    private func openSettings() { settingsController.show(SettingsRoot(model: model)) }
+    private func openSettings() { settingsController.show(SettingsRoot(model: model, updater: updater)) }
 }
 
 private struct SettingsRoot: View {
     let model: AppModel
+    let updater: AppUpdater
     var body: some View {
-        SettingsWindow().environment(model).tint(.morrowAccent).preferredColorScheme(model.colorScheme)
+        SettingsWindow().environment(model).environment(updater).tint(.morrowAccent).preferredColorScheme(model.colorScheme)
             .background(SettingsWindowAppearance(scheme: model.colorScheme))
     }
 }
@@ -121,24 +125,24 @@ private final class AppearanceTrackingView: NSView {
 /// Render only Morrow's own views with isolated fixture data. No screen capture
 /// or access to the user's databases is involved.
 @MainActor private enum SnapshotRenderer {
-    static func render(model: AppModel, controller: SettingsWindowController) {
+    static func render(model: AppModel, updater: AppUpdater, controller: SettingsWindowController) {
         let args = CommandLine.arguments
         guard let index = args.firstIndex(of: "--snapshot"), index + 1 < args.count else { NSApplication.shared.terminate(nil); return }
         let directory = URL(fileURLWithPath: args[index + 1])
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        let window = controller.prepareWindow(SettingsRoot(model: model))
+        let window = controller.prepareWindow(SettingsRoot(model: model, updater: updater))
         window.orderFront(nil)
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.7) {
             if args.contains("--snapshot-scrolled"), let view = window.contentView, let scroll = findScrollView(in: view) {
                 scroll.contentView.scroll(to: NSPoint(x: 0, y: 180))
                 scroll.reflectScrolledClipView(scroll.contentView)
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
-                    save(view: view, to: directory.appendingPathComponent("settings.png"))
+                    save(view: view.superview ?? view, to: directory.appendingPathComponent("settings.png"))
                     NSApplication.shared.terminate(nil)
                 }
                 return
             }
-            if let view = window.contentView { save(view: view, to: directory.appendingPathComponent("settings.png")) }
+            if let view = window.contentView { save(view: view.superview ?? view, to: directory.appendingPathComponent("settings.png")) }
             let menu = NSHostingView(rootView: DatabasePopover().environment(model).tint(.morrowAccent)
                 .background(Color(nsColor: .windowBackgroundColor)).preferredColorScheme(model.colorScheme ?? .light))
             let serviceCount = model.instances.count + model.mailServices.count + model.objectStorage.count
@@ -159,6 +163,18 @@ private final class AppearanceTrackingView: NSView {
                 editorWindow.orderFront(nil)
                 editor.layoutSubtreeIfNeeded()
                 save(view: editor, to: directory.appendingPathComponent("editor.png"))
+            }
+            if args.contains("--snapshot-onboarding") {
+                let setup = NSHostingView(rootView: OnboardingSheet().environment(model)
+                    .tint(.morrowAccent).preferredColorScheme(model.colorScheme ?? .light)
+                    .background(Color(nsColor: .windowBackgroundColor)))
+                setup.frame = NSRect(origin: .zero, size: setup.fittingSize)
+                let setupWindow = NSWindow(contentRect: setup.frame, styleMask: [.borderless], backing: .buffered, defer: false)
+                setupWindow.appearance = NSAppearance(named: model.colorScheme == .dark ? .darkAqua : .aqua)
+                setupWindow.contentView = setup
+                setupWindow.orderFront(nil)
+                setup.layoutSubtreeIfNeeded()
+                save(view: setup, to: directory.appendingPathComponent("onboarding.png"))
             }
             NSApplication.shared.terminate(nil)
         }

@@ -14,78 +14,38 @@ enum FloatingHeaderMetrics {
     }
 }
 
-struct FloatingSettingsHeader<Destination: SettingsDestination>: NSViewRepresentable {
+/// The title remains SwiftUI content above a native, masked backdrop. Keeping
+/// both inside the pane gives them the same lifetime as its scroll view.
+struct FloatingSettingsHeader<Destination: SettingsDestination>: View {
     let section: Destination
+    let scrolled: Bool
+
+    var body: some View {
+        HStack(spacing: DS.Spacing.sm) {
+            IconTile(symbol: section.symbol, color: section.color, size: 22)
+            Text(section.title)
+                .font(.system(size: 18, weight: .semibold))
+                .accessibilityAddTraits(.isHeader)
+            Spacer(minLength: 0)
+        }
+        .frame(height: SettingsLayout.detailHeaderHeight)
+        .padding(.horizontal, SettingsLayout.detailHorizontalInset)
+        .padding(.top, SettingsLayout.detailTopInset)
+        .padding(.bottom, SettingsLayout.detailSectionSpacing)
+        .background(SettingsHeaderBackdrop(scrolled: scrolled))
+        .allowsHitTesting(false)
+    }
+}
+
+private struct SettingsHeaderBackdrop: NSViewRepresentable {
     let scrolled: Bool
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.colorScheme) private var colorScheme
-    func makeNSView(context: Context) -> HeaderAnchorView { HeaderAnchorView() }
-    func updateNSView(_ anchor: HeaderAnchorView, context: Context) {
-        anchor.overlay.title.heading = NSLocalizedString(section.textTitle, comment: "Settings title")
-        anchor.overlay.title.symbol = section.symbol
-        anchor.overlay.title.tint = NSColor(section.color)
-        anchor.overlay.title.needsDisplay = true
-        anchor.overlay.effect.appearance = NSAppearance(named: colorScheme == .dark ? .darkAqua : .aqua)
-        anchor.overlay.effect.setVisible(scrolled, animated: !reduceMotion)
-        anchor.syncFrame()
-    }
-}
 
-/// Native sibling hosting keeps the blur above all SwiftUI scroll content and
-/// its title above the blur, including text rendered in SwiftUI's backing layer.
-final class HeaderAnchorView: NSView {
-    let overlay = HeaderOverlayView()
-    override func viewDidMoveToWindow() { super.viewDidMoveToWindow(); syncFrame() }
-    override func layout() { super.layout(); syncFrame() }
-    func syncFrame() {
-        guard let container = window?.contentView else { overlay.removeFromSuperview(); return }
-        if overlay.superview !== container {
-            overlay.removeFromSuperview()
-            container.addSubview(overlay)
-        }
-        overlay.frame = convert(bounds, to: container)
-        overlay.layoutSubtreeIfNeeded()
-    }
-    override func hitTest(_ point: NSPoint) -> NSView? { nil }
-}
-
-final class HeaderOverlayView: NSView {
-    let effect = HeaderEffectView()
-    let title = HeaderTitleView()
-    override init(frame frameRect: NSRect) {
-        super.init(frame: frameRect)
-        addSubview(effect)
-        addSubview(title)
-    }
-    convenience init() { self.init(frame: .zero) }
-    required init?(coder: NSCoder) { nil }
-    override func layout() {
-        super.layout()
-        effect.frame = bounds
-        title.frame = bounds
-    }
-    override func hitTest(_ point: NSPoint) -> NSView? { nil }
-}
-
-final class HeaderTitleView: NSView {
-    var heading = ""
-    var symbol = "gearshape.fill"
-    var tint = NSColor.gray
-    override var isFlipped: Bool { true }
-    override var isOpaque: Bool { false }
-    override func draw(_ dirtyRect: NSRect) {
-        let rect = NSRect(x: SettingsLayout.detailHorizontalInset, y: SettingsLayout.detailTopInset + 2, width: 22, height: 22)
-        let tile = NSBezierPath(roundedRect: rect, xRadius: 8, yRadius: 8)
-        NSGradient(starting: tint, ending: tint.blended(withFraction: 0.1, of: .black) ?? tint)?.draw(in: tile, angle: -90)
-        let config = NSImage.SymbolConfiguration(pointSize: 11, weight: .semibold)
-            .applying(NSImage.SymbolConfiguration(paletteColors: [.white]))
-        let titleSymbol = symbol == "info.circle.fill" ? "info.circle" : symbol
-        NSImage(systemSymbolName: titleSymbol, accessibilityDescription: nil)?.withSymbolConfiguration(config)?.draw(in: rect.insetBy(dx: 5, dy: 5))
-        let text = NSAttributedString(string: heading, attributes: [.font: NSFont.systemFont(ofSize: 18, weight: .semibold), .foregroundColor: NSColor.labelColor])
-        text.draw(at: NSPoint(x: rect.maxX + DS.Spacing.sm,
-            y: SettingsLayout.detailTopInset + (SettingsLayout.detailHeaderHeight - text.size().height) / 2))
-        setAccessibilityLabel(heading)
-        setAccessibilityRole(.staticText)
+    func makeNSView(context: Context) -> HeaderEffectView { HeaderEffectView() }
+    func updateNSView(_ effect: HeaderEffectView, context: Context) {
+        effect.appearance = NSAppearance(named: colorScheme == .dark ? .darkAqua : .aqua)
+        effect.setVisible(scrolled, animated: !reduceMotion)
     }
 }
 

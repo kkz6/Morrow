@@ -29,6 +29,14 @@ New workspaces open a setup assistant. Choose launch at login, the optional `mor
 
 Choose **Allow Morrow Setup** to review a native in-app explanation, then continue to macOS approval. Local domains require one-time approval for **Morrow** in macOS **System Settings → General → Login Items & Extensions**. The native helper handles only local DNS and standard-port setup; no sudo password is stored. Database and runtime management work without that helper. You can finish later and enable local domains when needed.
 
+## Settings and app updates
+
+Settings uses one fixed-size window with native macOS window controls. Each page keeps its title above the scrolling content, with a softly fading backdrop when needed. Cards share the same warm-gray surface, text gutters, and grouped action corners in light and dark appearances. Header animations respect Reduce Motion.
+
+**General** groups startup permissions, Appearance, Menu Bar, Command Line, and iCloud Sync. Choose **System**, **Light**, or **Dark** from the visible theme choices. **About** contains app update controls and links to documentation, source code, and issue reporting.
+
+In signed releases, choose **About → Check for Updates…**, or enable **Automatically check for updates**. Morrow uses Sparkle's native update window and verifies downloaded updates before installation. Updating the menu bar app does not upgrade your databases or runtimes. Development builds keep their local version and disable app updates. Builds predating the updater need one manual installation of a current signed release from [GitHub Releases](https://github.com/kkz6/Morrow/releases/latest).
+
 ## Create a database
 
 **General → Background access** displays the native helper's current permission. Morrow refreshes it when returning from System Settings and while monitoring, so an already allowed helper is not shown as needing approval. Approval and successful routing are separate checks; a helper can be allowed while local domains still need setup.

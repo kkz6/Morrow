@@ -14,7 +14,7 @@ release_directory="$(dirname "$app")"
 submission="$release_directory/notary-submission.zip"
 report="$release_directory/notarization.json"
 codesign --verify --strict "$app/Contents/MacOS/morrow"
-codesign --verify --strict "$app"
+codesign --verify --deep --strict "$app"
 ditto -c -k --sequesterRsrc --keepParent "$app" "$submission"
 submission_status=0
 xcrun notarytool submit "$submission" --keychain-profile "$MORROW_NOTARY_PROFILE" --keychain "$MORROW_NOTARY_KEYCHAIN" --wait --timeout 45m --output-format json > "$report" || submission_status=$?

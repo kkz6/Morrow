@@ -106,7 +106,7 @@ struct MenuBarPane: View {
                     if model.preferences.showRunningCount { Text("\(model.runningCount)").monospacedDigit() }
                     Spacer()
                     Text("Morrow in your menu bar").font(.system(size: 12)).foregroundStyle(.secondary)
-                }.padding(16)
+                }.settingsCellPadding()
             }
             SettingsNote(text: "Click the menu bar icon to start or stop instances, copy a connection address, or open Settings.")
         }
@@ -119,13 +119,11 @@ struct AppearancePane: View {
     var body: some View {
         SettingsPane(section: SettingsSection.appearance, embedded: embedded) {
             SettingsGroup {
-                SettingRow(title: "Appearance") {
-                    SettingsSelect(label: "Appearance", selection: model.preference(\.appearance), options: [
+                SettingsSegmentedRow(title: "Theme", selection: model.preference(\.appearance), options: [
                         .init(value: "system", title: "System", symbol: "circle.lefthalf.filled"),
-                        .init(value: "light", title: "Light", symbol: "sun.max.fill"),
-                        .init(value: "dark", title: "Dark", symbol: "moon.fill"),
-                    ])
-                }
+                        .init(value: "light", title: "Light", symbol: "sun.max"),
+                        .init(value: "dark", title: "Dark", symbol: "moon"),
+                ])
             }
             SettingsNote(text: "System follows your Mac’s appearance. Native materials adapt across the menu bar and Settings.")
         }
@@ -133,6 +131,7 @@ struct AppearancePane: View {
 }
 
 struct AboutPane: View {
+    @Environment(AppUpdater.self) private var updater
     private var version: String {
         Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "0.1.0"
     }
@@ -140,22 +139,42 @@ struct AboutPane: View {
         SettingsPane(section: SettingsSection.about) {
             VStack(spacing: 8) {
                 Image(nsImage: NSImage(named: NSImage.applicationIconName) ?? NSImage())
-                    .resizable().frame(width: 56, height: 56)
+                    .resizable().interpolation(.high).frame(width: 64, height: 64)
                 Text("Morrow").font(.system(size: 22, weight: .medium))
                 Text("Version \(version)").font(.system(size: 12)).foregroundStyle(.secondary)
-            }.frame(maxWidth: .infinity).padding(.top, 16).padding(.bottom, 20)
+            }.frame(maxWidth: .infinity).padding(.vertical, DS.Spacing.lg)
+            SettingsGroup {
+                Button { updater.checkForUpdates() } label: {
+                    SettingRow(icon: "arrow.triangle.2.circlepath", iconColor: .blue, title: "Check for Updates…") {
+                        if updater.isPreparingUpdateCheck {
+                            ProgressView().controlSize(.small)
+                        } else {
+                            Text(version).font(.system(size: 12)).foregroundStyle(.secondary)
+                        }
+                    }
+                }
+                .buttonStyle(SettingsNavigationRowStyle())
+                .disabled(!updater.isAvailable || updater.isPreparingUpdateCheck)
+                SettingsDivider()
+                SettingRow(title: "Automatically check for updates") {
+                    Toggle("Automatically check for updates", isOn: Binding(
+                        get: { updater.automaticallyChecksForUpdates },
+                        set: { updater.automaticallyChecksForUpdates = $0 }
+                    )).settingsToggle().disabled(!updater.isAvailable)
+                }
+            }
+            if !updater.isAvailable {
+                SettingsNote(text: "App updates are available in signed releases. Development builds stay on your local version.")
+            }
             SettingsGroup(header: "Resources") {
-                SettingsActionRow(title: "Documentation", symbol: "book") {
-                    NSWorkspace.shared.open(URL(string: "https://kkz6.github.io/Morrow/")!)
-                }
+                SettingsLinkRow(title: "Documentation", symbol: "book.fill", color: .blue,
+                                url: URL(string: "https://kkz6.github.io/Morrow/")!)
                 SettingsDivider()
-                SettingsActionRow(title: "Source Code", symbol: "chevron.left.forwardslash.chevron.right") {
-                    NSWorkspace.shared.open(URL(string: "https://github.com/kkz6/Morrow")!)
-                }
+                SettingsLinkRow(title: "Source Code", symbol: "chevron.left.forwardslash.chevron.right", color: .gray,
+                                url: URL(string: "https://github.com/kkz6/Morrow")!)
                 SettingsDivider()
-                SettingsActionRow(title: "Report a Problem", symbol: "bubble.left") {
-                    NSWorkspace.shared.open(URL(string: "https://github.com/kkz6/Morrow/issues/new")!)
-                }
+                SettingsLinkRow(title: "Report a Problem", symbol: "bubble.left.fill", color: .orange,
+                                url: URL(string: "https://github.com/kkz6/Morrow/issues/new")!)
             }
         }
     }
@@ -165,14 +184,10 @@ struct GeneralPane: View {
     var body: some View {
         SettingsPane(section: SettingsSection.general) {
             GeneralOptionsPane(embedded: true)
-            SectionHeader(title: "Appearance")
-            AppearancePane(embedded: true)
-            SectionHeader(title: "Menu Bar")
-            MenuBarPane(embedded: true)
-            SectionHeader(title: "Command Line")
-            CommandLinePane(embedded: true)
-            SectionHeader(title: "iCloud Sync")
-            SyncPane(embedded: true)
+            SettingsSubsection(header: "Appearance") { AppearancePane(embedded: true) }
+            SettingsSubsection(header: "Menu Bar") { MenuBarPane(embedded: true) }
+            SettingsSubsection(header: "Command Line") { CommandLinePane(embedded: true) }
+            SettingsSubsection(header: "iCloud Sync") { SyncPane(embedded: true) }
         }
     }
 }

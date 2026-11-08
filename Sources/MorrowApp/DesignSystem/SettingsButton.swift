@@ -1,5 +1,37 @@
 import SwiftUI
 
+/// Full-row navigation uses the card itself as its surface.
+struct SettingsLinkRow: View {
+    let title: LocalizedStringKey
+    let symbol: String
+    var color: Color = .accentColor
+    let url: URL
+
+    var body: some View {
+        Link(destination: url) {
+            SettingRow(icon: symbol, iconColor: color, title: title) {
+                Image(systemName: "arrow.up.right")
+                    .font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.tertiary)
+            }
+        }
+        .buttonStyle(SettingsNavigationRowStyle())
+    }
+}
+
+struct SettingsNavigationRowStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var enabled
+    @State private var hovering = false
+
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.primary.opacity(!enabled ? 0 : configuration.isPressed ? 0.08 : hovering ? 0.035 : 0))
+            .contentShape(Rectangle())
+            .onHover { hovering = $0 }
+    }
+}
+
 /// Neutral bordered action controls matching the supplied macOS reference.
 /// Settings actions can expand across a card; compact icon controls share the
 /// same border, surface, pressed state, and shadow.

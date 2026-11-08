@@ -6,7 +6,7 @@ order: 7.5
 ---
 ## Signed application builds
 
-The **Signed macOS release** GitHub Actions workflow runs on main through **Actions → Signed macOS release → Run workflow**. Enter a numeric version such as `0.1.0`. It uses Xcode 27 and its current macOS SDK, while keeping macOS 14 as the minimum supported version. The initial release targets Apple silicon.
+The **Signed macOS release** GitHub Actions workflow publishes automatically when a stable `v<major>.<minor>.<patch>` tag is pushed. The tagged commit must already be on `main`, and its version must match `Resources/Info.plist`. You can also run **Actions → Signed macOS release → Run workflow** on `main`, enter the matching version, and choose whether to publish or only produce a verified workflow artifact. It uses Xcode 27 and its current macOS SDK, while keeping macOS 14 as the minimum supported version. App releases target Apple silicon, including the updater helpers.
 
 Configure these repository secrets through GitHub's encrypted secret storage:
 
@@ -17,10 +17,17 @@ Configure these repository secrets through GitHub's encrypted secret storage:
 | `MORROW_NOTARY_KEY_BASE64` | Base64 of the dedicated App Store Connect team API key's `.p8` file |
 | `MORROW_NOTARY_KEY_ID` | That API key's Key ID |
 | `MORROW_NOTARY_ISSUER_ID` | The team's Issuer ID |
+| `MORROW_SPARKLE_ED_PRIVATE_KEY` | Base64-encoded 32-byte Ed25519 seed for signing Morrow update archives |
 
 Set repository variable `MORROW_APPLE_TEAM_ID` to the certificate's Apple Team ID. Set `MORROW_BINARY_CATALOG_URL` to the public HTTPS catalog to include it as the default source in releases. A user-selected source overrides this default.
 
-The workflow imports the certificate into a temporary keychain, checks its team, signs the app and bundled launcher with hardened runtime and timestamps, and submits an archive to Apple. Only an accepted submission is stapled and packaged. It verifies the ticket and Gatekeeper assessment before producing `Morrow-<version>-macos-arm64.zip`, `SHA256SUMS`, and the notarization reports. On failure, available reports are retained for diagnosis. Temporary credentials and the keychain are removed even after a failed build. Downloads are available under the workflow run's artifacts; this workflow does not automatically publish a GitHub Release.
+The workflow runs the tests, imports the certificate into a temporary keychain, checks its team, signs the app, bundled CLI, and all Sparkle helpers with hardened runtime and timestamps, and submits an archive to Apple. Only an accepted submission is stapled and packaged. It verifies the ticket and Gatekeeper assessment before producing `Morrow-<version>-macos-arm64.zip`, `SHA256SUMS`, and the notarization reports. On failure, available reports are retained for diagnosis. Temporary credentials and the keychain are removed even after a failed build.
+
+After notarization, the workflow generates `appcast.xml` using the same pinned Sparkle version as the app. The archive's Ed25519 signature is independently verified against `SUPublicEDKey` in the bundled `Info.plist`. The signed ZIP, checksum, and feed are uploaded to a draft release before it is published as the latest release. Published assets are immutable; use a newer version for fixes. Older versions cannot replace the stable feed. The feed URL is [the latest release's appcast](https://github.com/kkz6/Morrow/releases/latest/download/appcast.xml).
+
+Keep the update private key backed up securely outside the repository, and retain the matching public key in `Resources/Info.plist` across releases. This key is separate from the Apple Developer ID certificate. Do not regenerate it for each build. `CFBundleVersion` comes from the release workflow's increasing run number; preserve that ordering if the workflow is replaced. See [Sparkle's distribution documentation](https://sparkle-project.org/documentation/) for update signing and key rotation.
+
+Signed release builds enable the native updater. Local ad-hoc builds leave it disabled, so a development app cannot replace itself with a public release. Updating Morrow does not install database or runtime upgrades, or change their data folders; those remain explicit service-management actions.
 
 Never put private keys, certificate passwords, or storage credentials in source files, workflow text, documentation, or chat. Apple Developer membership and a valid Developer ID Application certificate are required. See [Apple's notarization workflow](https://developer.apple.com/documentation/security/customizing-the-notarization-workflow).
 
