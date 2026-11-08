@@ -37,7 +37,9 @@ struct ActionCorners: Equatable {
         guard grouped ?? (left && right) else { return normal }
         let top = button.minY <= inset + 1
         let bottom = button.maxY >= card.height - inset - 1
-        let edge = min(DS.Radius.actionEdge, max(0, DS.Radius.card - inset))
+        // An inset outline shares the card's corner center only when its radius
+        // shrinks by the same inset. A separate fixed cap breaks that alignment.
+        let edge = max(0, DS.Radius.card - inset)
         let inner = DS.Radius.actionInterior
         // Each outside corner follows the card. Paired buttons retain small
         // corners where they meet; bottom action rows get larger lower edges.

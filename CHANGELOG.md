@@ -2,6 +2,10 @@
 
 ## Unreleased
 
+- Matched inset button curves to their outer cards using the card radius minus the shared inset. Unified border weights and standalone control corners, aligned action labels with the content gutter, and removed overlapping shadows inside grouped action rows.
+
+## 0.2.0
+
 - Updated the shared settings layout with native macOS window controls, consistent section spacing, a pane-owned floating header, visible appearance choices, and full-row About links. Warm-gray cards, shared action corners, and the existing window size are preserved.
 - Added Sparkle app updates with manual checks and an automatic-check preference in About. Signed releases verify update archives with Morrow's own Ed25519 key; local development builds never replace themselves through the updater.
 - Release tags and the manual release workflow now build Apple silicon packages, sign the app and updater helpers, notarize and staple the app, verify the signed update feed, and publish the complete download to GitHub Releases. Failed or older releases cannot replace the stable feed.

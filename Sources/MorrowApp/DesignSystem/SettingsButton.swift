@@ -56,8 +56,8 @@ struct SettingsButtonStyle: ButtonStyle {
                    maxWidth: expands ? .infinity : nil,
                    minHeight: height, maxHeight: height, alignment: alignment)
             .background(surface(pressed: configuration.isPressed), in: corners.shape)
-            .overlay(corners.shape.strokeBorder(DS.Surface.border(colorScheme, enabled: enabled), lineWidth: 0.75))
-            .shadow(color: DS.Surface.shadow(colorScheme, enabled: enabled, pressed: configuration.isPressed), radius: 1, y: 0.5)
+            .overlay(corners.shape.strokeBorder(DS.Surface.border(colorScheme, enabled: enabled), lineWidth: DS.Stroke.border))
+            .shadow(color: expands && card != nil ? .clear : DS.Surface.shadow(colorScheme, enabled: enabled, pressed: configuration.isPressed), radius: 1, y: 0.5)
             .contentShape(corners.shape)
             .background {
                 if let card {
@@ -95,7 +95,7 @@ private struct SettingsMenuControlSurface: ViewModifier {
     func body(content: Content) -> some View {
         content.frame(width: height, height: height)
             .background(DS.Surface.control(colorScheme, state: !enabled ? .disabled : hovering ? .hovered : .normal), in: RoundedRectangle(cornerRadius: ControlLayout.radius))
-            .overlay(RoundedRectangle(cornerRadius: ControlLayout.radius).strokeBorder(DS.Surface.border(colorScheme, enabled: enabled), lineWidth: 0.75))
+            .overlay(RoundedRectangle(cornerRadius: ControlLayout.radius).strokeBorder(DS.Surface.border(colorScheme, enabled: enabled), lineWidth: DS.Stroke.border))
             .onHover { hovering = $0 }
     }
 }

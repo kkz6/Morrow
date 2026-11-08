@@ -19,8 +19,8 @@ enum SettingsLayout {
     static let groupHeaderSpacing: CGFloat = 6
     static let cardHorizontalInset: CGFloat = 14
     static let cardVerticalInset: CGFloat = 10
-    static let actionLabelInset: CGFloat = 11
     static let actionInset: CGFloat = 4
+    static let actionLabelInset = cardHorizontalInset - actionInset
     static let actionSpacing: CGFloat = 6
 
     /// The titlebar controls and detail header share this horizontal baseline.

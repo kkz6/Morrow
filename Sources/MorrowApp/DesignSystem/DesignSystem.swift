@@ -17,9 +17,13 @@ enum DS {
         static let control: CGFloat = 13
         static let selection: CGFloat = 11
         static let tile: CGFloat = 8
-        static let action: CGFloat = 5
+        static let action: CGFloat = 6
         static let actionInterior: CGFloat = 3
-        static let actionEdge: CGFloat = 11
+    }
+
+    enum Stroke {
+        static let border: CGFloat = 0.75
+        static let divider: CGFloat = 0.5
     }
 
     enum Size {
@@ -143,7 +147,7 @@ struct SettingsCard<Content: View>: View {
         .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
-                .strokeBorder(DS.borderColor, lineWidth: 1)
+                .strokeBorder(DS.Surface.border(colorScheme), lineWidth: DS.Stroke.border)
         )
         .shadow(color: DS.Surface.shadow(colorScheme), radius: 1, y: 0.5)
     }
@@ -154,7 +158,7 @@ struct SettingsDivider: View {
     var body: some View {
         Rectangle()
             .fill(DS.dividerColor)
-            .frame(height: 0.5)
+            .frame(height: DS.Stroke.divider)
             .accessibilityHidden(true)
     }
 }

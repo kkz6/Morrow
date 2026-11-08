@@ -2,7 +2,7 @@ import SwiftUI
 
 enum ControlLayout {
     static let height: CGFloat = 32
-    static let radius: CGFloat = 8
+    static let radius = DS.Radius.action
     static let inset: CGFloat = 10
 }
 
@@ -27,7 +27,7 @@ struct SettingsInput: View {
         }
         .padding(.horizontal, ControlLayout.inset).frame(height: ControlLayout.height)
         .background(DS.Surface.input(colorScheme).opacity(enabled ? 1 : 0.5), in: RoundedRectangle(cornerRadius: ControlLayout.radius))
-        .overlay(RoundedRectangle(cornerRadius: ControlLayout.radius).strokeBorder(focused ? Color.morrowAccent.opacity(0.7) : DS.Surface.border(colorScheme, enabled: enabled), lineWidth: focused ? 1 : 0.75))
+        .overlay(RoundedRectangle(cornerRadius: ControlLayout.radius).strokeBorder(focused ? Color.morrowAccent.opacity(0.7) : DS.Surface.border(colorScheme, enabled: enabled), lineWidth: focused ? 1 : DS.Stroke.border))
     }
 }
 

@@ -31,7 +31,7 @@ Choose **Allow Morrow Setup** to review a native in-app explanation, then contin
 
 ## Settings and app updates
 
-Settings uses one fixed-size window with native macOS window controls. Each page keeps its title above the scrolling content, with a softly fading backdrop when needed. Cards share the same warm-gray surface, text gutters, and grouped action corners in light and dark appearances. Header animations respect Reduce Motion.
+Settings uses one fixed-size window with native macOS window controls. Each page keeps its title above the scrolling content, with a softly fading backdrop when needed. Cards share the same warm-gray surface and text gutters in light and dark appearances. Inset actions derive their outside corners from the surrounding card, use matching border weights, and keep an even gap around the edges; paired actions round only their outside corners. Header animations respect Reduce Motion.
 
 **General** groups startup permissions, Appearance, Menu Bar, Command Line, and iCloud Sync. Choose **System**, **Light**, or **Dark** from the visible theme choices. **About** contains app update controls and links to documentation, source code, and issue reporting.
 
