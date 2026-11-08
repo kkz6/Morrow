@@ -1,27 +1,28 @@
 ---
 title: Getting started
-description: Build Morrow and create your first local database in one step.
+description: Download Morrow, set up your workspace, and create your first local database.
 group: Start here
 order: 1
 ---
 Morrow is a native macOS menu bar app and CLI. Both use the same databases, development runtimes, settings, and data folders. This developer preview supports Apple silicon (M-series) Macs running macOS 14 and later.
 
-## Build the app and CLI
+<div class="download-callout">
+<h2>Download Morrow for macOS</h2>
+<p>The signed, Apple-notarized app is ready to use. No Xcode or Homebrew required.</p>
+<p><a class="button" href="{{downloadUrl}}">Download for macOS — v{{version}}</a></p>
+<p>Apple silicon · macOS 14 or later · <a href="{{releaseUrl}}">Release notes and checksums</a></p>
+</div>
 
-Install a full version of Xcode and its command line tools. The build script selects the newest full Xcode in `/Applications` and uses its macOS SDK. No Homebrew installation is required. Missing software uses a configured verified binary catalog; Go can also use official archives. Read [Binary downloads](/docs/binary-downloads) before creating services on a fresh Mac.
+## Install the app
 
-Morrow targets Apple silicon only and supports macOS 14 or newer. Individual runtime packages can require a newer system: Flutter 3.47.7 requires macOS 15 because of its bundled iPhone tooling. Version selectors filter incompatible packages automatically.
+1. [Download the latest signed app]({{downloadUrl}}) and open the ZIP archive.
+2. Move **Morrow.app** into your **Applications** folder.
+3. Open Morrow from Applications. Its icon appears in your menu bar.
+4. Follow the setup assistant, or choose **Finish Later** to configure optional features when you need them.
 
-Flutter includes its SDK, Dart, and engine resources. Its optional package-download cache is omitted; the first use of Dart dependencies can require network access to Pub, as normal project dependency installation does. Dependency license notices remain included.
+The app includes its CLI. Database servers and runtimes download only when needed, with no package manager required. Compatible existing installations can also be reused. See [Binary downloads](/docs/binary-downloads) for details.
 
-```sh
-git clone https://github.com/kkz6/Morrow.git
-cd Morrow
-./scripts/build-app.sh
-open build/Morrow.app --args --settings
-```
-
-The build produces `build/Morrow.app`, which includes the CLI, and `build/morrow` for use from this checkout. Database servers are managed as native processes and downloaded only when necessary.
+Morrow supports Apple silicon Macs running macOS 14 or later. Some runtimes need a newer system; selectors filter incompatible packages. Building the application yourself is optional—see [Contributing](/docs/contributing#build-and-verify) for source-build instructions.
 
 ## First-launch setup
 
@@ -31,7 +32,7 @@ Choose **Allow Morrow Setup** to review a native in-app explanation, then contin
 
 ## Settings and app updates
 
-Settings uses one fixed-size window with native macOS window controls. Each page keeps its title above the scrolling content, with a softly fading backdrop when needed. Cards share the same warm-gray surface and text gutters in light and dark appearances. Inset actions derive their outside corners from the surrounding card, use matching border weights, and keep an even gap around the edges; paired actions round only their outside corners. Header animations respect Reduce Motion.
+Settings uses one fixed-size window with native macOS window controls. Each page keeps its title above the scrolling content, with soft translucent backdrops at the header and bottom edge. Cards share the same warm-gray surface and text gutters in light and dark appearances. Inset actions derive their outside corners from the surrounding card, use matching border weights, and keep an even gap around the edges; paired actions round only their outside corners. The edge fades remain in place as content scrolls beneath them, so no delayed shadow appears or disappears. They introduce no animation, including with Reduce Motion enabled.
 
 **General** groups startup permissions, Appearance, Menu Bar, Command Line, and iCloud Sync. Choose **System**, **Light**, or **Dark** from the visible theme choices. **About** contains app update controls and links to documentation, source code, and issue reporting.
 
@@ -45,20 +46,16 @@ In Settings, open **Databases → New Instance**. Choose the engine and version,
 
 Morrow finds compatible existing binaries, including Homebrew, PATH, Herd, and Postgres.app installations. If the requested version is missing, creation downloads a compatible catalog distribution. If a release is not published, use an existing installation or choose a published version. Port conflicts and duplicate names are rejected before downloading or initializing data.
 
-The equivalent terminal command is:
+After installing the optional CLI below, the equivalent terminal command is:
 
 ```sh
-./build/morrow db create postgresql my-app --version 17 --start
-./build/morrow db list
+morrow db create postgresql my-app --version 17 --start
+morrow db list
 ```
 
 ## Install the morrow command
 
-Open **Settings → General → Command Line → Install CLI**, or run:
-
-```sh
-./scripts/install-cli.sh
-```
+Open **Settings → General → Command Line → Install CLI**. Morrow links the command bundled in your installed app; no source checkout is needed.
 
 Add your local bin directory to PATH in `~/.zshrc` if needed:
 

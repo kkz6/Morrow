@@ -2,6 +2,12 @@
 
 ## Unreleased
 
+- Kept the settings header and footer softly blurred at rest and while scrolling, removing delayed scroll-triggered shadows. Titles stay sharp, bottom controls remain reachable, and the effect follows light and dark appearance without adding motion.
+
+- Redesigned the website and documentation with a shared ivory, slate, and teal theme, original workspace pattern, native app imagery, responsive navigation, and prominent signed-app downloads. Getting Started now covers installation before optional source builds; website downloads refresh after signed releases.
+
+## 0.2.2
+
 - Added a saved **Include Git worktrees** preference for each project directory, shared by the app and CLI. Excluding worktrees removes their automatic hosting routes while preserving folders, site settings, and manual links. Existing directories keep their current hosting behavior until the preference is changed.
 
 ## 0.2.1

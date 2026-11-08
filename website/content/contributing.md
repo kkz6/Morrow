@@ -38,10 +38,15 @@ General is one scrollable grouped page. Sidebar navigation groups Projects, Serv
 
 ## Build and verify
 
+To use Morrow, [download the signed app]({{downloadUrl}}). The steps below are for developing Morrow itself. Install a full version of Xcode; the scripts select its current macOS SDK.
+
 ```sh
+git clone https://github.com/kkz6/Morrow.git
+cd Morrow
 ./scripts/test.sh
 ./scripts/build-app.sh
 ./scripts/build-cli.sh
+open build/Morrow.app --args --settings
 ```
 
 Tests cover state, provider configuration, log reading, creation, duplicate prevention, and port validation. Real native integration checks should use an isolated `MORROW_HOME` and clean up their managed jobs.
@@ -137,3 +142,11 @@ Read `SMAppService` status at startup, during monitoring, and when the app becom
 Generated launchd jobs declare `AssociatedBundleIdentifiers` for Morrow. When the bundled CLI and app have valid matching Apple signing teams, database, mail, web, and S3 workers launch through Morrow's foreground service runner. Ad-hoc development builds launch native workers directly to avoid adding more ungrouped Morrow rows. The signed runner preserves environment/output, forwards stop signals to the owned native child, and exits with that child's status.
 
 Customer executables must share Morrow's Developer Team ID for macOS attribution. macOS owns the final Login Items grouping; ad-hoc previews, old registrations, or standalone unsigned binaries can appear separately. Never modify the system background-task database or claim that separate server processes disappear. Existing services adopt updated job metadata when recreated or restarted; do not stop user databases merely to refresh a settings list.
+
+## Website design and publishing
+
+The homepage and documentation share the website’s CSS tokens, Fraunces/Inter typography, slate and teal palette, native app imagery, and original workspace pattern. Keep navigation, search, downloads, mobile layouts, and keyboard focus consistent across both surfaces. Source Markdown stays in `website/content`; it remains the documentation source of truth.
+
+`npm run generate` resolves the latest published Apple silicon ZIP from GitHub Releases. It uses the verified release in `website/release.json` if the API is unavailable. The same release metadata supplies the homepage, navigation, and Getting Started downloads. The documentation workflow also runs after a successful signed release, keeping download links current.
+
+GitHub Pages publishes `website/.output/public`. `MORROW_SITE_BASE_PATH` and `MORROW_SITE_URL` repository variables select the deployment path and canonical URL. Keep the default `/Morrow/` path until the custom domain is configured; use `/` with `https://morrow.karti.dev/` after DNS is ready. Markdown links are generated for the selected base path. A custom subdomain uses a DNS-only CNAME to `kkz6.github.io`, with HTTPS enforced in GitHub Pages once the certificate is available.

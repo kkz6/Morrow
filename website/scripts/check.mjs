@@ -1,12 +1,28 @@
 import { readFile, access } from 'node:fs/promises'
 const docs = JSON.parse(await readFile(new URL('../app/generated/docs.json', import.meta.url), 'utf8'))
+const release = JSON.parse(await readFile(new URL('../app/generated/release.json', import.meta.url), 'utf8'))
+const baseURL = (process.env.NUXT_APP_BASE_URL || '/').replace(/\/?$/, '/')
 const slugs = new Set(docs.map(page => page.slug))
 const failures = []
 for (const page of docs) {
   if (!page.title || !page.description || !page.group || !Number.isFinite(page.order)) failures.push(`${page.slug}: incomplete metadata`)
-  for (const [, slug] of page.html.matchAll(/href="\/docs\/([^"#]+)(?:#[^"]+)?"/g)) if (!slugs.has(slug)) failures.push(`${page.slug}: broken link /docs/${slug}`)
+  for (const [, href] of page.html.matchAll(/href="([^"#]+)(?:#[^"]*)?"/g)) {
+    if (!href.startsWith('/') || href.startsWith('//')) continue
+    if (!href.startsWith(`${baseURL}docs/`)) { failures.push(`${page.slug}: invalid local link ${href}`); continue }
+    const slug = href.slice(`${baseURL}docs/`.length).replace(/\/$/, '')
+    if (!slugs.has(slug)) failures.push(`${page.slug}: broken link ${href}`)
+  }
+  if (/\{\{(?:version|downloadUrl|releaseUrl)\}\}/.test(page.html)) failures.push(`${page.slug}: unresolved release placeholder`)
   try { await access(new URL(`../.output/public/docs/${page.slug}/index.html`, import.meta.url)) }
   catch { failures.push(`${page.slug}: missing prerendered output`) }
+}
+const gettingStarted = docs.find(page => page.slug === 'getting-started')
+if (!gettingStarted?.html.includes(release.downloadUrl)) failures.push('Getting started is missing the published app download')
+const homepage = await readFile(new URL('../.output/public/index.html', import.meta.url), 'utf8')
+if (!homepage.includes(release.downloadUrl)) failures.push('Homepage is missing the published app download')
+for (const asset of ['morrow-icon.png', 'morrow-workspace.png', 'workspace-pattern.png']) {
+  try { await access(new URL(`../.output/public/images/${asset}`, import.meta.url)) }
+  catch { failures.push(`Missing website asset: ${asset}`) }
 }
 const cli = await readFile(new URL('../../Sources/MorrowCLI/main.swift', import.meta.url), 'utf8')
 const dbSwitch = cli.slice(cli.indexOf('switch subcommand {'), cli.indexOf('func printJSON'))

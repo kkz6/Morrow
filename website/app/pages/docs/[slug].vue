@@ -11,8 +11,8 @@ async function copyCode(event: MouseEvent) {
   const target = event.target as HTMLElement
   if (!target.matches('button[data-copy]')) return
   const text = target.parentElement?.querySelector('code')?.textContent || ''
-  await navigator.clipboard.writeText(text)
-  target.textContent = 'Copied'
+  try { await navigator.clipboard.writeText(text); target.textContent = 'Copied' }
+  catch { target.textContent = 'Select to copy' }
   setTimeout(() => { target.textContent = 'Copy' }, 1600)
 }
 </script>

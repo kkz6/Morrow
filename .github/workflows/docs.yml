@@ -4,6 +4,9 @@ on:
     branches: [main]
   pull_request:
   workflow_dispatch:
+  workflow_run:
+    workflows: ['Signed macOS release']
+    types: [completed]
 permissions:
   contents: read
   pages: write
@@ -13,6 +16,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   build:
+    if: github.event_name != 'workflow_run' || github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -26,7 +30,9 @@ jobs:
       - run: npm run generate && npm run check
         working-directory: website
         env:
-          NUXT_APP_BASE_URL: /Morrow/
+          NUXT_APP_BASE_URL: ${{ vars.MORROW_SITE_BASE_PATH || '/Morrow/' }}
+          NUXT_PUBLIC_SITE_URL: ${{ vars.MORROW_SITE_URL || 'https://kkz6.github.io/Morrow/' }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       - uses: actions/upload-pages-artifact@v5
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
         with:

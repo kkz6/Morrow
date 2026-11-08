@@ -107,7 +107,6 @@ struct SettingsPane<Destination: SettingsDestination, Content: View>: View {
     var embedded = false
     @ViewBuilder var content: Content
     @Environment(AppModel.self) private var model
-    @State private var hasScrolled = false
 
     var body: some View {
         if embedded {
@@ -119,11 +118,16 @@ struct SettingsPane<Destination: SettingsDestination, Content: View>: View {
                         .padding(.horizontal, SettingsLayout.detailHorizontalInset)
                         .padding(.top, FloatingHeaderMetrics.height)
                         .padding(.bottom, SettingsLayout.detailBottomInset)
-                        .background(SettingsScrollObserver(scrolled: $hasScrolled))
                 }
                 .scrollContentBackground(.hidden)
 
-                FloatingSettingsHeader(section: section, scrolled: hasScrolled)
+                FloatingSettingsHeader(section: section)
+            }
+            .overlay(alignment: .bottom) {
+                SettingsEdgeBackdrop(edge: .bottom)
+                    .frame(height: SettingsScrollEdge.bottom.height)
+                    .allowsHitTesting(false)
+                    .accessibilityHidden(true)
             }
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         }
