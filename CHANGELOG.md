@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.2.4
+
 - Gave development app bundles a separate Morrow Preview identity so macOS cannot confuse staged builds with the installed release. Preview builds cannot register the production local-domain setup helper.
 
 - Fixed background-registration cleanup leaving the Sites directory watcher on an older development build. Signed cleanup now migrates that monitor before repairing service associations, preventing it from restoring separate Caddy, DNS, and PHP entries. Serving processes keep running.
