@@ -20,6 +20,9 @@ import MorrowCore
     static var loginPermission: Permission { Permission(SMAppService.mainApp.status) }
     static var approved: Bool { service.status == .enabled }
     static func register() throws -> Bool {
+        guard Bundle.main.bundleIdentifier == "dev.morrow.app" else {
+            throw MorrowError.message("Local-domain setup must be enabled from the installed, signed Morrow app. Preview builds cannot register its system helper.")
+        }
         if service.status != .enabled && service.status != .requiresApproval {
             do { try service.register() }
             catch { guard needsApproval(error) else { throw error }; return false }

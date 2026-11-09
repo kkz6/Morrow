@@ -27,6 +27,12 @@ path=sys.argv[1]
 with open(path,'rb') as source: info=plistlib.load(source)
 version=os.environ.get('MORROW_RELEASE_VERSION','')
 info['MorrowEnableUpdater'] = bool(version and os.environ.get('MORROW_SIGNING_IDENTITY', '-') not in ('', '-'))
+if not info['MorrowEnableUpdater']:
+    # Launch Services discovers staged .app bundles even when never launched.
+    # Preview builds must not compete with the installed signed app's identity.
+    info['CFBundleIdentifier'] = 'dev.morrow.preview'
+    info['CFBundleName'] = 'Morrow Preview'
+    info['CFBundleDisplayName'] = 'Morrow Preview'
 if version:
     if not re.fullmatch(r'[0-9]+\.[0-9]+\.[0-9]+',version): raise SystemExit('Invalid release version.')
     info['CFBundleShortVersionString']=version

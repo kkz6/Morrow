@@ -111,6 +111,8 @@ MORROW_SIGNING_IDENTITY="Developer ID Application: Your Name (TEAMID)" ./scripts
 
 The build signs nested executables before the app, enables hardened runtime, and requests a timestamp when an identity is provided. Default development builds remain ad-hoc signed. The **Signed macOS release** workflow imports private signing material into a temporary keychain, builds with Xcode 27, submits to Apple, staples the accepted ticket, and packages an Apple silicon release with its SHA-256 digest. Its cleanup always removes temporary signing material. See [Release signing and hosting](/docs/releases) for configuration and download publishing. Providing a signing variable alone does not notarize a local build.
 
+Only a versioned build with a real signing identity uses `dev.morrow.app`. Other builds use `dev.morrow.preview` and the name **Morrow Preview**, even if staged inside the repository: Launch Services can discover an app without launching it. Previews cannot register the production local-domain helper. Use the installed signed release for system setup; do not give test bundles the production identity.
+
 Setup uses native `SMAppService` approval. Do not reintroduce AppleScript/Python elevation or cache a sudo password. Keep the setup helper's operations limited to validated local DNS and gateway installation.
 
 ## Background-item attribution

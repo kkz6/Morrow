@@ -108,3 +108,5 @@ Download the workflow artifact and publish the arm64 archive with its correspond
 ## Preserve running services during deployment
 
 Stage a new app with `MORROW_APP_OUTPUT`; do not overwrite executable files used by active service runners. Deploy the entire staged bundle atomically, preserving the previous bundle until its processes have exited. Launch Services registration and scoped attribution cleanup can update association metadata without stopping servers. Already running legacy workers and historical macOS records may remain separate until macOS refreshes or those workers next restart normally. Never reset the global background-task database to force a cosmetic cleanup.
+
+Development and unversioned builds use the separate **Morrow Preview** app identity. The production identity requires both `MORROW_RELEASE_VERSION` and a real `MORROW_SIGNING_IDENTITY`; the signed release workflow supplies both. Avoid retaining test builds with the production identity, since macOS indexes app bundles on disk independently of whether they are running.
