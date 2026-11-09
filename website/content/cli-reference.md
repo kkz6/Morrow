@@ -14,12 +14,19 @@ order: 6
 | `morrow binary brew off` | Clear the legacy compatibility preference; installation always uses portable packages |
 | `morrow background status` | Show native permission status for owned service jobs |
 | `morrow background clean` | Register the app, archive obsolete inactive registrations, and normalize retained definitions only with valid matching Apple signing teams |
+| `morrow background adopt <plist>` | Explicitly import a user-owned project worker registration under Morrow's signed launcher |
+| `morrow background workers` | List imported worker labels and project folders |
+| `morrow background restore <label>` | Restore the saved original registration and remove it from Morrow's imported-worker list |
 
 Read [Binary downloads](/docs/binary-downloads) for manifest format and current provider availability. Cleanup does not stop running databases or clear macOS's global background-item history.
 
 `morrow doctor` reports whether the complete app and its launcher are ready for background grouping. Ad-hoc development builds remain supported and report that Apple signing is deferred. The app's cleanup can also repair gateway association through an approved, current signed helper; the CLI performs user-owned registration repair only.
 
 When run from the signed app, `morrow background clean` also replaces a Sites directory monitor that still points to an older build, then repairs service associations. Web, DNS, PHP, and database processes stay running; an already-current directory monitor is left alone.
+
+Project-worker import requires the installed signed app and a regular, user-owned `.plist` in `~/Library/LaunchAgents`, with an existing executable and project working directory. The app provides the same action in **General → Background access → … → Import Project Worker**. Morrow preserves the original registration privately and changes only the launcher and app association. Import and restore never restart a worker. Existing loaded jobs adopt the new launcher when their registration is reloaded or at the next login; an ordinary child-process restart may still use launchd's old loaded definition. macOS controls when its visible list refreshes.
+
+Cleanup retains imported workers even when stopped and updates their launcher after app-path changes. Externally changed files are left alone; import/restore reports a conflict rather than overwriting them. Imports are local to this Mac and are not added to iCloud sync. Use **Restore Original Worker Registration** in the same app menu, or `morrow background restore <label>`, to undo an import.
 
 ## General commands
 

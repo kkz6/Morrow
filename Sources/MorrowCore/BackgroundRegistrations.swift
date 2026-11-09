@@ -18,7 +18,7 @@ public struct BackgroundRegistrations: Sendable {
         }
         let agents = store.loginAgentURL(label: "unused").deletingLastPathComponent()
         values += ((try? fm.contentsOfDirectory(at: agents, includingPropertiesForKeys: nil)) ?? []).filter { $0.lastPathComponent.hasPrefix("dev.morrow.") && $0.pathExtension == "plist" }
-        return values.filter { owned($0) != nil }
+        return values.filter { owned($0) != nil } + ((try? ProjectWorkers(store: store).managedFiles()) ?? [])
     }
     public func permissionFiles() -> [URL] {
         let loginDirectory = store.loginAgentURL(label: "unused").deletingLastPathComponent().path
@@ -42,11 +42,13 @@ public struct BackgroundRegistrations: Sendable {
         guard cli.path.hasSuffix("/Contents/MacOS/morrow") || ["morrow", "morrow-cli"].contains(cli.lastPathComponent), FileManager.default.isExecutableFile(atPath: cli.path) else { throw MorrowError.message("Morrow's service launcher is missing.") }
         let attribution = BackgroundAttribution(launcher: cli)
         try attribution.registerApp()
+        var importedUpdates = 0
         if attribution.ready {
             // An older directory watcher can rewrite repaired jobs with direct
             // server paths. Move it to this signed launcher first. This takes
             // its own operation lock and leaves all serving processes alone.
             try SiteManager(store: store, runner: runner).updateDirectoryWatcher(cli: cli, onlyIfChanged: true)
+            importedUpdates = try ProjectWorkers(store: store).repair(launcher: cli)
         }
         return try store.operation {
             let state = try store.load(), launchd = LaunchdControl(runner: runner), fm = FileManager.default
@@ -54,7 +56,7 @@ public struct BackgroundRegistrations: Sendable {
             let webLabels = (["watch", "caddy", "dns"] + state.web.php.map(sites.phpComponent)).map { sites.label($0, web: state.web) }
             let retained = Set(state.instances.map(\.label) + state.mailServices.map(\.label) + state.objectStorage.map(\.label) + webLabels)
             let archive = store.root.appendingPathComponent("archives/background-\(UUID().uuidString)")
-            var removed = 0, updated = 0, active = 0
+            var removed = 0, updated = importedUpdates, active = 0
             for file in jobFiles() {
                 guard var job = owned(file), let label = job["Label"] as? String, let arguments = job["ProgramArguments"] as? [String] else { continue }
                 if !retained.contains(label) {

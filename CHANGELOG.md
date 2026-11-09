@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Added explicit project-worker import and restore in General → Background access and the CLI. Imported user jobs use Morrow's signed launcher, retain their commands, runtime paths, folders, environment, and logs, and keep private originals for undo. Cleanup preserves and repairs imported registrations without stopping processes or adopting unrelated jobs.
+
 ## 0.2.4
 
 - Gave development app bundles a separate Morrow Preview identity so macOS cannot confuse staged builds with the installed release. Preview builds cannot register the production local-domain setup helper.

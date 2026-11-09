@@ -58,6 +58,17 @@ struct GeneralOptionsPane: View {
                         Menu {
                             Button("Review Permissions…") { NativeSetupController.openApprovalSettings() }
                             Button("Clean Up Old Registrations") { model.cleanupBackgroundItems() }
+                            Divider()
+                            Button("Import Project Worker…") { model.importProjectWorker() }.disabled(model.preview)
+                            if !model.importedProjectWorkers.isEmpty {
+                                Menu("Restore Original Worker Registration") {
+                                    ForEach(model.importedProjectWorkers, id: \.label) { worker in
+                                        Button("\(URL(fileURLWithPath: worker.directory).lastPathComponent) · \(worker.label)") {
+                                            model.restoreProjectWorker(worker.label)
+                                        }
+                                    }
+                                }
+                            }
                         } label: { Image(systemName: "ellipsis").frame(width: 16) }.settingsMenuControl().help("Background permissions and cleanup").disabled(model.busy)
                     }
                 }

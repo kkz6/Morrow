@@ -31,7 +31,7 @@ const reference = docs.find(page => page.slug === 'cli-reference')?.text || ''
 const binarySwitch = cli.slice(cli.indexOf('func binaryMain'), cli.indexOf('func toolsMain'))
 const binaryCommands = [...binarySwitch.matchAll(/^    case ([^:]+):/gm)].flatMap(match => [...match[1].matchAll(/"([a-z-]+)"/g)].map(item => item[1]))
 for (const command of new Set(binaryCommands)) if (!reference.includes(`morrow binary ${command}`)) failures.push(`CLI reference is missing: morrow binary ${command}`)
-for (const command of ['status', 'clean']) if (!reference.includes(`morrow background ${command}`)) failures.push(`CLI reference is missing: morrow background ${command}`)
+for (const command of ['status', 'clean', 'adopt', 'workers', 'restore']) if (!reference.includes(`morrow background ${command}`)) failures.push(`CLI reference is missing: morrow background ${command}`)
 for (const command of new Set(commands)) if (!reference.includes(`morrow db ${command}`)) failures.push(`CLI reference is missing: morrow db ${command}`)
 const toolSwitch = cli.slice(cli.indexOf('func toolsMain'), cli.indexOf('func projectMain'))
 const toolCommands = [...toolSwitch.matchAll(/^    case ([^:]+):/gm)].flatMap(match => [...match[1].matchAll(/"([a-z-]+)"/g)].map(item => item[1]))

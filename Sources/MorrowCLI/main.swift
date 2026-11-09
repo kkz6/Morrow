@@ -40,6 +40,9 @@ Morrow — databases and development runtimes.
   morrow binary brew off                 Clear the legacy compatibility setting
   morrow background status               Show service permission status
   morrow background clean                Archive obsolete owned registrations
+  morrow background adopt <plist>        Group an existing project worker under Morrow
+  morrow background workers              List explicitly imported project workers
+  morrow background restore <label>      Restore a worker's original registration
   morrow storage create <name>            Create a local MinIO S3 server
       --api-port <port> --console-port <port> --start --autostart
   morrow storage list [--json]            Show S3 servers and endpoints
@@ -188,7 +191,22 @@ func main() throws {
     }
     if command == "binary" { try binaryMain(args, manager: manager); return }
     if command == "background" {
-        guard args.count == 1, ["status", "clean"].contains(args[0]) else { throw MorrowError.message("Usage: morrow background status|clean") }
+        let workers = ProjectWorkers(store: manager.store)
+        if args.count == 2, args[0] == "adopt" {
+            let label = try workers.adopt(URL(fileURLWithPath: args[1]), launcher: ExecutableLocation.current())
+            print("Imported \(label). Running processes were preserved. The signed launcher takes effect when macOS next reloads the job or at your next login.")
+            return
+        }
+        if args.count == 2, args[0] == "restore" {
+            try workers.restore(args[1])
+            print("Restored \(args[1]). Running processes were preserved; the original launcher takes effect on the next job reload or login.")
+            return
+        }
+        if args == ["workers"] {
+            for worker in try workers.workers() { print("\(worker.label)\t\(worker.directory)") }
+            return
+        }
+        guard args.count == 1, ["status", "clean"].contains(args[0]) else { throw MorrowError.message("Usage: morrow background status|clean|workers|adopt <plist>|restore <label>") }
         let registrations = BackgroundRegistrations(store: manager.store, runner: manager.runner)
         if args[0] == "clean" { print(try registrations.clean(cli: try ExecutableLocation.current())) }
         else {

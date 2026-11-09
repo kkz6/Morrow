@@ -2,6 +2,7 @@ import SwiftUI
 import Observation
 import MorrowCore
 import ServiceManagement
+import UniformTypeIdentifiers
 
 struct InstanceCreationRequest: Identifiable {
     let id = UUID()
@@ -32,6 +33,7 @@ final class AppModel {
     var loginPermission: NativeSetupController.Permission = .notRegistered
     var setupHelperRefreshing = false
     var blockedBackgroundItems: [String] = []
+    var importedProjectWorkers: [ProjectWorkers.Worker] = []
     private var setupPreviouslyRegistered = false
     private var setupRegistrationDenied = false
     var setupApprovalRequired: Bool { setupPermission == .needsApproval || setupRegistrationDenied }
@@ -460,6 +462,7 @@ final class AppModel {
         } else { nativeSetupAllowedAt = nil }
         let jobs = BackgroundRegistrations(store: manager.store, runner: manager.runner).permissionFiles()
         blockedBackgroundItems = jobs.filter { SMAppService.statusForLegacyPlist(at: $0) == .requiresApproval }.map { $0.deletingPathExtension().lastPathComponent }
+        importedProjectWorkers = (try? ProjectWorkers(store: manager.store).workers()) ?? []
     }
     func openSetupApproval() { refreshPermissions(); NativeSetupController.requestApproval(afterRegistrationDenied: setupRegistrationDenied) }
     func refreshSetupHelper() {
@@ -473,6 +476,31 @@ final class AppModel {
                 refreshPermissions()
             } catch { notify(error.localizedDescription, error: true, title: "Setup helper needs attention", context: FeedbackContext(section: .general)) }
         }
+    }
+    func importProjectWorker() {
+        let panel = NSOpenPanel()
+        panel.title = "Manage Project Worker"
+        panel.message = "Choose an existing project worker’s launch registration. Morrow keeps its command, project folder, and logs. Running processes stay running."
+        panel.prompt = "Import Worker"
+        panel.canChooseDirectories = false; panel.allowsMultipleSelection = false
+        panel.allowedContentTypes = [UTType(filenameExtension: "plist")!]
+        panel.directoryURL = manager.store.loginAgentURL(label: "unused").deletingLastPathComponent()
+        guard panel.runModal() == .OK, let file = panel.url else { return }
+        let cli = cliURL
+        perform("Importing project worker…", operation: { manager in
+            _ = try ProjectWorkers(store: manager.store).adopt(file, launcher: cli)
+        }, completion: {
+            self.refreshPermissions()
+            self.notify("Worker imported. Its current process is unchanged; Morrow’s launcher takes effect at the next login or job reload.", context: FeedbackContext(section: .general))
+        })
+    }
+    func restoreProjectWorker(_ label: String) {
+        perform("Restoring worker registration…", operation: { manager in
+            try ProjectWorkers(store: manager.store).restore(label)
+        }, completion: {
+            self.refreshPermissions()
+            self.notify("Original registration restored. Running processes are unchanged; it takes effect at the next login or job reload.", context: FeedbackContext(section: .general))
+        })
     }
     func cleanupBackgroundItems() {
         let cli = cliURL

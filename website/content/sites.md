@@ -219,6 +219,12 @@ Open **Project Settings → Folder versions → Choose** to select PHP, Node.js,
 
 Parent folder choices apply to subfolders, with closer choices taking precedence per runtime. Existing explicit PHP route choices are retained as folder selections where the folder has one consistent PHP version. See [Folder Versions](/docs/project-versions) for installation policy and shell setup.
 
+## Existing project workers
+
+Queue workers and WebSocket servers registered independently of Morrow can be imported from **General → Background access → … → Import Project Worker**. Choose the worker's user launch-agent `.plist`; Morrow routes future launches through its signed app launcher and includes its permission in Background access. The CLI equivalent is `morrow background adopt <plist>`.
+
+Import preserves the exact runtime path, arguments, project folder, environment, startup settings, and log destinations. It does not start, stop, or duplicate the worker. Existing loaded jobs use the revised launcher at the next login or explicit registration reload. Originals are stored privately for **Restore Original Worker Registration**; files edited externally are never silently overwritten. Use `morrow background workers` to list imports and `morrow background restore <label>` to undo one. Imports do not sync to other Macs.
+
 ## Logs and actual status
 
 Sites reports live launchd PIDs and listener readiness. PHP projects also need their owned PHP-FPM process and socket; proxy projects need a listening upstream port. These checks indicate routing/runtime readiness, not an application-specific database or business-logic health check.
