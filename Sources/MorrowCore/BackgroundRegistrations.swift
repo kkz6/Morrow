@@ -39,10 +39,16 @@ public struct BackgroundRegistrations: Sendable {
         return job
     }
     public func clean(cli: URL) throws -> String {
-        try store.operation {
-            guard cli.path.hasSuffix("/Contents/MacOS/morrow") || ["morrow", "morrow-cli"].contains(cli.lastPathComponent), FileManager.default.isExecutableFile(atPath: cli.path) else { throw MorrowError.message("Morrow's service launcher is missing.") }
-            let attribution = BackgroundAttribution(launcher: cli)
-            try attribution.registerApp()
+        guard cli.path.hasSuffix("/Contents/MacOS/morrow") || ["morrow", "morrow-cli"].contains(cli.lastPathComponent), FileManager.default.isExecutableFile(atPath: cli.path) else { throw MorrowError.message("Morrow's service launcher is missing.") }
+        let attribution = BackgroundAttribution(launcher: cli)
+        try attribution.registerApp()
+        if attribution.ready {
+            // An older directory watcher can rewrite repaired jobs with direct
+            // server paths. Move it to this signed launcher first. This takes
+            // its own operation lock and leaves all serving processes alone.
+            try SiteManager(store: store, runner: runner).updateDirectoryWatcher(cli: cli, onlyIfChanged: true)
+        }
+        return try store.operation {
             let state = try store.load(), launchd = LaunchdControl(runner: runner), fm = FileManager.default
             let sites = SiteManager(store: store, runner: runner)
             let webLabels = (["watch", "caddy", "dns"] + state.web.php.map(sites.phpComponent)).map { sites.label($0, web: state.web) }

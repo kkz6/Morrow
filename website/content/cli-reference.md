@@ -19,6 +19,8 @@ Read [Binary downloads](/docs/binary-downloads) for manifest format and current 
 
 `morrow doctor` reports whether the complete app and its launcher are ready for background grouping. Ad-hoc development builds remain supported and report that Apple signing is deferred. The app's cleanup can also repair gateway association through an approved, current signed helper; the CLI performs user-owned registration repair only.
 
+When run from the signed app, `morrow background clean` also replaces a Sites directory monitor that still points to an older build, then repairs service associations. Web, DNS, PHP, and database processes stay running; an already-current directory monitor is left alone.
+
 ## General commands
 
 | Command | Purpose |

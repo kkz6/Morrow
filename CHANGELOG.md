@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Fixed background-registration cleanup leaving the Sites directory watcher on an older development build. Signed cleanup now migrates that monitor before repairing service associations, preventing it from restoring separate Caddy, DNS, and PHP entries. Serving processes keep running.
+
 ## 0.2.3
 
 - Kept the settings header and footer softly blurred at rest and while scrolling, removing delayed scroll-triggered shadows. Titles stay sharp, bottom controls remain reachable, and the effect follows light and dark appearance without adding motion.

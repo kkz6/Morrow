@@ -206,11 +206,14 @@ public struct SiteManager: Sendable {
         }
         if web != original { try saveAndApply(web) }
     }
-    public func updateDirectoryWatcher(cli: URL) throws {
+    public func updateDirectoryWatcher(cli: URL, onlyIfChanged: Bool = false) throws {
         try store.operation {
             var web = try store.load().web
             guard web.enabled else { return }
-            web.cliPath = cli.resolvingSymlinksInPath().path
+            let path = cli.resolvingSymlinksInPath().path
+            guard FileManager.default.isExecutableFile(atPath: path) else { throw MorrowError.message("The morrow CLI is missing.") }
+            guard !onlyIfChanged || web.cliPath != path else { return }
+            web.cliPath = path
             try store.update { $0.web.cliPath = web.cliPath }
             try launchd.unload(label("watch", web: web))
             try writeWatcher(web)

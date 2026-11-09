@@ -117,6 +117,8 @@ Setup uses native `SMAppService` approval. Do not reintroduce AppleScript/Python
 
 Register the app with Launch Services before repairing attribution. `BackgroundAttribution` checks the app and launcher signatures and Apple team identifiers. The build rejects a supplied signing identity when those teams differ or are missing. Ad-hoc development builds remain supported, but cleanup must explain their grouping limitation and avoid converting more unsigned native workers into separately named Morrow entries.
 
+Before signed cleanup rewrites jobs, migrate a Sites directory watcher whose saved launcher path differs from the current signed app. Run that migration under its own operation lock, outside the cleanup lock. It updates the saved path and restarts only the monitor; do not apply hosting configuration or restart serving processes for this repair. Otherwise an older watcher can overwrite repaired PHP/web jobs on its next scan.
+
 To stage an app without replacing the bundle used by current services:
 
 ```sh
