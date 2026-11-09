@@ -36,6 +36,8 @@ macOS may block helper registration with “Operation not permitted” before sh
 
 Correct association metadata does not prove that the visible Login Items list has collapsed to one entry. Older setup-helper records and development app copies can remain registered separately. Development bundles now use the name **Morrow Preview** and a separate identity to avoid competing with the installed release. A visible duplicate should be traced to its exact app or helper registration before removing it; do not stop serving processes or reset every app's background permissions to hide a row.
 
+A separate `php` entry may belong to a project's queue worker or WebSocket server registered outside Morrow. Hosting that project in Morrow does not make those independent jobs Morrow-managed services. Cleanup leaves their registrations and running processes intact.
+
 Keep Morrow open during approval. It resumes the pending cleanup after native permission becomes allowed and any saved domain request finishes. If you close the app first, run cleanup again after reopening it.
 
 ```sh
