@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.2.5
+
 - Added explicit project-worker import and restore in General → Background access and the CLI. Imported user jobs use Morrow's signed launcher, retain their commands, runtime paths, folders, environment, and logs, and keep private originals for undo. Cleanup preserves and repairs imported registrations without stopping processes or adopting unrelated jobs.
 
 ## 0.2.4
