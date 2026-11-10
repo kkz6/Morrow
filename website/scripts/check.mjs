@@ -28,6 +28,8 @@ const cli = await readFile(new URL('../../Sources/MorrowCLI/main.swift', import.
 const dbSwitch = cli.slice(cli.indexOf('switch subcommand {'), cli.indexOf('func printJSON'))
 const commands = [...dbSwitch.matchAll(/^    case ([^:]+):/gm)].flatMap(match => [...match[1].matchAll(/"([a-z-]+)"/g)].map(item => item[1]))
 const reference = docs.find(page => page.slug === 'cli-reference')?.text || ''
+const mcpCommands = ['serve', 'status', 'enable', 'disable', 'access', 'config', 'add', 'remove']
+for (const command of mcpCommands) if (!reference.includes(`morrow mcp ${command}`)) failures.push(`CLI reference is missing: morrow mcp ${command}`)
 const binarySwitch = cli.slice(cli.indexOf('func binaryMain'), cli.indexOf('func toolsMain'))
 const binaryCommands = [...binarySwitch.matchAll(/^    case ([^:]+):/gm)].flatMap(match => [...match[1].matchAll(/"([a-z-]+)"/g)].map(item => item[1]))
 for (const command of new Set(binaryCommands)) if (!reference.includes(`morrow binary ${command}`)) failures.push(`CLI reference is missing: morrow binary ${command}`)
@@ -55,4 +57,4 @@ const syncCommands = [...syncSwitch.matchAll(/^    case ([^:]+):/gm)].flatMap(ma
 for (const command of new Set(syncCommands)) if (!reference.includes(`morrow sync ${command}`)) failures.push(`CLI reference is missing: morrow sync ${command}`)
 try { await access(new URL('../.output/public/index.html', import.meta.url)) } catch { failures.push('Missing homepage') }
 if (failures.length) { console.error(failures.join('\n')); process.exit(1) }
-console.log(`Checked ${docs.length} prerendered docs pages, local documentation links, and ${new Set(commands).size + new Set(toolCommands).size + new Set(projectCommands).size + new Set(syncCommands).size + new Set(mailCommands).size + new Set(siteCommands).size + new Set(storageCommands).size + new Set(binaryCommands).size + dumpsCommands.length + 2} CLI commands`)
+console.log(`Checked ${docs.length} prerendered docs pages, local documentation links, and ${new Set(commands).size + new Set(toolCommands).size + new Set(projectCommands).size + new Set(syncCommands).size + new Set(mailCommands).size + new Set(siteCommands).size + new Set(storageCommands).size + new Set(binaryCommands).size + dumpsCommands.length + mcpCommands.length + 2} CLI commands`)

@@ -64,9 +64,10 @@ extension View {
     func settingsButton(height: CGFloat = 32, expands: Bool = false) -> some View {
         buttonStyle(SettingsButtonStyle(height: height, expands: expands))
     }
-    func settingsMenuControl(height: CGFloat = 28) -> some View {
-        menuStyle(.borderlessButton).menuIndicator(.hidden)
-            .frame(width: height, height: height).tint(.primary)
+    func settingsMenuControl(height: CGFloat = 28, iconOnly: Bool = true) -> some View {
+        menuStyle(.borderlessButton).menuIndicator(iconOnly ? .hidden : .visible)
+            .fixedSize(horizontal: !iconOnly, vertical: true)
+            .frame(width: iconOnly ? height : nil, height: height).tint(.primary)
     }
 }
 

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added a dedicated AI tab and local read-only MCP server shared by the app and CLI. AI clients can inspect sites, service status, runtimes, and project health, with separate opt-in access to logs, PHP captures, and test mail. Explicit client setup preserves other entries and saves private backups; access can be revoked for existing connections.
+- Simplified General to startup, the menu bar count, and appearance. Command Line and iCloud Sync now open focused sheets; background registration and setup tools live under Advanced. Removed the stacked previews, examples, and explanatory blocks from the main preferences page.
+
 - Aligned settings and menu controls with the shared design framework: rounded square icon tiles, adaptive bordered cards, standard macOS buttons and selectors, and plain menu action symbols. Settings actions use the card row without a second nested bezel. Tightened card and mail-list spacing; Mail cards combine the SMTP address, copy icon, and compact Open Inbox button in one row. Stop icons remain red and status colors reflect service readiness.
 
 - Replaced the fixed mail sheet with a resizable native inbox window, remembered window geometry, adjustable message-list width, larger email previews, visible format tabs, compact message details, attachment names/sizes, preview zoom, and an SMTP setup popover. Simplified Mail service cards and the inbox selector, placed unread indicators beside message times, and kept message polling scoped to open inbox windows.

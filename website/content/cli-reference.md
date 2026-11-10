@@ -4,6 +4,22 @@ description: All commands for managing the same workspace as the macOS app.
 group: Reference
 order: 6
 ---
+## AI and MCP
+
+| Command | Purpose |
+| --- | --- |
+| `morrow mcp serve [--site <folder>]` | Run the local read-only MCP server over stdin/stdout; a bare `morrow mcp` also serves |
+| `morrow mcp status` | Print this Mac's saved AI access preferences as JSON |
+| `morrow mcp enable` | Allow workspace inspection; optional mail/debug permissions remain unchanged |
+| `morrow mcp disable` | Deny tool calls, including from existing connections |
+| `morrow mcp access mail on\|off` | Allow or revoke reading captured email |
+| `morrow mcp access debug on\|off` | Allow or revoke reading logs and captured PHP requests |
+| `morrow mcp config [--client <client>]` | Print client configuration without modifying files |
+| `morrow mcp add <client>` | Add Morrow's entry, preserving other settings and saving a private backup |
+| `morrow mcp remove <client>` | Remove only the matching Morrow entry |
+
+Supported client IDs: `claude-desktop`, `cursor`, `vscode`, `windsurf`. Restart the AI app after adding or removing its entry. Codex and Claude Code registration commands are available under **AI → Copy Setup**. AI access starts off and is local to this Mac. See [AI connections](/docs/ai) for tools, data permissions, and limits.
+
 ## Binary sources and background permissions
 
 | Command | Purpose |

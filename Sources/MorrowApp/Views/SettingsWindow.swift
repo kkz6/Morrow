@@ -2,7 +2,7 @@ import SwiftUI
 import MorrowCore
 
 enum SettingsSection: String, Identifiable, SettingsDestination {
-    case instances, sites, applications, mail, dumps, logs, storage, general, commandLine, sync, menuBar, appearance, about
+    case instances, sites, applications, mail, dumps, logs, storage, general, ai, commandLine, sync, menuBar, appearance, about
     var id: String { rawValue }
     var feedbackSection: SettingsSection {
         switch self {
@@ -22,6 +22,7 @@ enum SettingsSection: String, Identifiable, SettingsDestination {
         case .commandLine: return "Command Line"
         case .logs: return "Logs"
         case .storage: return "Object Storage"
+        case .ai: return "AI"
         case .general: return "General"
         case .sync: return "iCloud Sync"
         case .menuBar: return "Menu Bar"
@@ -39,6 +40,7 @@ enum SettingsSection: String, Identifiable, SettingsDestination {
         case .commandLine: return "chevron.left.forwardslash.chevron.right"
         case .logs: return "terminal.fill"
         case .storage: return "externaldrive.badge.icloud"
+        case .ai: return "sparkles"
         case .general: return "gearshape.fill"
         case .sync: return "icloud.fill"
         case .menuBar: return "menubar.rectangle"
@@ -56,6 +58,7 @@ enum SettingsSection: String, Identifiable, SettingsDestination {
         case .commandLine: return .indigo
         case .logs: return .gray
         case .storage: return .orange
+        case .ai: return .indigo
         case .general: return .gray
         case .sync: return .blue
         case .menuBar: return .blue
@@ -70,7 +73,7 @@ struct SettingsWindow: View {
     private let groups: [SettingsSidebarGroup<SettingsSection>] = [
         .init("projects", header: "Projects", destinations: [.sites, .dumps]),
         .init("services", header: "Services", destinations: [.instances, .applications, .mail, .storage]),
-        .init("app", header: "App", destinations: [.general, .about]),
+        .init("app", header: "App", destinations: [.general, .ai, .about]),
     ]
     var body: some View {
         @Bindable var model = model
@@ -97,6 +100,7 @@ struct SettingsWindow: View {
         case .commandLine: CommandLinePane()
         case .logs: LogsPane()
         case .storage: StoragePane()
+        case .ai: AIPane()
         case .general: GeneralPane()
         case .sync: SyncPane()
         case .menuBar: MenuBarPane()

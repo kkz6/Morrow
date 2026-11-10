@@ -36,22 +36,12 @@ struct CommandLinePane: View {
 
 struct GeneralOptionsPane: View {
     var embedded = false
+    var reopenSetup: (() -> Void)? = nil
     @Environment(AppModel.self) private var model
     @State private var nvmPath = ""
     var body: some View {
         SettingsPane(section: SettingsSection.general, embedded: embedded) {
             SettingsGroup {
-                SettingRow(title: "Launch Morrow at login", subtitle: model.loginPermission == .needsApproval ? "Login permission needs approval in System Settings" : "Keep your database controls close by") {
-                    Toggle("Launch Morrow at login", isOn: Binding(get: { model.loginPermission == .allowed }, set: { value in
-                        if model.preview { model.loginPermission = value ? .allowed : .notRegistered; return }
-                        do {
-                            if value { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
-                            model.refreshPermissions()
-                            if value, model.loginPermission == .needsApproval { NativeSetupController.openApprovalSettings() }
-                        } catch { model.error = error.localizedDescription }
-                    })).settingsToggle()
-                }
-                SettingsDivider()
                 SettingRow(title: "Background access", subtitle: LocalizedStringKey(model.blockedBackgroundItems.isEmpty ? "Local domain setup: \(model.setupPermission.title.lowercased())" : "\(model.blockedBackgroundItems.count) service permissions need attention")) {
                     HStack(spacing: 8) {
                         Text(model.setupPermission.title).font(.system(size: 11)).foregroundStyle(model.setupPermission == .allowed ? Color.secondary : Color.orange)
@@ -90,9 +80,10 @@ struct GeneralOptionsPane: View {
                     }.settingsCellPadding()
                 }
             }
-            SettingsNote(text: "Database startup is configured per instance. Morrow uses macOS launchd so services continue running independently of the menu bar app.")
             SettingsGroup {
-                SettingsActionRow(title: "Open Setup Assistant…", symbol: "wand.and.stars") { model.onboardingPresented = true }
+                SettingsActionRow(title: "Open Setup Assistant…", symbol: "wand.and.stars") {
+                    if let reopenSetup { reopenSetup() } else { model.onboardingPresented = true }
+                }
             }
         }.onAppear {
             model.refreshPermissions()
@@ -192,13 +183,72 @@ struct AboutPane: View {
 }
 
 struct GeneralPane: View {
+    @Environment(AppModel.self) private var model
+    @State private var details: SettingsSection?
     var body: some View {
         SettingsPane(section: SettingsSection.general) {
-            GeneralOptionsPane(embedded: true)
-            SettingsSubsection(header: "Appearance") { AppearancePane(embedded: true) }
-            SettingsSubsection(header: "Menu Bar") { MenuBarPane(embedded: true) }
-            SettingsSubsection(header: "Command Line") { CommandLinePane(embedded: true) }
-            SettingsSubsection(header: "iCloud Sync") { SyncPane(embedded: true) }
+            SettingsGroup {
+                SettingRow(title: "Launch at login") {
+                    Toggle("Launch at login", isOn: Binding(get: { model.loginPermission == .allowed }, set: { value in
+                        if model.preview { model.loginPermission = value ? .allowed : .notRegistered; return }
+                        do {
+                            if value { try SMAppService.mainApp.register() } else { try SMAppService.mainApp.unregister() }
+                            model.refreshPermissions()
+                            if value, model.loginPermission == .needsApproval { NativeSetupController.openApprovalSettings() }
+                        } catch { model.error = error.localizedDescription }
+                    })).settingsToggle()
+                }
+                SettingsDivider()
+                SettingRow(title: "Show running count in menu bar") {
+                    Toggle("Show running count in menu bar", isOn: model.preference(\.showRunningCount)).settingsToggle()
+                }
+            }
+            if model.loginPermission == .needsApproval {
+                SettingsNote(text: "Launch at login needs approval in System Settings.")
+            }
+            SettingsGroup(header: "Appearance") {
+                SettingsSegmentedRow(title: "Theme", selection: model.preference(\.appearance), options: [
+                    .init(value: "system", title: "System", symbol: "circle.lefthalf.filled"),
+                    .init(value: "light", title: "Light", symbol: "sun.max"),
+                    .init(value: "dark", title: "Dark", symbol: "moon"),
+                ])
+            }
+            SettingsGroup {
+                SettingsActionRow(title: "iCloud Sync", symbol: "icloud", detail: model.preferences.iCloudSyncEnabled ? "On" : "Off") { details = .sync }
+                SettingsDivider()
+                SettingsActionRow(title: "Command Line", symbol: "terminal") { details = .commandLine }
+                SettingsDivider()
+                SettingsActionRow(title: "Advanced…", symbol: "slider.horizontal.3") { details = .general }
+            }
         }
+        .onAppear { model.refreshPermissions() }
+        .feedbackSheet(item: $details) { section in
+            GeneralDetailsSheet(section: section).environment(model)
+        }
+    }
+}
+
+private struct GeneralDetailsSheet: View {
+    let section: SettingsSection
+    @Environment(AppModel.self) private var model
+    @Environment(\.dismiss) private var dismiss
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            HStack {
+                Text(section == .general ? "Advanced" : section.textTitle).font(.system(size: 18, weight: .semibold))
+                Spacer()
+                Button("Done") { dismiss() }.settingsButton().keyboardShortcut(.cancelAction)
+            }
+            ScrollView {
+                switch section {
+                case .sync: SyncPane(embedded: true)
+                case .commandLine: CommandLinePane(embedded: true)
+                default: GeneralOptionsPane(embedded: true, reopenSetup: {
+                    dismiss()
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { model.onboardingPresented = true }
+                })
+                }
+            }
+        }.padding(20).frame(width: 540, height: 460)
     }
 }

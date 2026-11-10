@@ -33,6 +33,12 @@ struct Options {
 let help = """
 Morrow — databases and development runtimes.
 
+  morrow mcp serve [--site <folder>]     Serve read-only MCP over stdin/stdout
+  morrow mcp status                      Show AI access preferences as JSON
+  morrow mcp enable|disable              Allow or revoke AI workspace access
+  morrow mcp access mail|debug on|off     Set optional AI data permissions
+  morrow mcp config [--client <client>]   Print client JSON (no changes)
+  morrow mcp add|remove <client>          Update only Morrow's client entry
   morrow doctor                          Check binary sources and local paths
   morrow binary source <https-url|clear> Set a verified distribution catalog
   morrow binary list                     List compatible managed releases
@@ -789,6 +795,14 @@ func syncMain(_ args: [String], manager: WorkspaceSync) throws {
         if !report.failures.isEmpty { throw MorrowError.message("Some synced services could not be set up. Review the results and retry after resolving them.") }
     default: throw MorrowError.message("Unknown sync command. Run morrow --help.")
     }
+}
+
+if CommandLine.arguments.dropFirst().first == "mcp" {
+    Task {
+        do { try await mcpMain(Array(CommandLine.arguments.dropFirst(2))); exit(0) }
+        catch { FileHandle.standardError.write(Data("morrow: \(error.localizedDescription)\n".utf8)); exit(1) }
+    }
+    dispatchMain()
 }
 
 // Preserve the synchronous main thread for gateway/helper service commands.

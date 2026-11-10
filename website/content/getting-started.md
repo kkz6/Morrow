@@ -26,7 +26,7 @@ Morrow supports Apple silicon Macs running macOS 14 or later. Some runtimes need
 
 ## First-launch setup
 
-New workspaces open a setup assistant. Choose launch at login, the optional `morrow` command, and local project domains. Existing workspaces keep their settings and are not forced through onboarding. Reopen the assistant from **General → Open Setup Assistant**.
+New workspaces open a setup assistant. Choose launch at login, the optional `morrow` command, and local project domains. Existing workspaces keep their settings and are not forced through onboarding. Reopen the assistant from **General → Advanced → Open Setup Assistant**.
 
 Choose **Allow Morrow Setup** to review a native in-app explanation, then continue to macOS approval. Local domains require one-time approval for **Morrow** in macOS **System Settings → General → Login Items & Extensions**. The native helper handles only local DNS and standard-port setup; no sudo password is stored. Database and runtime management work without that helper. You can finish later and enable local domains when needed.
 
@@ -34,13 +34,13 @@ Choose **Allow Morrow Setup** to review a native in-app explanation, then contin
 
 Settings uses one fixed-size window with native macOS window controls. Each page keeps its title above the scrolling content, with soft translucent backdrops at the header and bottom edge. Cards use adaptive system backgrounds, consistent borders, and shared text gutters. Rounded square icon tiles identify each section; service logos retain their own marks. Text actions use standard macOS buttons and selectors, while the compact menu uses plain action icons. Settings navigation actions occupy the card row without a second button border inside it. Stop icons remain red and status colors show service readiness. Short preference lists use visible icon choices with a selection outline. The edge fades remain in place as content scrolls beneath them, so no delayed shadow appears or disappears. They introduce no animation, including with Reduce Motion enabled.
 
-**General** groups startup permissions, Appearance, Menu Bar, Command Line, and iCloud Sync. Choose **System**, **Light**, or **Dark** from the visible theme choices. **About** contains app update controls and links to documentation, source code, and issue reporting.
+**General** keeps launch at login, the menu bar count, and appearance visible. Command Line and iCloud Sync open focused settings sheets; permissions and registration repair live under **Advanced**. **AI** connects supported coding assistants to Morrow’s read-only MCP tools. Choose **System**, **Light**, or **Dark** from the visible theme choices. **About** contains app update controls and links to documentation, source code, and issue reporting.
 
 In signed releases, choose **About → Check for Updates…**, or enable **Automatically check for updates**. Morrow uses Sparkle's native update window and verifies downloaded updates before installation. Updating the menu bar app does not upgrade your databases or runtimes. Development builds keep their local version and disable app updates. Builds predating the updater need one manual installation of a current signed release from [GitHub Releases](https://github.com/kkz6/Morrow/releases/latest).
 
 ## Create a database
 
-**General → Background access** displays the native helper's current permission. Morrow refreshes it when returning from System Settings and while monitoring, so an already allowed helper is not shown as needing approval. Approval and successful routing are separate checks; a helper can be allowed while local domains still need setup.
+**General → Advanced → Background access** displays the native helper's current permission. Morrow refreshes it when returning from System Settings and while monitoring, so an already allowed helper is not shown as needing approval. Approval and successful routing are separate checks; a helper can be allowed while local domains still need setup.
 
 In Settings, open **Databases → New Instance**. Choose the engine and version, enter a name, and click **Create Instance**. The default **Start after creating** option starts it immediately.
 
@@ -93,4 +93,8 @@ Open **Settings → Object Storage → Create S3 Server** to run MinIO and confi
 
 ## Find your preferences and logs
 
-General is a single scrollable page with grouped headings for appearance, menu bar, command line, and iCloud sync. Shared cards and controls use subtle neutral surfaces that adapt to light and dark appearance. Service cards provide their own logs and configuration actions. The sidebar groups Projects, Services, and App for navigation; it has no separate Logs item.
+General is a compact preferences page without repeated previews, terminal examples, or setup explanations. Open its Command Line, iCloud Sync, or Advanced row for those detailed controls. Shared cards and controls use subtle neutral surfaces that adapt to light and dark appearance. Service cards provide their own logs and configuration actions. The sidebar groups Projects, Services, and App for navigation; it has no separate Logs item.
+
+## AI coding assistants
+
+Open **Settings → AI** to connect your assistant to local project health, service status, and runtime information. Mail and debug data are separate opt-in permissions. See [AI connections](/docs/ai).
