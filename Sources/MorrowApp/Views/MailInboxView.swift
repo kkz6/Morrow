@@ -98,7 +98,7 @@ struct MailInboxView: View {
             }
             Spacer(minLength: 12)
             HStack(spacing: DS.Spacing.sm) {
-                SettingsSelect(label: "Project inbox", selection: $project, options: [.init(value: "", title: "All inboxes", symbol: "tray.full")] + projectNames.map { .init(value: $0, title: $0, symbol: "folder") }, bordered: true)
+                SettingsMenuPicker(label: "Project inbox", selection: $project, options: [.init(value: "", title: "All inboxes", symbol: "tray.full")] + projectNames.map { .init(value: $0, title: $0, symbol: "folder") })
                     .frame(maxWidth: 220, alignment: .trailing)
                 Button("SMTP Settings") { copiedSettings = false; showSetup.toggle() }.settingsButton(height: ControlLayout.height)
                     .popover(isPresented: $showSetup, arrowEdge: .bottom) { smtpSetup }
@@ -315,10 +315,12 @@ private struct MailMessageRow: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 6) {
-                Circle().fill(message.Read ? Color.clear : .morrowAccent).frame(width: 5, height: 5)
                 Text(message.From.Name.isEmpty ? message.From.Address : message.From.Name).font(.system(size: 12, weight: .medium)).lineLimit(1)
                 Spacer(minLength: 6)
                 Text(MailDate.short(message.Created)).font(.system(size: 10)).foregroundStyle(.secondary)
+                if !message.Read {
+                    Circle().fill(Color.morrowAccent).frame(width: 5, height: 5).accessibilityLabel("Unread")
+                }
             }
             Text(message.Subject.isEmpty ? "(No subject)" : message.Subject).font(.system(size: 13, weight: .semibold)).lineLimit(2)
             Text(message.Snippet).font(.system(size: 12)).foregroundStyle(.secondary).lineLimit(1)

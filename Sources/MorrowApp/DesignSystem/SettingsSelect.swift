@@ -16,21 +16,12 @@ struct SettingsSelect<Value: Hashable>: View {
     let options: [SelectOption<Value>]
     var placeholder = "Choose…"
     var placeholderSymbol = "square.stack.3d.up"
-    var bordered = false
     @Environment(\.isEnabled) private var isEnabled
-    @Environment(\.colorScheme) private var colorScheme
     var body: some View {
         NativeSettingsSelect(label: label, selection: $selection, options: options,
                              placeholder: placeholder, placeholderSymbol: placeholderSymbol,
-                             enabled: isEnabled, bordered: bordered)
+                             enabled: isEnabled)
             .frame(height: ControlLayout.height)
-            .padding(.horizontal, bordered ? DS.Spacing.sm : 0)
-            .background {
-                if bordered { RoundedRectangle(cornerRadius: ControlLayout.radius).fill(DS.Surface.control(colorScheme, state: isEnabled ? .normal : .disabled)) }
-            }
-            .overlay {
-                if bordered { RoundedRectangle(cornerRadius: ControlLayout.radius).strokeBorder(DS.Surface.border(colorScheme, enabled: isEnabled), lineWidth: DS.Stroke.border) }
-            }
     }
 }
 
@@ -41,7 +32,6 @@ private struct NativeSettingsSelect<Value: Hashable>: NSViewRepresentable {
     let placeholder: String
     let placeholderSymbol: String
     let enabled: Bool
-    let bordered: Bool
 
     func makeCoordinator() -> Coordinator { Coordinator(selection: $selection) }
     func makeNSView(context: Context) -> SelectPopUpButton {
@@ -72,7 +62,6 @@ private struct NativeSettingsSelect<Value: Hashable>: NSViewRepresentable {
             button.selectItem(at: button.numberOfItems - 1)
         }
         button.selectedSymbol = selected.map { options[$0].symbol } ?? placeholderSymbol
-        button.borderedAppearance = bordered
         button.isEnabled = enabled && !options.isEmpty
         button.setAccessibilityLabel(label)
         button.setAccessibilityValue(selected.map { options[$0].title } ?? placeholder)
@@ -97,7 +86,6 @@ private struct NativeSettingsSelect<Value: Hashable>: NSViewRepresentable {
 /// actual popup, selection checks, keyboard handling, and accessibility role.
 private final class SelectPopUpButton: NSPopUpButton {
     var selectedSymbol = "square.stack.3d.up"
-    var borderedAppearance = false
     override var intrinsicContentSize: NSSize {
         let width = ((selectedItem?.title ?? "") as NSString).size(withAttributes: [.font: NSFont.systemFont(ofSize: 13)]).width
         return NSSize(width: ceil(width) + 55, height: ControlLayout.height)
@@ -115,10 +103,6 @@ private final class SelectPopUpButton: NSPopUpButton {
             .font: NSFont.systemFont(ofSize: 13), .foregroundColor: textColor, .paragraphStyle: paragraph,
         ])
         title.draw(in: NSRect(x: 28, y: bounds.midY - 8, width: max(0, bounds.width - 55), height: 17))
-        if borderedAppearance {
-            drawSymbol("chevron.down", rect: NSRect(x: bounds.maxX - 16, y: bounds.midY - 5, width: 10, height: 10), color: textColor, size: 9)
-            return
-        }
         let capsuleRect = NSRect(x: bounds.maxX - 19, y: bounds.midY - 11, width: 16, height: 22)
         let capsule = NSBezierPath(roundedRect: capsuleRect, xRadius: 8, yRadius: 8)
         NSColor.labelColor.withAlphaComponent(0.025).setFill()
