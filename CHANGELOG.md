@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Adopted native Liquid Glass buttons, action icons, and menus on macOS 26 and later, with standard macOS controls on earlier versions. Removed hand-drawn button bezels and selectors, used native segmented preferences and zoom controls, and tightened card and mail-list spacing.
+
 - Replaced the fixed mail sheet with a resizable native inbox window, remembered window geometry, adjustable message-list width, larger email previews, visible format tabs, compact message details, attachment names/sizes, preview zoom, and an SMTP setup popover. Simplified Mail service cards and the inbox selector, placed unread indicators beside message times, and kept message polling scoped to open inbox windows.
 - Grouped Git worktrees beneath their main project in Sites, collapsed by default, with hosting counts and search that reveals matching worktrees. Standalone worktree groups remain accessible when the main checkout is not linked. Domains, HTTPS, ignore choices, and running services are unchanged.
 - Added Project Health in Sites and `morrow project doctor`: framework detection, public-root and dependency checks, saved-runtime comparisons with numeric version files, private Laravel environment checks, and declared PHP/Node requirements. Inspection reads bounded metadata without executing project scripts or changing project files.

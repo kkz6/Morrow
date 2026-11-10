@@ -69,26 +69,36 @@ enum DS {
 
 // MARK: - Icon Tile
 
-/// SF Symbol on a rounded, tinted square — the colored icons in the sidebar / rows.
+/// System symbols and service logos on a native material surface.
 struct IconTile: View {
-    @Environment(\.colorScheme) private var colorScheme
     let symbol: String
     var color: Color = .accentColor
     var size: CGFloat = DS.Size.tile
 
     var body: some View {
-        RoundedRectangle(cornerRadius: DS.Radius.tile, style: .continuous)
-            .fill(BrandIcons.image(for: symbol) == nil ? AnyShapeStyle(color.gradient) : AnyShapeStyle(DS.Surface.control(colorScheme)))
-            .frame(width: size, height: size)
-            .overlay {
-                if let image = BrandIcons.image(for: symbol) {
-                    Image(nsImage: image).resizable().scaledToFit().frame(width: size * 0.76, height: size * 0.76)
-                } else {
-                    Image(systemName: BrandIcons.fallbackSymbol(symbol))
-                        .font(.system(size: size * 0.5, weight: .semibold)).foregroundStyle(.white)
-                }
+        Group {
+            if let image = BrandIcons.image(for: symbol) {
+                Image(nsImage: image).resizable().scaledToFit()
+                    .frame(width: size * 0.76, height: size * 0.76)
+            } else {
+                Image(systemName: BrandIcons.fallbackSymbol(symbol))
+                    .font(.system(size: size * 0.5, weight: .medium))
+                    .foregroundStyle(color)
             }
-            .shadow(color: color.opacity(0.12), radius: 1, y: 0.5)
+        }
+        .frame(width: size, height: size)
+        .modifier(NativeIconSurface())
+        .accessibilityHidden(true)
+    }
+}
+
+private struct NativeIconSurface: ViewModifier {
+    @ViewBuilder func body(content: Content) -> some View {
+        if #available(macOS 26.0, *) {
+            content.glassEffect()
+        } else {
+            content.background(.regularMaterial, in: Circle())
+        }
     }
 }
 
@@ -125,20 +135,10 @@ struct SettingsNote: View {
 struct SettingsCard<Content: View>: View {
     @Environment(\.colorScheme) private var colorScheme
     @ViewBuilder var content: Content
-    @State private var cardID = UUID()
-    @State private var cardSize = CGSize.zero
 
     var body: some View {
         VStack(spacing: 0) {
             content
-        }
-        .coordinateSpace(name: cardID)
-        .environment(\.settingsCardContext, SettingsCardContext(id: cardID, size: cardSize))
-        .background {
-            GeometryReader { geometry in
-                Color.clear.onAppear { cardSize = geometry.size }
-                    .onChange(of: geometry.size) { _, size in cardSize = size }
-            }
         }
         .background(
             RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)

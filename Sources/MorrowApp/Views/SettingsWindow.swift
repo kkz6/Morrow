@@ -188,7 +188,7 @@ struct ErrorCard: View {
         HStack(alignment: .top, spacing: 8) {
             Image(systemName: "exclamationmark.circle.fill").foregroundStyle(.orange)
             Text(message).font(.system(size: 12)).textSelection(.enabled).frame(maxWidth: .infinity, alignment: .leading)
-            Button(action: dismiss) { Image(systemName: "xmark") }.buttonStyle(.plain).help("Dismiss")
+            Button(action: dismiss) { Image(systemName: "xmark") }.buttonStyle(MenuIconButtonStyle()).help("Dismiss")
         }.padding(12).background(.orange.opacity(0.07), in: RoundedRectangle(cornerRadius: 12))
     }
 }

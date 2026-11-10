@@ -136,9 +136,9 @@ struct MailInboxView: View {
                     .font(.system(size: 11)).foregroundStyle(.secondary).monospacedDigit()
                 Spacer()
                 Button { offset = max(0, offset - 50) } label: { Image(systemName: "chevron.left") }
-                    .buttonStyle(.plain).help("Previous page").accessibilityLabel("Previous page").disabled(offset == 0)
+                    .buttonStyle(MenuIconButtonStyle()).help("Previous page").accessibilityLabel("Previous page").disabled(offset == 0)
                 Button { offset += 50 } label: { Image(systemName: "chevron.right") }
-                    .buttonStyle(.plain).help("Next page").accessibilityLabel("Next page").disabled(offset + messages.count >= total)
+                    .buttonStyle(MenuIconButtonStyle()).help("Next page").accessibilityLabel("Next page").disabled(offset + messages.count >= total)
             }.padding(.horizontal, DS.Spacing.md).frame(height: 34)
         }
     }
@@ -184,7 +184,7 @@ struct MailInboxView: View {
                 Text("To: \((message.To ?? []).map(\.label).joined(separator: ", "))")
                     .font(.system(size: 12)).foregroundStyle(.secondary).lineLimit(1)
                 Spacer(minLength: 8)
-                Button("Details") { showDetails.toggle() }.buttonStyle(.plain).font(.system(size: 11)).foregroundStyle(.tint)
+                Button("Details") { showDetails.toggle() }.settingsButton(height: 24)
                     .popover(isPresented: $showDetails) { messageDetails(message) }
             }
             HStack(spacing: 10) {
@@ -259,7 +259,7 @@ struct MailInboxView: View {
             if loading && messages.isEmpty { ProgressView().controlSize(.mini) }
             Text("\(total) \(total == 1 ? "message" : "messages")").monospacedDigit()
             if !groupedInboxes && supportsGrouping {
-                Button("Project inbox setup") { showSetup = true }.buttonStyle(.plain).foregroundStyle(.tint)
+                Button("Project inbox setup") { showSetup = true }.settingsButton(height: 24)
             }
             Spacer()
             if let refreshed { Text("Updated \(refreshed.formatted(date: .omitted, time: .shortened))").foregroundStyle(.secondary) }
@@ -313,7 +313,7 @@ struct MailInboxView: View {
 private struct MailMessageRow: View {
     let message: MailMessageSummary
     var body: some View {
-        VStack(alignment: .leading, spacing: 5) {
+        VStack(alignment: .leading, spacing: 3) {
             HStack(spacing: 6) {
                 Text(message.From.Name.isEmpty ? message.From.Address : message.From.Name).font(.system(size: 12, weight: .medium)).lineLimit(1)
                 Spacer(minLength: 6)
@@ -329,7 +329,7 @@ private struct MailMessageRow: View {
                 Spacer()
                 if let count = message.Attachments, count > 0 { Label(String(count), systemImage: "paperclip") }
             }.font(.system(size: 10)).foregroundStyle(.secondary)
-        }.padding(.vertical, 7).help(message.Subject)
+        }.padding(.vertical, 4).help(message.Subject)
     }
 }
 

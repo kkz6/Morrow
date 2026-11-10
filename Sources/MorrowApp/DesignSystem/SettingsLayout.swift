@@ -18,7 +18,7 @@ enum SettingsLayout {
     static let detailSectionSpacing: CGFloat = 14
     static let groupHeaderSpacing: CGFloat = 6
     static let cardHorizontalInset: CGFloat = 14
-    static let cardVerticalInset: CGFloat = 10
+    static let cardVerticalInset: CGFloat = 8
     static let actionInset: CGFloat = 4
     static let actionLabelInset = cardHorizontalInset - actionInset
     static let actionSpacing: CGFloat = 6

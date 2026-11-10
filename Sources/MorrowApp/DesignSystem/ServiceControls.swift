@@ -15,11 +15,10 @@ struct ServiceActionButton: View {
     let action: () -> Void
     var body: some View {
         Button(action: action) {
-            Image(systemName: kind.symbol).font(.system(size: 12, weight: .medium)).frame(width: compact ? MenuLayout.actionSize : 28, height: compact ? MenuLayout.actionSize : 28)
+            Image(systemName: kind.symbol).font(.system(size: 12, weight: .medium))
         }
-        .buttonStyle(.plain)
+        .buttonStyle(SettingsButtonStyle(height: compact ? MenuLayout.actionSize : 28, iconOnly: true))
         .foregroundStyle(kind == .stop || kind == .remove ? Color.red : Color.secondary)
-        .contentShape(RoundedRectangle(cornerRadius: DS.Radius.action))
         .help(title).accessibilityLabel(title)
     }
 }
