@@ -8,7 +8,7 @@ Morrow should keep its native macOS interface, shared app/CLI core, portable App
 
 | Addition | Result | Limits |
 | --- | --- | --- |
-| Native mail inbox | Project tags, search, HTML/text/raw/header views, attachments, message deletion, SMTP settings | Uses existing Mailpit; project tagging becomes active on a server's next start |
+| Native mail inbox | Resizable native window, project tags, sender/time/attachment summaries, search, HTML/text/raw/header tabs, attachment exports, message deletion, preview zoom, SMTP setup popover | Uses existing Mailpit; project tagging becomes active on a server's next start. Reviewed [Flock's mail workflow](https://github.com/flock-php/flock/blob/93101c8f7c36d8b3d0175b6959a8bd29208b1afe/macos/Sources/FlockUI/MailWindow.swift); implementation uses Morrow's shared controls and existing local API. |
 | PHP request timeline | Per-folder opt-in dumps, supported Laravel queries/logs/views/jobs, app and CLI | Laravel 11+ with uncached local configuration; existing workers need a later launch through the Morrow PHP shim |
 | Project Health | Framework detection, public directory, dependency markers, saved runtime/version-file comparisons, private environment checks | Read-only metadata checks; no dependency installation, migrations, extension probing, or database validation |
 | Better new-site detection | Conventional PHP framework roots; Node/Go/Python/Ruby/Rust wait for an app port | Existing site settings stay unchanged; custom layouts still need an explicit root |

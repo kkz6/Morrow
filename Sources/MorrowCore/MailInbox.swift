@@ -15,6 +15,7 @@ public struct MailMessageSummary: Codable, Identifiable, Sendable {
     public let Read: Bool
     public let Snippet: String
     public let Tags: [String]?
+    public let Attachments: Int?
     public var id: String { self.ID }
 }
 

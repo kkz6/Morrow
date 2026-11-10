@@ -11,6 +11,7 @@ final class MailInboxTests: XCTestCase {
         let page = try await client().messages(search: "subject:Receipt", project: "shop.test", offset: 50)
         XCTAssertEqual(page.matchingCount, 1)
         XCTAssertEqual(page.messages.first?.Subject, "Receipt")
+        XCTAssertEqual(page.messages.first?.Attachments, 1)
         let message = try await client().message("mail-1")
         XCTAssertEqual(message.Text, "Your receipt")
         XCTAssertEqual(message.Attachments?.first?.FileName, "receipt.txt")
@@ -46,7 +47,7 @@ private final class InboxProtocol: URLProtocol {
             let query = URLComponents(url: request.url!, resolvingAgainstBaseURL: false)!.queryItems!
             XCTAssertEqual(query.first { $0.name == "query" }?.value, "tag:\"shop.test\" subject:Receipt")
             XCTAssertEqual(query.first { $0.name == "start" }?.value, "50")
-            response = #"{"total":2,"messages_count":1,"tags":["shop.test"],"messages":[{"ID":"mail-1","Subject":"Receipt","From":{"Name":"Shop","Address":"shop@example.test"},"Created":"2026-11-10T01:00:00Z","Read":false,"Snippet":"Your receipt"}]}"#
+            response = #"{"total":2,"messages_count":1,"tags":["shop.test"],"messages":[{"ID":"mail-1","Subject":"Receipt","From":{"Name":"Shop","Address":"shop@example.test"},"Created":"2026-11-10T01:00:00Z","Read":false,"Snippet":"Your receipt","Attachments":1}]}"#
         } else if path.hasSuffix("/headers") { response = #"{"Subject":["Receipt"]}"# }
         else if path.hasSuffix("/mail-1") { response = #"{"ID":"mail-1","Subject":"Receipt","From":{"Name":"Shop","Address":"shop@example.test"},"Date":"2026-11-10T01:00:00Z","Text":"Your receipt","HTML":"<p>Your receipt</p>","Attachments":[{"PartID":"1.2","FileName":"receipt.txt","ContentType":"text/plain","Size":7}]}"# }
         else if path.hasSuffix("/stopped") { status = 503 }

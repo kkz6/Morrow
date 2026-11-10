@@ -28,6 +28,12 @@ struct MorrowApp: App {
             model.web = web
             model.selection = .sites
         }
+        if snapshot && CommandLine.arguments.contains("--snapshot-mail"),
+           ProcessInfo.processInfo.environment["MORROW_HOME"] != nil, let state = try? model.manager.store.load() {
+            model.mailServices = state.mailServices
+            model.mailStatuses = Dictionary(uniqueKeysWithValues: state.mailServices.map { ($0.id, .running) })
+            model.selection = .mail
+        }
         if snapshot && CommandLine.arguments.contains("--snapshot-scrolled") {
             let installation = model.installations[0]
             model.instances = (1...18).map { DatabaseInstance(name: "project-\($0)", installation: installation, port: 5400 + $0) }
@@ -96,7 +102,7 @@ private struct SettingsRoot: View {
     }
 }
 
-private struct SettingsWindowAppearance: NSViewRepresentable {
+struct SettingsWindowAppearance: NSViewRepresentable {
     let scheme: ColorScheme?
     func makeNSView(context: Context) -> AppearanceTrackingView { AppearanceTrackingView() }
     func updateNSView(_ view: AppearanceTrackingView, context: Context) {
@@ -105,7 +111,7 @@ private struct SettingsWindowAppearance: NSViewRepresentable {
     }
 }
 
-private final class AppearanceTrackingView: NSView {
+final class AppearanceTrackingView: NSView {
     var scheme: ColorScheme?
     override func viewDidMoveToWindow() { super.viewDidMoveToWindow(); apply() }
     func apply() {
@@ -149,10 +155,11 @@ private final class AppearanceTrackingView: NSView {
             return
         }
         if args.contains("--snapshot-inbox"), let service = try? model.manager.store.load().mailServices.first {
-            let view = NSHostingView(rootView: MailInboxSheet(service: service).environment(model)
+            let view = NSHostingView(rootView: MailInboxView(service: service).environment(model)
                 .tint(.morrowAccent).preferredColorScheme(model.colorScheme ?? .light)
                 .background(Color(nsColor: .windowBackgroundColor)))
-            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 680, height: 560), styleMask: [.borderless], backing: .buffered, defer: false)
+            let size = args.contains("--snapshot-compact") ? MailWindowController.minimumSize : MailWindowController.initialSize
+            let window = NSWindow(contentRect: NSRect(origin: .zero, size: size), styleMask: [.borderless], backing: .buffered, defer: false)
             window.appearance = NSAppearance(named: model.colorScheme == .dark ? .darkAqua : .aqua)
             window.contentView = view; window.orderFront(nil)
             DispatchQueue.main.asyncAfter(deadline: .now() + 2) {

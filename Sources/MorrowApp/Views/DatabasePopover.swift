@@ -128,7 +128,7 @@ private struct PopoverMailRow: View {
                     if stop { try mail.stop(id) } else { try mail.start(id) }
                 }
             }.disabled(model.busy)
-            Button { model.mailInboxRequest = service; model.selection = .mail; openSettings() } label: { Image(systemName: "tray").font(.system(size: 11)) }
+            Button { model.showMailInbox(service) } label: { Image(systemName: "tray").font(.system(size: 11)) }
                 .buttonStyle(MenuIconButtonStyle()).help("Open test inbox").accessibilityLabel("Open test inbox").disabled(status != .running)
             Button { model.showMailLogs(service); openSettings() } label: { Image(systemName: "terminal").font(.system(size: 11)) }
                 .buttonStyle(MenuIconButtonStyle()).help("View mail logs").accessibilityLabel("View mail logs")

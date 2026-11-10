@@ -77,7 +77,6 @@ struct SettingsWindow: View {
         SettingsShell(selection: $model.selection, groups: groups) { section in
             detail(section)
         }
-        .feedbackSheet(item: $model.mailInboxRequest) { MailInboxSheet(service: $0).environment(model) }
         .feedbackSheet(item: $model.logRequest) { ServiceLogSheet(request: $0).environment(model) }
         .feedbackSheet(item: $model.configurationRequest) { ConfigurationEditorSheet(request: $0).environment(model) }
         .feedbackSheet(item: $model.creationRequest) { version in

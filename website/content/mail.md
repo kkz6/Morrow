@@ -55,13 +55,19 @@ Mailpit captures messages for inspection rather than forwarding them to recipien
 
 ## Inbox and logs
 
-Choose **Open Inbox** in Settings or use the menu-bar inbox button to open Morrow’s native inbox. Search messages, filter by project, read HTML or plain text, inspect headers and original MIME, save email attachments or `.eml` files, and delete individual messages. Messages refresh while the inbox is open. HTML previews block scripts and remote resources; explicit links open in your browser. Inline images remain available as downloadable attachments.
+Choose **Open Inbox** in Settings or use the menu-bar inbox button to open Morrow’s separate, resizable mail window. It starts with a roomy reading area and remembers its window size and position. Drag the divider to adjust the message list, or use the native window controls to enlarge it. Opening the same server again brings its existing window forward; closing it stops inbox polling without stopping the mail server.
+
+The list shows sender, received time, subject, a short preview, project tag, and attachment count. Search messages or filter by project from the top toolbar. The reader offers visible **HTML**, **Text**, **Headers**, and **Raw** tabs, with a compact header and a **Details** popover for full addresses and message metadata. Attachment buttons show names and sizes and save the selected file. Use **…** for original `.eml` export and copying the message ID. The trash icon confirms deletion of the selected message only.
+
+The **− / percentage / +** controls beside the format tabs zoom the message preview from 50% to 200%, including HTML, text, headers, and raw source. Click the percentage to reset to 100%, or use **⌘−**, **⌘+**, and **⌘0**. Zoom changes the preview only; the original email is preserved.
+
+Messages refresh while the inbox is open; **⌘R** refreshes immediately. Pagination recovers when the final page is emptied elsewhere. HTML previews block scripts and remote resources; explicit links open in your browser. Inline images remain available as downloadable attachments. **SMTP Settings** in the toolbar shows the selected project's connection settings and a copy button, without taking space from the email preview.
 
 The browser inbox remains available through `morrow mail inbox <server>` and the server’s local URL.
 
 ### Project inboxes
 
-Newly started supported Mailpit servers accept any local test username/password and automatically tag mail with the username. Select a site in the native inbox and choose **Copy SMTP Settings**, or run:
+Newly started supported Mailpit servers accept any local test username/password and automatically tag mail with the username. Select a site in the native inbox and choose **SMTP Settings → Copy SMTP Settings**, or run:
 
 ```sh
 morrow mail config local-mail --project shop.test

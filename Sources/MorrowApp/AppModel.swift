@@ -583,7 +583,14 @@ final class AppModel {
         } catch { domainFailure = true; httpsMessage = error.localizedDescription }
         await refresh()
     }
-    var mailInboxRequest: MailService?
+    @ObservationIgnored private var mailWindows: [UUID: MailWindowController] = [:]
+    func showMailInbox(_ service: MailService) {
+        let controller = mailWindows[service.id] ?? MailWindowController(id: service.id, title: "\(service.name) — Mail") { [weak self] in
+            self?.mailWindows.removeValue(forKey: service.id)
+        }
+        mailWindows[service.id] = controller
+        controller.show(service: service, model: self)
+    }
     var mail: MailManager { MailManager(store: manager.store, runner: manager.runner) }
     func showMailLogs(_ service: MailService) { presentLogs(ServiceLogRequest(title: service.name, subtitle: "Mailpit", url: mail.logURL(service))) }
     var runtimes: RuntimeManager { RuntimeManager(store: manager.store, runner: manager.runner) }

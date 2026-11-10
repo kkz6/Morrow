@@ -25,37 +25,40 @@ struct MailPane: View {
                 }
             } else {
                 ForEach(model.mailServices) { service in
-                    SettingsGroup(header: LocalizedStringKey(service.name)) {
-                        SettingRow(title: "Mailpit", subtitle: LocalizedStringKey(service.installation.version)) {
-                            HStack {
-                                StatusBadge(status: model.mailStatuses[service.id] ?? .unknown)
-                                ServiceActionButton(kind: [.running, .starting].contains(model.mailStatuses[service.id] ?? .unknown) ? .stop : .start, title: [.running, .starting].contains(model.mailStatuses[service.id] ?? .unknown) ? "Stop mail server" : "Start mail server") {
-                                    let stop = [.running, .starting].contains(model.mailStatuses[service.id] ?? .unknown)
-                                    model.perform(stop ? "Stopping mail…" : "Starting mail…", success: stop ? "Mail server stopped" : "Mail server started") { manager in
-                                        let mail = MailManager(store: manager.store, runner: manager.runner)
-                                        if stop { try mail.stop(service.id) } else { try mail.start(service.id) }
-                                    }
-                                }.disabled(model.busy)
+                    SettingsGroup {
+                        HStack(spacing: 12) {
+                            IconTile(symbol: "tray.fill", color: .orange, size: 30)
+                            VStack(alignment: .leading, spacing: 3) {
+                                Text(service.name).font(.system(size: 14, weight: .semibold))
+                                Text("Mailpit \(service.installation.version)").font(.system(size: 11)).foregroundStyle(.secondary)
                             }
-                        }
+                            Spacer()
+                            StatusBadge(status: model.mailStatuses[service.id] ?? .unknown)
+                            ServiceActionButton(kind: [.running, .starting].contains(model.mailStatuses[service.id] ?? .unknown) ? .stop : .start, title: [.running, .starting].contains(model.mailStatuses[service.id] ?? .unknown) ? "Stop mail server" : "Start mail server") {
+                                let stop = [.running, .starting].contains(model.mailStatuses[service.id] ?? .unknown)
+                                model.perform(stop ? "Stopping mail…" : "Starting mail…", success: stop ? "Mail server stopped" : "Mail server started") { manager in
+                                    let mail = MailManager(store: manager.store, runner: manager.runner)
+                                    if stop { try mail.stop(service.id) } else { try mail.start(service.id) }
+                                }
+                            }.disabled(model.busy)
+                            Menu {
+                                Button("Server Settings…") { editing = service }
+                                Button("Server Logs…") { model.showMailLogs(service) }
+                                Divider()
+                                Button("Remove Server…", role: .destructive) { removing = service }
+                            } label: { Image(systemName: "ellipsis").frame(width: 16) }.settingsMenuControl().disabled(model.busy)
+                        }.settingsCellPadding()
                         SettingsDivider()
                         SettingRow(title: "SMTP", subtitle: LocalizedStringKey(service.smtpURL)) {
                             Button("Copy Settings") { copy(service.appConfiguration) }.settingsButton(height: 28)
                         }
                         SettingsDivider()
-                        SettingsActionRow(title: "Open Inbox", symbol: "tray", detail: ":\(service.httpPort)") { model.mailInboxRequest = service }
+                        SettingsActionRow(title: "Open Inbox", symbol: "tray", detail: "New window") { model.showMailInbox(service) }
                             .disabled(model.mailStatuses[service.id] != .running)
-                        SettingsDivider()
-                        HStack {
-                            ServiceActionButton(kind: .configuration, title: "Mail server settings") { editing = service }
-                            ServiceActionButton(kind: .logs, title: "Open Mailpit logs") { model.showMailLogs(service) }
-                            Spacer()
-                            Button("Remove…", role: .destructive) { removing = service }.settingsButton(height: 28)
-                        }.settingsCellPadding().disabled(model.busy)
                     }
                 }
             }
-            SettingsNote(text: "SMTP and the inbox listen on 127.0.0.1. Use a project name as the SMTP username to group messages, or leave authentication off. Keep TLS disabled for local SMTP. Captured messages remain in this Mac's local inbox.")
+            SettingsNote(text: "Emails stay on this Mac and are never sent to real recipients. Open the inbox for project filters and SMTP setup.")
         }
         .feedbackSheet(isPresented: $creating) { MailEditor().environment(model) }
         .feedbackSheet(item: $editing) { MailEditor(existing: $0).environment(model) }
