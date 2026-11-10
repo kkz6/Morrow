@@ -10,7 +10,10 @@ struct SitesPane: View {
     @State private var inspecting: LocalSite?
     @State private var query = ""
     @State private var php: [RuntimeInstallation] = []
-    private var projects: [LocalSite] { model.web.sites.filter { query.isEmpty || $0.domain.localizedCaseInsensitiveContains(query) || $0.path.localizedCaseInsensitiveContains(query) } }
+    @State private var groups: [SiteProjectGroup] = []
+    @State private var expandedGroups: Set<String> = []
+    private var searching: Bool { !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
+    private var projects: [SiteProjectGroup] { groups.compactMap { $0.matching(query) } }
     var body: some View {
         SettingsPane(section: SettingsSection.sites) {
             HStack {
@@ -97,9 +100,12 @@ struct SitesPane: View {
             } else {
                 SettingsInput(placeholder: "Find a project", text: $query, symbol: "magnifyingglass", clearable: true)
                 SettingsGroup {
-                    ForEach(Array(projects.enumerated()), id: \.element.id) { index, site in
-                        siteRow(site)
+                    ForEach(Array(projects.enumerated()), id: \.element.id) { index, group in
+                        projectGroup(group)
                         if index < projects.count - 1 { SettingsDivider() }
+                    }
+                    if searching && projects.isEmpty {
+                        Text("No matching projects or worktrees.").font(.system(size: 12)).foregroundStyle(.secondary).settingsCellPadding()
                     }
                 }
             }
@@ -111,18 +117,46 @@ struct SitesPane: View {
         .feedbackSheet(item: $editing) { SiteEditor(site: $0, php: php).environment(model) }
         .feedbackSheet(item: $inspecting) { ProjectHealthSheet(site: $0).environment(model) }
         .task(id: model.inventory.runtimes.map(\.id)) { php = model.inventory.runtimes.filter { $0.engine == .php && $0.phpFPM != nil } }
+        .task(id: model.web.sites) {
+            let sites = model.web.sites
+            let result = await Task.detached(priority: .utility) { SiteProjectGroup.groups(for: sites) }.value
+            guard !Task.isCancelled else { return }
+            groups = result
+        }
+    }
+    @ViewBuilder private func projectGroup(_ group: SiteProjectGroup) -> some View {
+        if let project = group.project { siteRow(project) }
+        if !group.worktrees.isEmpty {
+            let expanded = searching || expandedGroups.contains(group.id)
+            let count = group.worktrees.count
+            let title = "\(count) \(count == 1 ? "worktree" : "worktrees")"
+            if group.project != nil { SettingsDivider() }
+            SettingsDisclosureRow(
+                title: group.project == nil ? "\(group.name) · \(title)" : title,
+                subtitle: "\(group.worktrees.filter { !$0.isIgnoredForHosting }.count) included in hosting",
+                isExpanded: Binding(get: { expanded }, set: { value in
+                    if value { expandedGroups.insert(group.id) } else { expandedGroups.remove(group.id) }
+                })
+            ).disabled(searching)
+            if expanded {
+                ForEach(group.worktrees) { worktree in
+                    SettingsDivider()
+                    siteRow(worktree, worktree: true)
+                }
+            }
+        }
     }
     private var hasPreviousResolver: Bool { SiteSystemSetup.setupIssue(suffixes: model.web.suffixes) != nil }
     private var setupLabel: String {
         if model.webStatus?.systemConfigured == true { return "Finish Setup" }
         return hasPreviousResolver ? "Replace Setup" : "Set Up"
     }
-    private func siteRow(_ site: LocalSite) -> some View {
+    private func siteRow(_ site: LocalSite, worktree: Bool = false) -> some View {
         let status = site.worktreeExcluded ? SiteStatus.worktreeExcluded.rawValue : site.ignored ? "Ignored for .\(model.web.suffix) hosting" : site.issue ?? model.webStatus?.sites[site.id]?.rawValue ?? "Stopped"
         let expiry = model.webStatus?.certificateExpirations[site.domain]
         let validUntil = expiry.map { " · \($0 > Date() ? "Valid until" : "Expired") \($0.formatted(date: .abbreviated, time: .omitted))" } ?? ""
         return HStack(spacing: 12) {
-            IconTile(symbol: site.mode == .proxy ? "arrow.triangle.branch" : "globe", color: .blue, size: 30)
+            IconTile(symbol: worktree || site.mode == .proxy ? "arrow.triangle.branch" : "globe", color: .blue, size: 30)
             VStack(alignment: .leading, spacing: 3) {
                 HStack(spacing: 5) {
                     Text(site.domain).font(.system(size: 13, weight: .semibold))

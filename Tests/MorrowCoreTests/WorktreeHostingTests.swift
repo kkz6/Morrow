@@ -117,6 +117,78 @@ final class WorktreeHostingTests: XCTestCase {
         let plist = try XCTUnwrap(PropertyListSerialization.propertyList(from: Data(contentsOf: manager.job("watch", web: web)), format: nil) as? [String: Any])
         XCTAssertTrue((plist["ProgramArguments"] as? [String])?.contains("/previous/morrow") == true)
     }
+
+    func testGroupingKeepsWorktreesUnderTheirIgnoredMainWithoutChangingHosting() throws {
+        let (_, _, _, manager) = try fixture()
+        let main = try manager.resolve("main.test")
+        try manager.ignore(main.id, ignored: true)
+        let before = try manager.store.load().web
+        let routes = try manager.caddyConfiguration(before)
+        let groups = SiteProjectGroup.groups(for: before.sites)
+        let group = try XCTUnwrap(groups.first)
+        XCTAssertEqual(groups.count, 1)
+        XCTAssertEqual(group.project?.domain, "main.test")
+        XCTAssertEqual(group.project?.ignored, true)
+        XCTAssertEqual(group.worktrees.map(\.domain), ["feature.test"])
+        XCTAssertFalse(group.worktrees[0].isIgnoredForHosting)
+        XCTAssertEqual(try manager.store.load().web, before)
+        XCTAssertEqual(try manager.caddyConfiguration(manager.store.load().web), routes)
+    }
+
+    func testGroupingSearchRevealsChildAndRetainsParentContext() throws {
+        let (_, _, _, manager) = try fixture()
+        let group = try XCTUnwrap(SiteProjectGroup.groups(for: manager.store.load().web.sites).first)
+        let childMatch = try XCTUnwrap(group.matching("  FEATURE.TEST  "))
+        XCTAssertEqual(childMatch.project?.domain, "main.test")
+        XCTAssertEqual(childMatch.worktrees.map(\.domain), ["feature.test"])
+        XCTAssertEqual(group.matching("main.test"), group)
+        XCTAssertEqual(group.matching(" \n "), group)
+        XCTAssertNil(group.matching("nonexistent"))
+    }
+
+    func testUnlinkedMainStillGroupsAllWorktreesAndPreservesExcludedChildren() throws {
+        let (projects, main, _, manager) = try fixture()
+        try CommandRunner().run("/usr/bin/git", ["-C", main.path, "-c", "core.hooksPath=/dev/null", "worktree", "add", "-q", "--detach", projects.appendingPathComponent("next").path], environment: [:]).checked()
+        let directory = try XCTUnwrap(manager.store.load().web.directories.first)
+        try manager.setDirectory(directory.id, includeWorktrees: false)
+        let sites = try manager.store.load().web.sites.filter { $0.path != main.path }
+        let groups = SiteProjectGroup.groups(for: sites.reversed())
+        XCTAssertEqual(groups.count, 1)
+        let group = try XCTUnwrap(groups.first)
+        XCTAssertNil(group.project)
+        XCTAssertEqual(group.name, "main")
+        XCTAssertEqual(group.worktrees.map(\.domain), ["feature.test", "next.test"])
+        XCTAssertTrue(group.worktrees.allSatisfy(\.worktreeExcluded))
+        XCTAssertEqual(group.matching("next.test")?.worktrees.map(\.domain), ["next.test"])
+        XCTAssertEqual(groups, SiteProjectGroup.groups(for: sites))
+    }
+
+    func testSimilarNamesAreNotGroupedAndBrokenBackPointersStayVisible() throws {
+        let (projects, main, worktree, manager) = try fixture()
+        let similar = projects.appendingPathComponent("main-checkpoint")
+        try FileManager.default.createDirectory(at: similar, withIntermediateDirectories: true)
+        try manager.refreshProjects()
+        let sites = try manager.store.load().web.sites
+        let groups = SiteProjectGroup.groups(for: sites)
+        XCTAssertEqual(groups.count, 2)
+        XCTAssertEqual(groups.first { $0.project?.path == similar.path }?.worktrees.count, 0)
+        try "/not/the/linked/folder/.git\n".write(to: main.appendingPathComponent(".git/worktrees/feature/gitdir"), atomically: true, encoding: .utf8)
+        let broken = SiteProjectGroup.groups(for: sites)
+        XCTAssertEqual(broken.count, 3)
+        XCTAssertNotNil(broken.first { $0.project?.path == worktree.path })
+    }
+
+    func testGroupingResolvesRelativeMetadataAndSeparateMainGitDirectory() throws {
+        let (projects, main, worktree, manager) = try fixture()
+        let separate = projects.appendingPathComponent("metadata.git")
+        try FileManager.default.moveItem(at: main.appendingPathComponent(".git"), to: separate)
+        try "gitdir: ../metadata.git\n".write(to: main.appendingPathComponent(".git"), atomically: true, encoding: .utf8)
+        try "gitdir: ../metadata.git/worktrees/feature\n".write(to: worktree.appendingPathComponent(".git"), atomically: true, encoding: .utf8)
+        let groups = SiteProjectGroup.groups(for: try manager.store.load().web.sites)
+        XCTAssertEqual(groups.count, 1)
+        XCTAssertEqual(groups[0].project?.path, main.path)
+        XCTAssertEqual(groups[0].worktrees.map(\.path), [worktree.path])
+    }
 }
 
 private final class RejectConfigurationRunner: CommandRunning, @unchecked Sendable {

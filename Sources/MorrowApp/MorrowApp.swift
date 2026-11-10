@@ -23,6 +23,11 @@ struct MorrowApp: App {
             model.selection = .logs
             model.logInstanceID = model.instances.first?.id
         }
+        if snapshot && CommandLine.arguments.contains("--snapshot-sites"),
+           ProcessInfo.processInfo.environment["MORROW_HOME"] != nil, let web = try? model.manager.store.load().web {
+            model.web = web
+            model.selection = .sites
+        }
         if snapshot && CommandLine.arguments.contains("--snapshot-scrolled") {
             let installation = model.installations[0]
             model.instances = (1...18).map { DatabaseInstance(name: "project-\($0)", installation: installation, port: 5400 + $0) }

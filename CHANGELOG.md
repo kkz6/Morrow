@@ -2,6 +2,7 @@
 
 ## Unreleased
 
+- Grouped Git worktrees beneath their main project in Sites, collapsed by default, with hosting counts and search that reveals matching worktrees. Standalone worktree groups remain accessible when the main checkout is not linked. Domains, HTTPS, ignore choices, and running services are unchanged.
 - Added Project Health in Sites and `morrow project doctor`: framework detection, public-root and dependency checks, saved-runtime comparisons with numeric version files, private Laravel environment checks, and declared PHP/Node requirements. Inspection reads bounded metadata without executing project scripts or changing project files.
 - Improved new-site discovery for PHP framework document roots and Python, Ruby, and Rust app servers. Invalid manifests block only their own route; existing project settings remain intact.
 - Added request timing, query totals, slow-query markers, repeated-query hints, nested-value search, and an attention filter to Dumps. `morrow dumps insights` exposes the same analysis as text or JSON; repeated queries are hints to investigate, not confirmed N+1 errors.

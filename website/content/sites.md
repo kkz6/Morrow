@@ -27,6 +27,10 @@ Folder names are converted to lowercase DNS labels; spaces and unsupported chara
 
 ## Git worktree hosting
 
+Sites groups linked Git worktrees beneath their main project in a collapsed **worktrees** row. Expand it to manage each worktree's domain, HTTPS, logs, and settings. Search includes worktrees and reveals matching children automatically. If the main checkout is outside your linked sites, its worktrees appear together under the repository name. Grouping uses Git metadata, not similar folder names.
+
+Collapsing a group only simplifies the list; it does not stop hosting. The row shows how many worktrees are included in hosting. Ignoring a main project does not automatically ignore its worktrees; use the directory preference below to exclude them, or ignore individual worktrees from their menus.
+
 Under **Sites → + → Project Directories**, each directory has an **Include Git worktrees** switch. Turn it off to exclude linked Git worktree folders from automatic local hosting. The choice is saved per directory and also applies to worktrees discovered later. It starts enabled so existing sites keep working after an update.
 
 Excluded worktrees stay listed as **Worktree excluded from local hosting**. Their files, custom domains, HTTPS preferences, folder runtime selections, and individual ignore choices are preserved. Turn the switch back on to restore their routes. Regular repositories and submodules are unaffected. Detection reads [Git's worktree metadata](https://git-scm.com/docs/gitrepository-layout); it does not run Git or require Git to be installed.
