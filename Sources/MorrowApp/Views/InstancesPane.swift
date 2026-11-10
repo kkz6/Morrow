@@ -8,19 +8,22 @@ struct InstancesPane: View {
     private var filtered: [DatabaseInstance] {
         model.instances.filter { query.isEmpty || $0.name.localizedCaseInsensitiveContains(query) || $0.engine.title.localizedCaseInsensitiveContains(query) }
     }
+    @ViewBuilder private var toolbar: some View {
+        if !model.instances.isEmpty {
+            HStack(spacing: 8) {
+                ToolbarIconButton(symbol: "arrow.triangle.2.circlepath", title: "Check database updates") { model.checkUpdates() }
+                ToolbarIconButton(symbol: "plus", title: "New database instance") { model.requestCreation() }
+            }.disabled(model.busy)
+        }
+    }
     var body: some View {
-        SettingsPane(section: SettingsSection.instances) {
+        SettingsPane(section: SettingsSection.instances, toolbar: AnyView(toolbar)) {
             HStack {
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Your local workspace").font(.system(size: 13, weight: .medium))
                     Text("\(model.databaseRunningCount) running · \(model.instances.count) instances").font(.system(size: 11)).foregroundStyle(.secondary)
                 }
                 Spacer()
-                if !model.instances.isEmpty {
-                    Button("Check Updates") { model.checkUpdates() }.settingsButton().disabled(model.busy)
-                    Button { model.requestCreation() } label: { Label("New Instance", systemImage: "plus") }
-                        .settingsButton().disabled(model.busy)
-                }
             }
             if model.instances.isEmpty {
                 SettingsCard {

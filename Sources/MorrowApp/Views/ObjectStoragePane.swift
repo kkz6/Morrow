@@ -10,11 +10,15 @@ struct StoragePane: View {
     @State private var addingBucket = false
     @State private var deletingBucket: String?
     @State private var removing: ObjectStorageService?
+    @ViewBuilder private var toolbar: some View {
+        if !model.objectStorage.isEmpty {
+            ToolbarIconButton(symbol: "plus", title: "New S3 server") { creating = true }.disabled(model.busy)
+        }
+    }
     var body: some View {
-        SettingsPane(section: SettingsSection.storage) {
+        SettingsPane(section: SettingsSection.storage, toolbar: AnyView(toolbar)) {
             HStack {
                 Text("Local S3 storage").font(.system(size: 13, weight: .medium)); Spacer()
-                if !model.objectStorage.isEmpty { Button("New Server") { creating = true }.settingsButton().disabled(model.busy) }
             }
             if model.objectStorage.isEmpty {
                 SettingsCard {

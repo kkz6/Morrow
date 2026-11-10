@@ -1,5 +1,37 @@
 import SwiftUI
 
+private struct ToolbarActionsKey: EnvironmentKey {
+    static let defaultValue = false
+}
+
+extension EnvironmentValues {
+    var morrowToolbarActions: Bool {
+        get { self[ToolbarActionsKey.self] }
+        set { self[ToolbarActionsKey.self] = newValue }
+    }
+}
+
+/// Glass is reserved for navigation and toolbar controls, above the content.
+/// Controls within cards retain the platform's quiet bordered appearance.
+struct SettingsToolbar<Content: View>: View {
+    @ViewBuilder var content: Content
+    var body: some View {
+        HStack(spacing: 8) { content }
+            .environment(\.morrowToolbarActions, true)
+    }
+}
+
+struct ToolbarIconButton: View {
+    let symbol: String
+    let title: String
+    let action: () -> Void
+    var body: some View {
+        Button(action: action) { Image(systemName: symbol).font(.system(size: 14, weight: .medium)) }
+            .buttonStyle(SettingsButtonStyle(height: 28, iconOnly: true))
+            .help(title).accessibilityLabel(title)
+    }
+}
+
 /// Full-row navigation uses the card itself as its surface.
 struct SettingsLinkRow: View {
     let title: LocalizedStringKey
@@ -28,7 +60,7 @@ struct SettingsNavigationRowStyle: PrimitiveButtonStyle {
 
 /// Layout only: macOS owns each control's material, corners, focus, and feedback.
 struct SettingsButtonStyle: PrimitiveButtonStyle {
-    var height: CGFloat = 32
+    var height: CGFloat = 28
     var expands = false
     var iconOnly = false
     var alignment: Alignment = .center
@@ -46,11 +78,19 @@ struct SettingsButtonStyle: PrimitiveButtonStyle {
 
 /// Standard platform controls, matching the shared settings framework.
 private struct NativeActionStyle: ViewModifier {
-    var height: CGFloat = 32
+    @Environment(\.morrowToolbarActions) private var toolbar
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    var height: CGFloat = 28
     var iconOnly = false
 
     @ViewBuilder func body(content: Content) -> some View {
-        if iconOnly {
+        if toolbar, #available(macOS 26, *), !reduceTransparency {
+            content.buttonStyle(.glass(.regular)).tint(nil)
+                .buttonBorderShape(.capsule)
+                .controlSize(.regular)
+        } else if toolbar {
+            content.buttonStyle(.bordered).tint(nil).controlSize(.regular)
+        } else if iconOnly {
             content.buttonStyle(.plain).tint(nil)
                 .frame(width: height, height: height)
         } else {
@@ -61,13 +101,30 @@ private struct NativeActionStyle: ViewModifier {
 }
 
 extension View {
-    func settingsButton(height: CGFloat = 32, expands: Bool = false) -> some View {
+    func settingsButton(height: CGFloat = 28, expands: Bool = false) -> some View {
         buttonStyle(SettingsButtonStyle(height: height, expands: expands))
     }
     func settingsMenuControl(height: CGFloat = 28, iconOnly: Bool = true) -> some View {
-        menuStyle(.borderlessButton).menuIndicator(iconOnly ? .hidden : .visible)
-            .fixedSize(horizontal: !iconOnly, vertical: true)
-            .frame(width: iconOnly ? height : nil, height: height).tint(.primary)
+        modifier(SettingsMenuControlStyle(height: height, iconOnly: iconOnly))
+    }
+}
+
+private struct SettingsMenuControlStyle: ViewModifier {
+    @Environment(\.morrowToolbarActions) private var toolbar
+    @Environment(\.accessibilityReduceTransparency) private var reduceTransparency
+    var height: CGFloat
+    var iconOnly: Bool
+    @ViewBuilder func body(content: Content) -> some View {
+        if toolbar, #available(macOS 26, *), !reduceTransparency {
+            content.menuStyle(.borderlessButton).menuIndicator(.visible)
+                .tint(.primary).controlSize(.regular).fixedSize()
+                .padding(.horizontal, 10).frame(height: height)
+                .glassEffect(.regular.interactive(), in: .capsule)
+        } else {
+            content.menuStyle(.borderlessButton).menuIndicator(iconOnly ? .hidden : .visible)
+                .fixedSize(horizontal: !iconOnly, vertical: true)
+                .frame(width: iconOnly ? height : nil, height: height).tint(.primary)
+        }
     }
 }
 
@@ -104,8 +161,7 @@ struct SettingsActionGroup<Content: View>: View {
 struct MenuIconButtonStyle: PrimitiveButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         Button(configuration)
-            .buttonStyle(.plain).tint(nil)
-            .controlSize(.small)
+            .modifier(NativeActionStyle(height: MenuLayout.actionSize, iconOnly: true))
             .frame(width: MenuLayout.actionSize, height: MenuLayout.actionSize)
     }
 }

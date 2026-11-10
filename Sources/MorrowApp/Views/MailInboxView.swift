@@ -48,7 +48,7 @@ struct MailInboxView: View {
             SettingsDivider()
             statusBar
         }
-        .background(DS.Surface.card(scheme))
+        .background(DS.Surface.canvas)
         .task {
             let manager = model.mail, service = service
             supportsGrouping = (try? await Task.detached { try manager.supportsProjectInboxes(service) }.value) ?? false
@@ -105,6 +105,7 @@ struct MailInboxView: View {
                 ControlIconButton(symbol: "arrow.clockwise", help: "Refresh inbox (⌘R)") { refreshID += 1 }
                     .keyboardShortcut("r", modifiers: .command)
             }.frame(height: ControlLayout.height)
+                .environment(\.morrowToolbarActions, true)
         }.padding(.horizontal, DS.Spacing.lg).padding(.vertical, DS.Spacing.md)
     }
 

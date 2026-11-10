@@ -6,12 +6,16 @@ struct MailPane: View {
     @State private var creating = false
     @State private var editing: MailService?
     @State private var removing: MailService?
+    @ViewBuilder private var toolbar: some View {
+        if !model.mailServices.isEmpty {
+            ToolbarIconButton(symbol: "plus", title: "New mail server") { creating = true }.disabled(model.busy)
+        }
+    }
     var body: some View {
-        SettingsPane(section: SettingsSection.mail) {
+        SettingsPane(section: SettingsSection.mail, toolbar: AnyView(toolbar)) {
             HStack {
                 Text("SMTP for your local apps").font(.system(size: 13, weight: .medium))
                 Spacer()
-                if !model.mailServices.isEmpty { Button("New Mail Server") { creating = true }.settingsButton().disabled(model.busy) }
             }
             if model.mailServices.isEmpty {
                 SettingsCard {

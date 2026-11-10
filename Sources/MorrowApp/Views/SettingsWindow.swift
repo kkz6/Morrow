@@ -113,6 +113,7 @@ struct SettingsWindow: View {
 struct SettingsPane<Destination: SettingsDestination, Content: View>: View {
     let section: Destination
     var embedded = false
+    var toolbar: AnyView? = nil
     @ViewBuilder var content: Content
     @Environment(AppModel.self) private var model
 
@@ -129,7 +130,7 @@ struct SettingsPane<Destination: SettingsDestination, Content: View>: View {
                 }
                 .scrollContentBackground(.hidden)
 
-                FloatingSettingsHeader(section: section)
+                FloatingSettingsHeader(section: section, toolbar: toolbar)
             }
             .overlay(alignment: .bottom) {
                 SettingsEdgeBackdrop(edge: .bottom)

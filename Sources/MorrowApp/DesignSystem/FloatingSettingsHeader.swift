@@ -16,21 +16,21 @@ enum FloatingHeaderMetrics {
 /// both inside the pane gives them the same lifetime as its scroll view.
 struct FloatingSettingsHeader<Destination: SettingsDestination>: View {
     let section: Destination
+    var toolbar: AnyView? = nil
 
     var body: some View {
         HStack(spacing: DS.Spacing.sm) {
-            IconTile(symbol: section.symbol, color: section.color, size: 22)
             Text(section.title)
-                .font(.system(size: 18, weight: .semibold))
+                .font(.system(size: 15, weight: .semibold))
                 .accessibilityAddTraits(.isHeader)
-            Spacer(minLength: 0)
+            Spacer(minLength: 12)
+            if let toolbar { SettingsToolbar { toolbar } }
         }
         .frame(height: SettingsLayout.detailHeaderHeight)
         .padding(.horizontal, SettingsLayout.detailHorizontalInset)
         .padding(.top, SettingsLayout.detailTopInset)
         .padding(.bottom, SettingsLayout.detailSectionSpacing)
-        .background(SettingsEdgeBackdrop(edge: .top))
-        .allowsHitTesting(false)
+        .background(SettingsEdgeBackdrop(edge: .top).allowsHitTesting(false))
     }
 }
 
@@ -69,7 +69,7 @@ final class SettingsEdgeEffectView: NSVisualEffectView {
     init(edge: SettingsScrollEdge) {
         self.edge = edge
         super.init(frame: .zero)
-        material = .underWindowBackground
+        material = .headerView
         blendingMode = .withinWindow
         state = .active
         isEmphasized = false

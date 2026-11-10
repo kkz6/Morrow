@@ -29,7 +29,7 @@ final class FloatingHeaderTests: XCTestCase {
     @MainActor func testBothEdgesAreVisibleImmediatelyInEitherAppearance() {
         for edge in [SettingsScrollEdge.top, .bottom] {
             let view = SettingsEdgeEffectView(edge: edge)
-            XCTAssertEqual(view.material, .underWindowBackground)
+            XCTAssertEqual(view.material, .headerView)
             XCTAssertEqual(view.blendingMode, .withinWindow)
             for appearance in [NSAppearance.Name.aqua, .darkAqua] {
                 view.appearance = NSAppearance(named: appearance)

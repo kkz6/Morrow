@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Updated shared controls with neutral native Liquid Glass toolbar actions on macOS 26+, compact gray content buttons, native search fields, and quieter adaptive cards. Main actions now stay beside the page title while content scrolls. The sidebar, window size, service controls, and creation workflows are preserved; older systems and Reduce Transparency use standard controls.
+
 - Added a dedicated AI tab and local read-only MCP server shared by the app and CLI. AI clients can inspect sites, service status, runtimes, and project health, with separate opt-in access to logs, PHP captures, and test mail. Explicit client setup preserves other entries and saves private backups; access can be revoked for existing connections.
 - Simplified General to startup, the menu bar count, and appearance. Command Line and iCloud Sync now open focused sheets; background registration and setup tools live under Advanced. Removed the stacked previews, examples, and explanatory blocks from the main preferences page.
 

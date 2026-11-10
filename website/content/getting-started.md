@@ -93,7 +93,7 @@ Open **Settings → Object Storage → Create S3 Server** to run MinIO and confi
 
 ## Find your preferences and logs
 
-General is a compact preferences page without repeated previews, terminal examples, or setup explanations. Open its Command Line, iCloud Sync, or Advanced row for those detailed controls. Shared cards and controls use subtle neutral surfaces that adapt to light and dark appearance. Service cards provide their own logs and configuration actions. The sidebar groups Projects, Services, and App for navigation; it has no separate Logs item.
+General is a compact preferences page without repeated previews, terminal examples, or setup explanations. Open its Command Line, iCloud Sync, or Advanced row for those detailed controls. The main content uses a clean background and subtle gray cards without heavy shadows. Page actions stay beside the title and use neutral native Liquid Glass on macOS 26 and newer; buttons inside cards use compact system controls. Search fields provide macOS’s native focus, clear, and keyboard behavior. The sidebar and window size are unchanged. All surfaces adapt to light and dark appearance, with standard controls on older macOS versions or when Reduce Transparency is enabled. Service cards provide their own logs and configuration actions. The sidebar groups Projects, Services, and App for navigation; it has no separate Logs item.
 
 ## AI coding assistants
 

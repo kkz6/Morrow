@@ -12,7 +12,7 @@ enum DS {
     }
 
     enum Radius {
-        static let card: CGFloat = 17
+        static let card: CGFloat = 12
         static let row: CGFloat = 13
         static let control: CGFloat = 13
         static let selection: CGFloat = 11
@@ -38,9 +38,9 @@ enum DS {
         enum State { case normal, hovered, pressed, disabled }
         static func card(_ scheme: ColorScheme) -> Color {
             if scheme == .dark { return Color(white: 0.18) }
-            // Warm gray sampled from the supplied About reference (#F5F4F4).
-            return Color(.sRGB, red: 245.0 / 255.0, green: 244.0 / 255.0, blue: 244.0 / 255.0)
+            return Color(white: 0.965)
         }
+        static let canvas = Color(nsColor: .textBackgroundColor)
         static func control(_ scheme: ColorScheme, state: State = .normal) -> Color {
             let value: Double
             if scheme == .dark {
@@ -62,9 +62,9 @@ enum DS {
     }
 
     /// Visible, theme-adaptive border used on every card and input.
-    static let borderColor = Color.gray.opacity(0.55)
+    static let borderColor = Color.primary.opacity(0.12)
     /// Lighter hairline used to separate rows inside a card.
-    static let dividerColor = Color.gray.opacity(0.28)
+    static let dividerColor = Color.primary.opacity(0.08)
 }
 
 // MARK: - Icon Tile
@@ -125,6 +125,8 @@ struct SettingsNote: View {
 /// Grouped card that lays its children out as rows separated by hairline dividers,
 /// matching the rounded grouped lists in the reference design.
 struct SettingsCard<Content: View>: View {
+    @Environment(\.colorScheme) private var colorScheme
+    @Environment(\.colorSchemeContrast) private var contrast
     @ViewBuilder var content: Content
 
     var body: some View {
@@ -133,14 +135,13 @@ struct SettingsCard<Content: View>: View {
         }
         .background(
             RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
-                .fill(.background)
+                .fill(DS.Surface.card(colorScheme))
         )
         .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
-                .strokeBorder(DS.borderColor, lineWidth: 1)
+                .strokeBorder(contrast == .increased ? Color.primary.opacity(0.5) : DS.borderColor, lineWidth: DS.Stroke.border)
         )
-        .shadow(color: .black.opacity(0.10), radius: 7, y: 2)
     }
 }
 
@@ -182,7 +183,7 @@ struct SettingRow<Trailing: View>: View {
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.system(size: 14))
+                    .font(.system(size: 13))
                 if let subtitle {
                     Text(subtitle)
                         .font(.system(size: 12))

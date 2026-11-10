@@ -14,8 +14,22 @@ struct SitesPane: View {
     @State private var expandedGroups: Set<String> = []
     private var searching: Bool { !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     private var projects: [SiteProjectGroup] { groups.compactMap { $0.matching(query) } }
+    private var toolbar: some View {
+        HStack(spacing: 8) {
+            ToolbarIconButton(symbol: "folder", title: "Project directories") { directories = true }
+            ToolbarIconButton(symbol: "arrow.clockwise", title: "Refresh projects") {
+                model.perform("Refreshing projects…") { try SiteManager(store: $0.store, runner: $0.runner).refreshProjects(force: true) }
+            }
+            ToolbarIconButton(symbol: "slider.horizontal.3", title: "Hosting settings") { settings = true }
+            Menu {
+                Button("Link Project…") { adding = true }
+                Button("Add Project Directory…") { directories = true }
+            } label: { Image(systemName: "plus") }
+                .settingsMenuControl().help("Add a project").accessibilityLabel("Add a project")
+        }.disabled(model.busy)
+    }
     var body: some View {
-        SettingsPane(section: SettingsSection.sites) {
+        SettingsPane(section: SettingsSection.sites, toolbar: AnyView(toolbar)) {
             HStack {
                 VStack(alignment: .leading, spacing: 3) {
                     Text("Your local projects").font(.system(size: 13, weight: .medium))
@@ -34,7 +48,6 @@ struct SitesPane: View {
                                 if stop { try sites.stop() } else { try sites.start(cli: cli) }
                             }
                         }.disabled(model.busy)
-                        ServiceActionButton(kind: .configuration, title: "Hosting settings") { settings = true }.disabled(model.busy)
                     }
                 }
                 SettingsDivider()
@@ -80,16 +93,7 @@ struct SitesPane: View {
                         .frame(maxWidth: .infinity, alignment: .leading).lineLimit(3).help(message).textSelection(.enabled).settingsCellPadding()
                 }
             }
-            HStack {
-                SectionHeader(title: "Projects")
-                Spacer()
-                Menu {
-                    Button("Link Project…") { adding = true }
-                    Button("Project Directories…") { directories = true }
-                    Divider()
-                    Button("Refresh Projects") { model.perform("Refreshing projects…") { try SiteManager(store: $0.store, runner: $0.runner).refreshProjects(force: true) } }
-                } label: { Image(systemName: "plus").frame(width: 16) }.settingsMenuControl().help("Add or manage projects").disabled(model.busy)
-            }
+            SectionHeader(title: "Projects")
             if model.web.sites.isEmpty {
                 SettingsCard {
                     Text("Add a project directory to discover sites, or link a project's local app port.")

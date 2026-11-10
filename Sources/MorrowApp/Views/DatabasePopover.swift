@@ -16,7 +16,8 @@ struct DatabasePopover: View {
                 Button { model.requestCreation(); openSettings() } label: {
                     Image(systemName: "plus").font(.system(size: 12, weight: .medium))
                 }.buttonStyle(MenuIconButtonStyle()).help("New instance").accessibilityLabel("New instance").disabled(model.busy)
-            }.padding(.horizontal, MenuLayout.horizontalInset).frame(height: MenuLayout.headerHeight)
+            }.environment(\.morrowToolbarActions, true)
+                .padding(.horizontal, MenuLayout.horizontalInset).frame(height: MenuLayout.headerHeight)
             if services.isEmpty {
                 VStack(spacing: 7) {
                     Image(systemName: "externaldrive.badge.plus").font(.system(size: 24, weight: .light)).foregroundStyle(.teal)
@@ -54,7 +55,8 @@ struct DatabasePopover: View {
                     .buttonStyle(MenuIconButtonStyle()).help("Settings").accessibilityLabel("Settings").keyboardShortcut(",", modifiers: .command)
                 Button { NSApplication.shared.terminate(nil) } label: { Image(systemName: "power") }
                     .buttonStyle(MenuIconButtonStyle()).help("Quit Morrow — services stay running").accessibilityLabel("Quit Morrow").disabled(model.busy)
-            }.font(.system(size: 13)).foregroundStyle(.secondary)
+            }.environment(\.morrowToolbarActions, true)
+                .font(.system(size: 13)).foregroundStyle(.secondary)
                 .padding(.horizontal, MenuLayout.horizontalInset).frame(height: MenuLayout.footerHeight)
         }.frame(width: MenuLayout.width).fixedSize(horizontal: false, vertical: true)
             .task { await model.refresh() }

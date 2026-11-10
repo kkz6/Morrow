@@ -19,8 +19,16 @@ struct ApplicationsPane: View {
             .map { SelectOption(value: $0.formula, title: $0.formula.hasPrefix("managed:") ? $0.version : "\($0.version) · \($0.formula)", symbol: "square.stack.3d.up") }
         return (engine == .node ? [SelectOption(value: "lts", title: "Latest LTS", symbol: "morrow.node")] : []) + existing + missing
     }
+    private var toolbar: some View {
+        HStack(spacing: 8) {
+            ToolbarIconButton(symbol: "arrow.clockwise", title: "Refresh installed versions and channels") {
+                Task { await model.loadInventory(force: true); model.loadRuntimeChannels(engine, force: true) }
+            }.disabled(model.busy || model.inventoryLoading)
+            ToolbarIconButton(symbol: "arrow.triangle.2.circlepath", title: "Check runtime updates") { model.checkUpdates() }.disabled(model.busy)
+        }
+    }
     var body: some View {
-        SettingsPane(section: SettingsSection.applications) {
+        SettingsPane(section: SettingsSection.applications, toolbar: AnyView(toolbar)) {
             SettingsNote(text: "Install a runtime or choose an installed version as the default for Morrow commands.")
             SettingsGroup(header: "Add Runtime") {
                 SettingRow(title: "Application") {
@@ -44,8 +52,6 @@ struct ApplicationsPane: View {
             HStack {
                 Text("Your Runtimes").font(.system(size: 12, weight: .semibold)).foregroundStyle(.secondary)
                 Spacer()
-                ServiceActionButton(kind: .refresh, title: "Refresh installed versions and channels") { Task { await model.loadInventory(force: true); model.loadRuntimeChannels(engine, force: true) } }.disabled(model.busy || model.inventoryLoading)
-                Button("Check Updates") { model.checkUpdates() }.settingsButton().disabled(model.busy)
             }
             if model.tools.isEmpty {
                 SettingsCard { Text("Select a version above to add your first application.").font(.system(size: 12)).foregroundStyle(.secondary).frame(maxWidth: .infinity, alignment: .leading).padding(16) }

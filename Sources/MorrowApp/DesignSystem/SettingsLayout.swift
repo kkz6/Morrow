@@ -83,7 +83,7 @@ struct SettingsShell<Destination: SettingsDestination, Detail: View>: View {
             width: SettingsLayout.windowSize.width,
             height: SettingsLayout.windowSize.height
         )
-        .background(VisualEffectView(material: .underWindowBackground).ignoresSafeArea())
+        .background(DS.Surface.canvas.ignoresSafeArea())
         .ignoresSafeArea()
     }
 }
