@@ -36,6 +36,8 @@ Settings uses one fixed-size window with native macOS window controls. Each page
 
 **General** keeps launch at login, the menu bar count, and appearance visible. Command Line and iCloud Sync open focused settings sheets; permissions and registration repair live under **Advanced**. **AI** connects supported coding assistants to Morrow’s read-only MCP tools. Choose **System**, **Light**, or **Dark** from the visible theme choices. **About** contains app update controls and links to documentation, source code, and issue reporting.
 
+Click Morrow in the menu bar to see your services in a compact list. The **+** icon opens database creation, or choose **Create Instance** when the list is empty. The footer shows the running count beside shortcuts to Sites, Settings, and Quit.
+
 In signed releases, choose **About → Check for Updates…**, or enable **Automatically check for updates**. Morrow uses Sparkle's native update window and verifies downloaded updates before installation. Updating the menu bar app does not upgrade your databases or runtimes. Development builds keep their local version and disable app updates. Builds predating the updater need one manual installation of a current signed release from [GitHub Releases](https://github.com/kkz6/Morrow/releases/latest).
 
 ## Create a database

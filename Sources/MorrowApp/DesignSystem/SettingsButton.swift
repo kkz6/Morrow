@@ -160,9 +160,12 @@ struct SettingsActionGroup<Content: View>: View {
 /// Compact native actions used in the menu bar and contextual feedback.
 struct MenuIconButtonStyle: PrimitiveButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
-        Button(configuration)
-            .modifier(NativeActionStyle(height: MenuLayout.actionSize, iconOnly: true))
-            .frame(width: MenuLayout.actionSize, height: MenuLayout.actionSize)
+        Button(role: configuration.role, action: configuration.trigger) {
+            configuration.label
+                .frame(width: MenuLayout.actionSize, height: MenuLayout.actionSize)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain).tint(nil)
     }
 }
 

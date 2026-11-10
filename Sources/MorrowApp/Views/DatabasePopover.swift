@@ -10,19 +10,20 @@ struct DatabasePopover: View {
     var body: some View {
         VStack(spacing: 0) {
             HStack(spacing: 6) {
-                Text("Morrow").font(.system(size: 12, weight: .semibold))
+                Text("Morrow").font(.system(size: 12, weight: .semibold)).foregroundStyle(.secondary)
                 Spacer()
-                Text("\(model.runningCount) running").font(.system(size: 10)).foregroundStyle(.secondary)
-                Button { model.requestCreation(); openSettings() } label: {
-                    Image(systemName: "plus").font(.system(size: 12, weight: .medium))
-                }.buttonStyle(MenuIconButtonStyle()).help("New instance").accessibilityLabel("New instance").disabled(model.busy)
-            }.environment(\.morrowToolbarActions, true)
-                .padding(.horizontal, MenuLayout.horizontalInset).frame(height: MenuLayout.headerHeight)
+                if !services.isEmpty {
+                    Button { model.requestCreation(); openSettings() } label: {
+                        Image(systemName: "plus").font(.system(size: 12, weight: .semibold))
+                    }.buttonStyle(MenuIconButtonStyle()).help("New instance").accessibilityLabel("New instance").disabled(model.busy)
+                }
+            }.padding(.horizontal, MenuLayout.horizontalInset).frame(height: MenuLayout.headerHeight)
             if services.isEmpty {
                 VStack(spacing: 7) {
                     Image(systemName: "externaldrive.badge.plus").font(.system(size: 24, weight: .light)).foregroundStyle(.teal)
                     Text("Create your first database").font(.system(size: 12, weight: .medium))
-                    Button("Create Instance") { model.requestCreation(); openSettings() }.buttonStyle(MenuActionButtonStyle()).padding(.top, 3)
+                    Button("Create Instance") { model.requestCreation(); openSettings() }
+                        .buttonStyle(MenuActionButtonStyle()).disabled(model.busy).padding(.top, 3)
                 }.frame(maxWidth: .infinity).frame(height: MenuLayout.emptyHeight)
             } else {
                 ScrollView {
@@ -48,6 +49,8 @@ struct DatabasePopover: View {
             if let error = model.error { ErrorCard(message: error) { model.error = nil }.lineLimit(3).padding(8) }
             Divider().frame(height: MenuLayout.separatorHeight).opacity(0.35)
             HStack(spacing: DS.Spacing.md) {
+                Text("\(model.runningCount) running")
+                    .font(.system(size: 11)).foregroundStyle(.tertiary)
                 Spacer()
                 Button { model.selection = .sites; openSettings() } label: { Image(systemName: "globe") }
                     .buttonStyle(MenuIconButtonStyle()).help("Sites and project directories").accessibilityLabel("Sites and project directories")
@@ -55,8 +58,7 @@ struct DatabasePopover: View {
                     .buttonStyle(MenuIconButtonStyle()).help("Settings").accessibilityLabel("Settings").keyboardShortcut(",", modifiers: .command)
                 Button { NSApplication.shared.terminate(nil) } label: { Image(systemName: "power") }
                     .buttonStyle(MenuIconButtonStyle()).help("Quit Morrow — services stay running").accessibilityLabel("Quit Morrow").disabled(model.busy)
-            }.environment(\.morrowToolbarActions, true)
-                .font(.system(size: 13)).foregroundStyle(.secondary)
+            }.font(.system(size: 13)).foregroundStyle(.secondary)
                 .padding(.horizontal, MenuLayout.horizontalInset).frame(height: MenuLayout.footerHeight)
         }.frame(width: MenuLayout.width).fixedSize(horizontal: false, vertical: true)
             .task { await model.refresh() }
