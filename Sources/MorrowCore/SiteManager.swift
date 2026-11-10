@@ -301,7 +301,7 @@ public struct SiteManager: Sendable {
             web.enabled = true
             do { try apply(web); try store.update { $0.web = web }; try writeWatcher(web) }
             catch {
-                for component in ["caddy", "dns", "watch"] + web.php.map(phpComponent) { try? launchd.unload(label(component, web: web)) }
+                for component in ["caddy", "dns", "watch"] + phpComponents(web) { try? launchd.unload(label(component, web: web)) }
                 throw error
             }
         }
@@ -309,7 +309,7 @@ public struct SiteManager: Sendable {
     public func stop() throws {
         try store.operation {
             var web = try store.load().web; web.enabled = false
-            for component in ["watch", "caddy", "dns"] + web.php.map(phpComponent) {
+            for component in ["watch", "caddy", "dns"] + phpComponents(web) {
                 try launchd.unload(label(component, web: web))
                 let login = store.loginAgentURL(label: label(component, web: web))
                 if FileManager.default.fileExists(atPath: login.path) { try FileManager.default.removeItem(at: login) }
@@ -324,6 +324,27 @@ public struct SiteManager: Sendable {
         for (port, component) in [(web.httpPort, "caddy"), (web.httpsPort, "caddy"), (web.dnsPort, "dns")] {
             if live(component, web: web) { continue }
             guard !reserved.contains(port), DatabaseManager.portAvailable(port) else { throw MorrowError.message("Port \(port) is unavailable. Choose another Sites listener port.") }
+        }
+    }
+    // Captured requests use a separate PHP pool: FastCGI PHP_VALUE settings
+    // can persist between requests in a worker. Normal site pools stay intact.
+    func reloadDiagnosticsRoutes() throws {
+        let web = try store.load().web
+        guard web.enabled, let caddy = web.caddyPath else { return }
+        let text = try caddyConfiguration(web)
+        let candidate = base.appendingPathComponent("Caddyfile.diagnostics")
+        try writeFile(text, to: candidate)
+        try runner.run(caddy, ["validate", "--config", candidate.path, "--adapter", "caddyfile"], environment: [:]).checked()
+        if live("caddy", web: web) {
+            try startCapturePHP(web)
+            try runner.run(caddy, ["reload", "--config", candidate.path, "--adapter", "caddyfile", "--address", "unix/" + adminSocket(web)], environment: [:]).checked()
+        }
+        try writeFile(text, to: configurationURL)
+        if web.cliPath != nil {
+            // A watcher left running from an older app release would otherwise
+            // regenerate routes without the separate capture pool.
+            try launchd.unload(label("watch", web: web))
+            try writeWatcher(web)
         }
     }
     private func apply(_ web: WebWorkspace) throws {
@@ -352,6 +373,34 @@ public struct SiteManager: Sendable {
             try waitFor("dns", web: web, port: web.dnsPort)
         }
     }
+    private func startCapturePHP(_ web: WebWorkspace) throws {
+        let active = try web.sites.filter { site in
+            guard site.mode == .php, site.issue == nil, !site.isIgnoredForHosting else { return false }
+            return try Diagnostics(store: store).prepend(for: site.path) != nil
+        }
+        let used = Set(active.compactMap { $0.phpID ?? web.defaultPHPID })
+        for item in web.php where used.contains(item.id) {
+            let component = captureComponent(item)
+            guard let executable = Self.fpmExecutable(item) else { throw MorrowError.message("PHP-FPM for capture is missing.") }
+            let configuration = base.appendingPathComponent(component + ".conf")
+            try writeFile(fpmConfiguration(item, web: web, capture: true), to: configuration)
+            try runner.run(executable, ["--test", "--fpm-config", configuration.path], environment: item.environment).checked()
+            try writeJob(component, web: web, arguments: [executable, "--nodaemonize", "--fpm-config", configuration.path], output: base.appendingPathComponent(component + ".log"), runtimeEnvironment: item.environment)
+            if !live(component, web: web) { try launchd.unload(label(component, web: web)); try launchd.bootstrap(job(component, web: web)) }
+            var ready = false
+            for _ in 0..<30 {
+                if live(component, web: web), FileManager.default.fileExists(atPath: phpSocket(item, web: web, capture: true)) { ready = true; break }
+                Thread.sleep(forTimeInterval: 0.1)
+            }
+            guard ready else { throw MorrowError.message("The PHP capture pool did not start. Existing sites were preserved; check \(component).log.") }
+        }
+        // In-flight requests finish in their current pool. Idle capture pools
+        // remain until Sites stops, but disabled pools do not return at login.
+        for item in web.php where !used.contains(item.id) {
+            let login = store.loginAgentURL(label: label(captureComponent(item), web: web))
+            if FileManager.default.fileExists(atPath: login.path) { try FileManager.default.removeItem(at: login) }
+        }
+    }
     private func startPHP(_ web: WebWorkspace) throws {
         let used = Set(web.sites.filter { $0.mode == .php && $0.issue == nil && !$0.isIgnoredForHosting }.compactMap { $0.phpID ?? web.defaultPHPID })
         for item in web.php where !used.contains(item.id) {
@@ -368,6 +417,7 @@ public struct SiteManager: Sendable {
             try writeJob(component, web: web, arguments: [executable, "--nodaemonize", "--fpm-config", configuration.path], output: base.appendingPathComponent(component + ".log"), runtimeEnvironment: item.environment)
             if !live(component, web: web) { try launchd.unload(label(component, web: web)); try launchd.bootstrap(job(component, web: web)) }
         }
+        try startCapturePHP(web)
     }
     private func writeWatcher(_ web: WebWorkspace) throws {
         guard let cli = web.cliPath else { return }
@@ -417,7 +467,8 @@ public struct SiteManager: Sendable {
             else if !proxy { statuses[site.id] = .stopped }
             else if site.mode == .proxy && !(site.proxyPort.map(DatabaseManager.portListening) ?? false) { statuses[site.id] = .waitingForApp }
             else if site.mode == .php {
-                if let item = web.php.first(where: { $0.id == (site.phpID ?? web.defaultPHPID) }), live(phpComponent(item), web: web), FileManager.default.fileExists(atPath: phpSocket(item, web: web)) { statuses[site.id] = .serving }
+                let capture = (try? Diagnostics(store: store).prepend(for: site.path)) != nil
+                if let item = web.php.first(where: { $0.id == (site.phpID ?? web.defaultPHPID) }), live(capture ? captureComponent(item) : phpComponent(item), web: web), FileManager.default.fileExists(atPath: phpSocket(item, web: web, capture: capture)) { statuses[site.id] = .serving }
                 else { statuses[site.id] = .needsPHP }
             } else { statuses[site.id] = .serving }
         }

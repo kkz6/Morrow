@@ -53,7 +53,7 @@ public struct BackgroundRegistrations: Sendable {
         return try store.operation {
             let state = try store.load(), launchd = LaunchdControl(runner: runner), fm = FileManager.default
             let sites = SiteManager(store: store, runner: runner)
-            let webLabels = (["watch", "caddy", "dns"] + state.web.php.map(sites.phpComponent)).map { sites.label($0, web: state.web) }
+            let webLabels = (["watch", "caddy", "dns"] + sites.phpComponents(state.web)).map { sites.label($0, web: state.web) }
             let retained = Set(state.instances.map(\.label) + state.mailServices.map(\.label) + state.objectStorage.map(\.label) + webLabels)
             let archive = store.root.appendingPathComponent("archives/background-\(UUID().uuidString)")
             var removed = 0, updated = importedUpdates, active = 0

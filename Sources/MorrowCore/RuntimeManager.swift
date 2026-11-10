@@ -269,7 +269,14 @@ public struct RuntimeManager: Sendable {
         let name = command ?? engine.binary
         guard let executable = item.command(name), FileManager.default.isExecutableFile(atPath: executable) else { throw MorrowError.message("The selected release does not include \(name).") }
         let process = Process()
-        process.executableURL = URL(fileURLWithPath: executable); process.arguments = arguments
+        var launchArguments = arguments
+        if engine == .php, name == "php", let prepend = try Diagnostics(store: store).prepend(for: folder) {
+            // Explicit invocation settings take precedence over optional capture.
+            if !arguments.contains(where: { $0.contains("auto_prepend_file") || ["-n", "--no-php-ini"].contains($0) }) {
+                launchArguments = ["-d", "auto_prepend_file=" + prepend.path] + arguments
+            }
+        }
+        process.executableURL = URL(fileURLWithPath: executable); process.arguments = launchArguments
         process.currentDirectoryURL = URL(fileURLWithPath: folder, isDirectory: true)
         var environment = ProcessInfo.processInfo.environment
         environment.merge(item.environment) { _, configured in configured }

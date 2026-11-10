@@ -12,11 +12,13 @@ extension SiteManager {
     var dnsConfigurationURL: URL { base.appendingPathComponent("dnsmasq.conf") }
     func label(_ component: String, web: WebWorkspace) -> String { "dev.morrow.web.\(web.id.uuidString.lowercased()).\(component)" }
     func adminSocket(_ web: WebWorkspace) -> String { "/tmp/morrow.\(getuid()).\(web.id.uuidString.lowercased()).caddy.sock" }
-    func phpSocket(_ item: RuntimeInstallation, web: WebWorkspace) -> String {
+    func phpSocket(_ item: RuntimeInstallation, web: WebWorkspace, capture: Bool = false) -> String {
         let hash = SHA256.hash(data: Data(item.id.utf8)).prefix(8).map { String(format: "%02x", $0) }.joined()
-        return "/tmp/morrow.\(getuid()).\(web.id.uuidString.lowercased()).\(hash).sock"
+        return "/tmp/morrow.\(getuid()).\(web.id.uuidString.lowercased()).\(hash)\(capture ? ".capture" : "").sock"
     }
     func phpComponent(_ item: RuntimeInstallation) -> String { "php." + SHA256.hash(data: Data(item.id.utf8)).prefix(8).map { String(format: "%02x", $0) }.joined() }
+    func captureComponent(_ item: RuntimeInstallation) -> String { phpComponent(item) + ".capture" }
+    func phpComponents(_ web: WebWorkspace) -> [String] { web.php.flatMap { [phpComponent($0), captureComponent($0)] } }
     public func url(_ site: LocalSite, web: WebWorkspace? = nil) -> URL {
         let web = web ?? (try? store.load().web) ?? WebWorkspace()
         let installed = SiteSystemSetup.isConfigured(http: web.httpPort, https: web.httpsPort, dns: web.dnsPort, suffixes: web.suffixes)
@@ -73,7 +75,10 @@ extension SiteManager {
                 result += "    @private path /.env* /.git* */.env* */.git* /composer.* /package*.json /*.lock /node_modules/* /vendor/* /morrow.json\n    respond @private 404\n"
                 if site.mode == .php {
                     if let php = web.php.first(where: { $0.id == (site.phpID ?? web.defaultPHPID) }), Self.fpmExecutable(php) != nil {
-                        result += "    php_fastcgi unix/\(phpSocket(php, web: web))\n"
+                        if let prepend = try Diagnostics(store: store).prepend(for: site.path) {
+                            let ini = "auto_prepend_file=\"" + prepend.path.replacingOccurrences(of: "\\", with: "\\\\").replacingOccurrences(of: "\"", with: "\\\"") + "\""
+                            result += "    php_fastcgi unix/\(phpSocket(php, web: web, capture: true)) {\n        env PHP_VALUE \(try Self.quote(ini))\n    }\n"
+                        } else { result += "    php_fastcgi unix/\(phpSocket(php, web: web))\n" }
                     } else { result += "    respond \"Select a PHP-FPM version in Morrow\" 503\n" }
                 } else {
                     result += "    @phpSource path *.php\n    respond @phpSource 404\n"
@@ -95,17 +100,17 @@ extension SiteManager {
     static func fpmExecutable(_ item: RuntimeInstallation) -> String? {
         [item.prefix + "/sbin/php-fpm", item.prefix + "/bin/php-fpm"].first { FileManager.default.isExecutableFile(atPath: $0) }
     }
-    func fpmConfiguration(_ item: RuntimeInstallation, web: WebWorkspace) -> String {
+    func fpmConfiguration(_ item: RuntimeInstallation, web: WebWorkspace, capture: Bool = false) -> String {
         let user = getpwuid(getuid()).map { String(cString: $0.pointee.pw_name) } ?? NSUserName()
         let group = getgrgid(getgid()).map { String(cString: $0.pointee.gr_name) } ?? "staff"
         return """
         [global]
         daemonize = no
-        error_log = \(base.appendingPathComponent(phpComponent(item) + ".log").path)
+        error_log = \(base.appendingPathComponent((capture ? captureComponent(item) : phpComponent(item)) + ".log").path)
         [morrow]
         user = \(user)
         group = \(group)
-        listen = \(phpSocket(item, web: web))
+        listen = \(phpSocket(item, web: web, capture: capture))
         listen.mode = 0600
         pm = ondemand
         pm.max_children = 5

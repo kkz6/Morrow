@@ -245,3 +245,7 @@ The setup daemon is bundled with Morrow and registered through `SMAppService`. m
 The gateway is copied to a root-protected application-support location and runs as the Mac user. It keeps working if the GUI app moves. The helper and gateway are distinct roles: only installation metadata and resolver changes use root privileges.
 
 Customer builds must be Developer ID signed and notarized. Ad-hoc development builds can have additional macOS approval restrictions. See [Contributing](/docs/contributing) for release build inputs.
+
+## Inspect PHP requests
+
+Enable a project in **Settings → Dumps** to inspect `dump()` calls and supported Laravel query, log, view, and job events. This adds per-project FastCGI parameters without restarting PHP or editing application files. See [PHP dumps and request inspection](/docs/dumps).

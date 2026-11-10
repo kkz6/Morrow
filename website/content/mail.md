@@ -1,6 +1,6 @@
 ---
 title: Local SMTP testing
-description: Capture development email with a native Mailpit server and browser inbox.
+description: Capture development email with a local SMTP server and Morrow’s native project inboxes.
 group: Everyday use
 order: 4.8
 ---
@@ -55,7 +55,31 @@ Mailpit captures messages for inspection rather than forwarding them to recipien
 
 ## Inbox and logs
 
-Choose **Open Inbox** in Settings or use the menu-bar inbox button. Mailpit's browser inbox lets you inspect HTML, plain text, recipients, headers, and attachments.
+Choose **Open Inbox** in Settings or use the menu-bar inbox button to open Morrow’s native inbox. Search messages, filter by project, read HTML or plain text, inspect headers and original MIME, save email attachments or `.eml` files, and delete individual messages. Messages refresh while the inbox is open. HTML previews block scripts and remote resources; explicit links open in your browser. Inline images remain available as downloadable attachments.
+
+The browser inbox remains available through `morrow mail inbox <server>` and the server’s local URL.
+
+### Project inboxes
+
+Newly started supported Mailpit servers accept any local test username/password and automatically tag mail with the username. Select a site in the native inbox and choose **Copy SMTP Settings**, or run:
+
+```sh
+morrow mail config local-mail --project shop.test
+```
+
+Use `MAIL_USERNAME="shop.test"` and `MAIL_PASSWORD=morrow`, with the same loopback host, port, and disabled TLS. These are local routing labels, not account credentials. Messages without authentication still appear in All inboxes. Existing captured messages are not relabeled.
+
+An already running server keeps its current settings. Morrow shows **Restart Mail** when project tagging is not enabled; this briefly restarts only that mail server and preserves its database. Older external Mailpit binaries lacking the tagging/authentication flags remain usable without project grouping; choose a current catalog release to enable it.
+
+```sh
+morrow mail messages local-mail --project shop.test --search "subject:Receipt" --json
+morrow mail messages local-mail --offset 50
+morrow mail message local-mail <message-id>
+morrow mail message local-mail <message-id> --raw > message.eml
+morrow mail delete-message local-mail <message-id>
+```
+
+Lists are paginated in groups of 50. Deletion names a specific message; an empty selection never clears the mailbox.
 
 The card's **Logs** action opens the shared searchable log sheet directly. The same action is available in the menu bar. The red stop icon controls the owned mail process; the plain dot and status label report actual readiness.
 

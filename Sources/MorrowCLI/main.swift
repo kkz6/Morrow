@@ -81,6 +81,13 @@ Morrow — databases and development runtimes.
   morrow site certificates               List local HTTPS certificate expiry dates
   morrow site renew-https [domain]        Renew one or all active HTTPS certificates
   morrow site open|logs <domain>          Open a site or print its routing log
+  morrow dumps on|off <folder>          Enable or disable local PHP capture
+  morrow dumps list [--project <folder>] List captured requests and events
+  morrow dumps clear [--project <folder>] --yes
+  morrow mail messages <server>         Search captured email; --project, --search, --json
+  morrow mail message <server> <id>      Read an email; --raw exports original MIME
+  morrow mail delete-message <server> <id>
+  morrow mail config <server> --project <name>
   morrow mail create <name>               Create a local SMTP testing server
       --smtp-port <port>                 Default: next free port from 1025
       --http-port <port>                 Default: next free port from 8025
@@ -220,7 +227,7 @@ func main() throws {
     }
     if command == "storage" { try storageMain(args, manager: ObjectStorageManager(store: manager.store, runner: manager.runner)); return }
     if command == "site" { try siteMain(args, manager: SiteManager(store: manager.store, runner: manager.runner)); return }
-    if command == "mail" { try mailMain(args, manager: MailManager(store: manager.store, runner: manager.runner)); return }
+    if command == "dumps" { try dumpsMain(args, manager: manager); return }
     if command == "sync" { try syncMain(args, manager: WorkspaceSync(store: manager.store, runner: manager.runner)); return }
     if command == "tool" { try toolsMain(args, manager: RuntimeManager(store: manager.store, runner: manager.runner)); return }
     if command == "project" { try projectMain(args, manager: RuntimeManager(store: manager.store, runner: manager.runner)); return }
@@ -459,7 +466,30 @@ func projectMain(_ args: [String], manager: RuntimeManager) throws {
     }
 }
 
-func mailMain(_ args: [String], manager: MailManager) throws {
+func dumpsMain(_ args: [String], manager: DatabaseManager) throws {
+    guard let action = args.first else { throw MorrowError.message("Use morrow dumps on|off|list|clear.") }
+    let diagnostics = Diagnostics(store: manager.store)
+    if ["on", "off"].contains(action) {
+        let options = try Options(Array(args.dropFirst())); try options.requireCount(1, usage: "morrow dumps \(action) <folder>")
+        try diagnostics.configure(path: options.positional[0], enabled: action == "on", runner: manager.runner)
+        print(action == "on" ? "Capture enabled for Morrow PHP requests and new CLI commands." : "Capture disabled; existing captures preserved.")
+    } else if ["list", "clear"].contains(action) {
+        let options = try Options(Array(args.dropFirst()), allowedValues: ["--project"], allowedFlags: action == "clear" ? ["--yes"] : [])
+        try options.requireCount(0, usage: "morrow dumps \(action) [--project <folder>]")
+        let project = try options.values["--project"].map { try ProjectRuntimeStore.directory($0) }
+        if action == "clear" {
+            guard options.flags.contains("--yes") else { throw MorrowError.message("Add --yes to delete the selected local captures.") }
+            try diagnostics.clear(project: project); print("Captures cleared.")
+        } else {
+            for request in try diagnostics.requests(project: project) {
+                print("\(request.title) · \(request.project)")
+                for event in request.events { print("  [\(event.kind)] \(event.title)"); try printJSON(event.value) }
+            }
+        }
+    } else { throw MorrowError.message("Use morrow dumps on|off|list|clear.") }
+}
+
+func mailMain(_ args: [String], manager: MailManager) async throws {
     guard let action = args.first else { throw MorrowError.message("Usage: morrow mail create|list|start|stop|inbox|smtp|config|logs|configure|remove") }
     let remaining = Array(args.dropFirst())
     switch action {
@@ -478,6 +508,25 @@ func mailMain(_ args: [String], manager: MailManager) throws {
             let rows = services.map { ["id": $0.id.uuidString, "name": $0.name, "version": $0.installation.version, "smtp": $0.smtpURL, "inbox": $0.inboxURL.absoluteString, "status": manager.status($0).rawValue] }
             try printJSON(rows)
         } else { for service in services { print("\(service.name) · Mailpit \(service.installation.version) · SMTP :\(service.smtpPort) · Inbox :\(service.httpPort) · \(manager.status(service).title)") } }
+    case "messages":
+        let options = try Options(remaining, allowedValues: ["--project", "--search", "--offset"], allowedFlags: ["--json"])
+        try options.requireCount(1, usage: "morrow mail messages <server> [--project <name>] [--search <query>] [--offset <number>] [--json]")
+        let inbox = MailInbox(service: try manager.resolve(options.positional[0]))
+        let page = try await inbox.messages(search: options.values["--search"] ?? "", project: options.values["--project"] ?? "", offset: options.number("--offset", default: 0))
+        if options.flags.contains("--json") { try printJSON(page) }
+        else { for message in page.messages { print("\(message.id) · \(message.Subject) · \(message.From.label)") } }
+    case "message", "delete-message":
+        let options = try Options(remaining, allowedFlags: action == "message" ? ["--raw"] : [])
+        try options.requireCount(2, usage: "morrow mail \(action) <server> <message-id>")
+        let inbox = MailInbox(service: try manager.resolve(options.positional[0])), id = options.positional[1]
+        if action == "delete-message" { try await inbox.delete([id]); print("Message deleted.") }
+        else if options.flags.contains("--raw") { FileHandle.standardOutput.write(try await inbox.raw(id)) }
+        else { try await printJSON(inbox.message(id)) }
+    case "config":
+        let options = try Options(remaining, allowedValues: ["--project"])
+        try options.requireCount(1, usage: "morrow mail config <server> [--project <name>]")
+        let service = try manager.resolve(options.positional[0])
+        print(try options.values["--project"].map { try service.appConfiguration(project: $0) } ?? service.appConfiguration)
     case "configure":
         let options = try Options(remaining, allowedValues: ["--smtp-port", "--http-port", "--name", "--autostart"])
         try options.requireCount(1, usage: "morrow mail configure <name> [options]")
@@ -487,7 +536,7 @@ func mailMain(_ args: [String], manager: MailManager) throws {
         service.name = options.values["--name"] ?? service.name
         if let auto = options.values["--autostart"] { guard ["on", "off"].contains(auto) else { throw MorrowError.message("Use --autostart on|off.") }; service.autoStart = auto == "on" }
         try manager.update(service); print("Saved mail settings.")
-    case "start", "stop", "restart", "inbox", "smtp", "config", "logs", "remove":
+    case "start", "stop", "restart", "inbox", "smtp", "logs", "remove":
         let options = try Options(remaining, allowedFlags: action == "remove" ? ["--delete-messages"] : [])
         try options.requireCount(1, usage: "morrow mail \(action) <name>")
         let service = try manager.resolve(options.positional[0])
@@ -709,5 +758,14 @@ func syncMain(_ args: [String], manager: WorkspaceSync) throws {
     }
 }
 
+// Preserve the synchronous main thread for gateway/helper service commands.
+// Only interactive mail API commands need an asynchronous URLSession loop.
+if CommandLine.arguments.dropFirst().first == "mail" {
+    Task {
+        do { try await mailMain(Array(CommandLine.arguments.dropFirst(2)), manager: MailManager()); exit(0) }
+        catch { FileHandle.standardError.write(Data("morrow: \(error.localizedDescription)\n".utf8)); exit(1) }
+    }
+    dispatchMain()
+}
 do { try main() }
 catch { FileHandle.standardError.write(Data("morrow: \(error.localizedDescription)\n".utf8)); exit(1) }

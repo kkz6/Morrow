@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added a native mail inbox with project filters, search, HTML/text/header/raw previews, attachment and original-email exports, and individual message deletion. Supported Mailpit servers tag incoming mail by SMTP username on their next start; existing messages and running services are preserved.
+- Added opt-in per-folder PHP dump capture and a native request timeline for supported Laravel queries, logs, views, and queue jobs. App and CLI share private, bounded local captures; project files remain untouched and captured web requests use isolated PHP pools without exposing another network port.
+
 ## 0.2.5
 
 - Added explicit project-worker import and restore in General → Background access and the CLI. Imported user jobs use Morrow's signed launcher, retain their commands, runtime paths, folders, environment, and logs, and keep private originals for undo. Cleanup preserves and repairs imported registrations without stopping processes or adopting unrelated jobs.

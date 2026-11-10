@@ -140,6 +140,14 @@ public struct MailManager: Sendable {
         }
     }
     public func stop(_ id: UUID) throws { try store.operation { try launchd.unload(current(id).label) } }
+    public func projectInboxesEnabled(_ service: MailService) -> Bool {
+        guard let job = try? launchd.inspect(service.label), job.status == 0 else { return false }
+        return job.output.contains("--tags-username") && job.output.contains("--smtp-auth-accept-any")
+    }
+    public func supportsProjectInboxes(_ service: MailService) throws -> Bool {
+        let help = try runner.run(service.installation.executable, ["--help"], environment: [:]).checked()
+        return ["--tags-username", "--smtp-auth-accept-any", "--smtp-auth-allow-insecure"].allSatisfy { help.contains($0) }
+    }
     public func restart(_ id: UUID) throws { try stop(id); try start(id) }
     public func update(_ proposed: MailService) throws {
         try store.operation {
@@ -176,8 +184,12 @@ public struct MailManager: Sendable {
     private func writeJobs(_ service: MailService) throws {
         // env -i prevents inherited Mailpit relay/forwarding settings. This is
         // a loopback mail catcher, with persistent messages per service.
-        let arguments = ["/usr/bin/env", "-i", "HOME=" + FileManager.default.homeDirectoryForCurrentUser.path, "PATH=/usr/bin:/bin", "LC_ALL=C", "MP_DISABLE_VERSION_CHECK=true", service.installation.executable,
+        var arguments = ["/usr/bin/env", "-i", "HOME=" + FileManager.default.homeDirectoryForCurrentUser.path, "PATH=/usr/bin:/bin", "LC_ALL=C", "MP_DISABLE_VERSION_CHECK=true", service.installation.executable,
                          "--listen", "127.0.0.1:\(service.httpPort)", "--smtp", "127.0.0.1:\(service.smtpPort)", "--database", directory(service).appendingPathComponent("messages.db").path]
+        // Capability probing keeps older external Mailpit installations usable.
+        if try supportsProjectInboxes(service) {
+            arguments += ["--tags-username", "--smtp-auth-accept-any", "--smtp-auth-allow-insecure"]
+        }
         let description: [String: Any] = ["Label": service.label, "ProgramArguments": ManagedServiceRunner.arguments(arguments), "AssociatedBundleIdentifiers": ManagedServiceRunner.bundleIdentifiers, "RunAtLoad": true, "KeepAlive": false, "WorkingDirectory": directory(service).path, "StandardOutPath": logURL(service).path, "StandardErrorPath": logURL(service).path, "ExitTimeOut": 30]
         try FileManager.default.createDirectory(at: job(service).deletingLastPathComponent(), withIntermediateDirectories: true)
         let data = try PropertyListSerialization.data(fromPropertyList: description, format: .xml, options: 0)

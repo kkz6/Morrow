@@ -241,3 +241,19 @@ Creation options: `--api-port <port>`, `--console-port <port>`, `--autostart`, `
 Read [Local S3 storage](/docs/object-storage) for buckets, SDK settings, credentials, and data preservation.
 
 Morrow resolves its own launcher independently of the current working directory, so commands invoked through PATH use the same installation from any project folder.
+
+## Native inbox and PHP capture
+
+```sh
+morrow mail config <server> --project <inbox-name>
+morrow mail messages <server> [--project <name>] [--search <query>] [--offset <number>] [--json]
+morrow mail message <server> <message-id> [--raw]
+morrow mail delete-message <server> <message-id>
+morrow dumps on|off <folder>
+morrow dumps list [--project <folder>]
+morrow dumps clear [--project <folder>] --yes
+```
+
+Mail lists contain up to 50 messages. Raw exports are original MIME bytes. Deletion only accepts explicit message IDs; it never clears an unspecified mailbox. Project inbox names map to Mailpit’s SMTP username tags after the mail server starts with grouping enabled. `mail inbox` continues to open the browser inbox.
+
+Dumps use the same opt-in folder settings as the app. `list` prints request timelines and structured event values. `clear` requires `--yes` and only removes Morrow’s capture files. PHP script commands launched through `tool exec php` or the installed PHP shim use capture when their working directory is an enabled folder. Existing workers are not restarted. See [PHP dumps](/docs/dumps) for framework support and limits.

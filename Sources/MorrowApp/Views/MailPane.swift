@@ -18,7 +18,7 @@ struct MailPane: View {
                     VStack(spacing: 10) {
                         IconTile(symbol: "envelope.fill", color: .orange, size: 36)
                         Text("Your test inbox").font(.system(size: 14, weight: .medium))
-                        Text("Send SMTP messages from your apps and inspect them in Mailpit.").font(.system(size: 12)).foregroundStyle(.secondary)
+                        Text("Send SMTP messages from your apps and read them here in Morrow.").font(.system(size: 12)).foregroundStyle(.secondary)
                     }.frame(maxWidth: .infinity).padding(24)
                     SettingsDivider()
                     SettingsActionRow(title: "Create Mail Server…", symbol: "plus") { creating = true }.disabled(model.busy)
@@ -43,7 +43,7 @@ struct MailPane: View {
                             Button("Copy Settings") { copy(service.appConfiguration) }.settingsButton(height: 28)
                         }
                         SettingsDivider()
-                        SettingsActionRow(title: "Open Inbox", symbol: "tray", detail: ":\(service.httpPort)") { NSWorkspace.shared.open(service.inboxURL) }
+                        SettingsActionRow(title: "Open Inbox", symbol: "tray", detail: ":\(service.httpPort)") { model.mailInboxRequest = service }
                             .disabled(model.mailStatuses[service.id] != .running)
                         SettingsDivider()
                         HStack {
@@ -55,7 +55,7 @@ struct MailPane: View {
                     }
                 }
             }
-            SettingsNote(text: "SMTP and the inbox listen on 127.0.0.1. Use no authentication and no TLS in your app's development mail settings. Captured messages remain in this Mac's local inbox.")
+            SettingsNote(text: "SMTP and the inbox listen on 127.0.0.1. Use a project name as the SMTP username to group messages, or leave authentication off. Keep TLS disabled for local SMTP. Captured messages remain in this Mac's local inbox.")
         }
         .feedbackSheet(isPresented: $creating) { MailEditor().environment(model) }
         .feedbackSheet(item: $editing) { MailEditor(existing: $0).environment(model) }

@@ -583,6 +583,7 @@ final class AppModel {
         } catch { domainFailure = true; httpsMessage = error.localizedDescription }
         await refresh()
     }
+    var mailInboxRequest: MailService?
     var mail: MailManager { MailManager(store: manager.store, runner: manager.runner) }
     func showMailLogs(_ service: MailService) { presentLogs(ServiceLogRequest(title: service.name, subtitle: "Mailpit", url: mail.logURL(service))) }
     var runtimes: RuntimeManager { RuntimeManager(store: manager.store, runner: manager.runner) }

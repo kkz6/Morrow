@@ -2,7 +2,7 @@ import SwiftUI
 import MorrowCore
 
 enum SettingsSection: String, Identifiable, SettingsDestination {
-    case instances, sites, applications, mail, logs, storage, general, commandLine, sync, menuBar, appearance, about
+    case instances, sites, applications, mail, dumps, logs, storage, general, commandLine, sync, menuBar, appearance, about
     var id: String { rawValue }
     var feedbackSection: SettingsSection {
         switch self {
@@ -18,6 +18,7 @@ enum SettingsSection: String, Identifiable, SettingsDestination {
         case .sites: return "Sites"
         case .applications: return "Runtimes"
         case .mail: return "Mail"
+        case .dumps: return "Dumps"
         case .commandLine: return "Command Line"
         case .logs: return "Logs"
         case .storage: return "Object Storage"
@@ -34,6 +35,7 @@ enum SettingsSection: String, Identifiable, SettingsDestination {
         case .sites: return "globe"
         case .applications: return "chevron.left.forwardslash.chevron.right"
         case .mail: return "envelope.fill"
+        case .dumps: return "ladybug.fill"
         case .commandLine: return "chevron.left.forwardslash.chevron.right"
         case .logs: return "terminal.fill"
         case .storage: return "externaldrive.badge.icloud"
@@ -50,6 +52,7 @@ enum SettingsSection: String, Identifiable, SettingsDestination {
         case .sites: return .blue
         case .applications: return .indigo
         case .mail: return .orange
+        case .dumps: return .purple
         case .commandLine: return .indigo
         case .logs: return .gray
         case .storage: return .orange
@@ -65,7 +68,7 @@ enum SettingsSection: String, Identifiable, SettingsDestination {
 struct SettingsWindow: View {
     @Environment(AppModel.self) private var model
     private let groups: [SettingsSidebarGroup<SettingsSection>] = [
-        .init("projects", header: "Projects", destinations: [.sites]),
+        .init("projects", header: "Projects", destinations: [.sites, .dumps]),
         .init("services", header: "Services", destinations: [.instances, .applications, .mail, .storage]),
         .init("app", header: "App", destinations: [.general, .about]),
     ]
@@ -74,6 +77,7 @@ struct SettingsWindow: View {
         SettingsShell(selection: $model.selection, groups: groups) { section in
             detail(section)
         }
+        .feedbackSheet(item: $model.mailInboxRequest) { MailInboxSheet(service: $0).environment(model) }
         .feedbackSheet(item: $model.logRequest) { ServiceLogSheet(request: $0).environment(model) }
         .feedbackSheet(item: $model.configurationRequest) { ConfigurationEditorSheet(request: $0).environment(model) }
         .feedbackSheet(item: $model.creationRequest) { version in
@@ -90,6 +94,7 @@ struct SettingsWindow: View {
         case .sites: SitesPane()
         case .applications: ApplicationsPane()
         case .mail: MailPane()
+        case .dumps: DumpsPane()
         case .commandLine: CommandLinePane()
         case .logs: LogsPane()
         case .storage: StoragePane()
