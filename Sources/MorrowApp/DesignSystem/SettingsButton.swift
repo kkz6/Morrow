@@ -22,7 +22,7 @@ struct SettingsLinkRow: View {
 /// Navigation rows keep the system's borderless behavior, without a drawn bezel.
 struct SettingsNavigationRowStyle: PrimitiveButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
-        Button(configuration).buttonStyle(.borderless)
+        Button(configuration).buttonStyle(.plain)
     }
 }
 
@@ -44,20 +44,18 @@ struct SettingsButtonStyle: PrimitiveButtonStyle {
     }
 }
 
-/// Both Button and Menu use the same platform-supplied styles. There is no
-/// custom glass approximation on older systems.
+/// Standard platform controls, matching the shared settings framework.
 private struct NativeActionStyle: ViewModifier {
     var height: CGFloat = 32
     var iconOnly = false
 
     @ViewBuilder func body(content: Content) -> some View {
-        if #available(macOS 26.0, *) {
-            content.buttonStyle(.glass).tint(nil)
-                .buttonBorderShape(iconOnly ? .circle : .roundedRectangle)
-                .controlSize(height <= 24 ? .mini : height < 32 ? .small : .regular)
+        if iconOnly {
+            content.buttonStyle(.plain).tint(nil)
+                .frame(width: height, height: height)
         } else {
             content.buttonStyle(.bordered).tint(nil)
-                .controlSize(height <= 24 ? .mini : height < 32 ? .small : .regular)
+                .controlSize(height < 32 ? .small : .regular)
         }
     }
 }
@@ -67,17 +65,12 @@ extension View {
         buttonStyle(SettingsButtonStyle(height: height, expands: expands))
     }
     func settingsMenuControl(height: CGFloat = 28) -> some View {
-        menuStyle(.button).menuIndicator(.hidden)
-            .modifier(NativeActionStyle(height: height, iconOnly: true))
-    }
-    func settingsPickerControl() -> some View {
-        menuStyle(.button).menuIndicator(.visible)
-            .modifier(NativeActionStyle())
+        menuStyle(.borderlessButton).menuIndicator(.hidden)
+            .frame(width: height, height: height).tint(.primary)
     }
 }
 
-/// An inset, full-width button inside a settings card. Optional secondary text
-/// occupies the trailing edge, like the version in the reference update row.
+/// A settings action is a row of the card, without a second nested bezel.
 struct SettingsActionRow: View {
     let title: LocalizedStringKey
     var symbol: String? = nil
@@ -85,15 +78,14 @@ struct SettingsActionRow: View {
     let action: () -> Void
     var body: some View {
         Button(action: action) {
-            HStack(spacing: 8) {
-                if let symbol { Image(systemName: symbol).font(.system(size: 13)) }
-                Text(title)
-                Spacer(minLength: 8)
+            SettingRow(icon: symbol, title: title) {
                 if let detail { Text(detail).font(.system(size: 12)).foregroundStyle(.secondary) }
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 11, weight: .semibold)).foregroundStyle(.tertiary)
             }
+            .contentShape(Rectangle())
         }
-        .buttonStyle(SettingsButtonStyle(expands: true, alignment: .leading))
-        .padding(SettingsLayout.actionInset)
+        .buttonStyle(.plain)
     }
 }
 
@@ -111,7 +103,7 @@ struct SettingsActionGroup<Content: View>: View {
 struct MenuIconButtonStyle: PrimitiveButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         Button(configuration)
-            .buttonStyle(.borderless).tint(nil)
+            .buttonStyle(.plain).tint(nil)
             .controlSize(.small)
             .frame(width: MenuLayout.actionSize, height: MenuLayout.actionSize)
     }

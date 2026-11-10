@@ -46,7 +46,7 @@ struct DatabasePopover: View {
             }
             if let error = model.error { ErrorCard(message: error) { model.error = nil }.lineLimit(3).padding(8) }
             Divider().frame(height: MenuLayout.separatorHeight).opacity(0.35)
-            HStack(spacing: 8) {
+            HStack(spacing: DS.Spacing.md) {
                 Spacer()
                 Button { model.selection = .sites; openSettings() } label: { Image(systemName: "globe") }
                     .buttonStyle(MenuIconButtonStyle()).help("Sites and project directories").accessibilityLabel("Sites and project directories")
@@ -54,7 +54,7 @@ struct DatabasePopover: View {
                     .buttonStyle(MenuIconButtonStyle()).help("Settings").accessibilityLabel("Settings").keyboardShortcut(",", modifiers: .command)
                 Button { NSApplication.shared.terminate(nil) } label: { Image(systemName: "power") }
                     .buttonStyle(MenuIconButtonStyle()).help("Quit Morrow — services stay running").accessibilityLabel("Quit Morrow").disabled(model.busy)
-            }.font(.system(size: 12)).foregroundStyle(.secondary)
+            }.font(.system(size: 13)).foregroundStyle(.secondary)
                 .padding(.horizontal, MenuLayout.horizontalInset).frame(height: MenuLayout.footerHeight)
         }.frame(width: MenuLayout.width).fixedSize(horizontal: false, vertical: true)
             .task { await model.refresh() }

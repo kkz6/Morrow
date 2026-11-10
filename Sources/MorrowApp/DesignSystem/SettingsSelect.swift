@@ -16,25 +16,24 @@ struct SettingsSelect<Value: Hashable>: View {
     var placeholderSymbol = "square.stack.3d.up"
 
     var body: some View {
-        Menu {
-            Picker(label, selection: $selection) {
-                ForEach(options) { option in
-                    Label {
-                        Text(option.title)
-                    } icon: {
-                        if let image = BrandIcons.menuImage(for: option.symbol) {
-                            Image(nsImage: image)
-                        } else {
-                            Image(systemName: BrandIcons.fallbackSymbol(option.symbol))
-                        }
-                    }.tag(option.value)
-                }
-            }.pickerStyle(.inline)
-        } label: {
-            Text(options.first { $0.value == selection }?.title ?? placeholder)
-                .lineLimit(1).truncationMode(.middle)
+        Picker(label, selection: $selection) {
+            if !options.contains(where: { $0.value == selection }) {
+                Text(placeholder).tag(selection).disabled(true)
+            }
+            ForEach(options) { option in
+                Label {
+                    Text(option.title)
+                } icon: {
+                    if let image = BrandIcons.menuImage(for: option.symbol) {
+                        Image(nsImage: image)
+                    } else {
+                        Image(systemName: BrandIcons.fallbackSymbol(option.symbol))
+                    }
+                }.tag(option.value)
+            }
         }
-        .settingsPickerControl()
+        .labelsHidden().pickerStyle(.menu)
+        .tint(.primary).foregroundStyle(.primary).controlSize(.regular)
         .disabled(options.isEmpty)
         .accessibilityLabel(label)
         .accessibilityValue(options.first { $0.value == selection }?.title ?? placeholder)

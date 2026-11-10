@@ -62,32 +62,35 @@ enum DS {
     }
 
     /// Visible, theme-adaptive border used on every card and input.
-    static let borderColor = Color.primary.opacity(0.14)
+    static let borderColor = Color.gray.opacity(0.55)
     /// Lighter hairline used to separate rows inside a card.
-    static let dividerColor = Color.primary.opacity(0.10)
+    static let dividerColor = Color.gray.opacity(0.28)
 }
 
 // MARK: - Icon Tile
 
-/// System symbols and service logos, without decorative icon backplates.
+/// Shared rounded icon tiles used by the settings framework and menu rows.
 struct IconTile: View {
+    @Environment(\.colorScheme) private var colorScheme
     let symbol: String
     var color: Color = .accentColor
     var size: CGFloat = DS.Size.tile
 
     var body: some View {
-        Group {
-            if let image = BrandIcons.image(for: symbol) {
-                Image(nsImage: image).resizable().scaledToFit()
-                    .frame(width: size * 0.76, height: size * 0.76)
-            } else {
-                Image(systemName: BrandIcons.fallbackSymbol(symbol))
-                    .font(.system(size: size * 0.5, weight: .medium))
-                    .foregroundStyle(color)
+        RoundedRectangle(cornerRadius: DS.Radius.tile, style: .continuous)
+            .fill(BrandIcons.image(for: symbol) == nil ? AnyShapeStyle(color.gradient) : AnyShapeStyle(DS.Surface.control(colorScheme)))
+            .frame(width: size, height: size)
+            .overlay {
+                if let image = BrandIcons.image(for: symbol) {
+                    Image(nsImage: image).resizable().scaledToFit()
+                        .frame(width: size * 0.76, height: size * 0.76)
+                } else {
+                    Image(systemName: BrandIcons.fallbackSymbol(symbol))
+                        .font(.system(size: size * 0.5, weight: .semibold)).foregroundStyle(.white)
+                }
             }
-        }
-        .frame(width: size, height: size)
-        .accessibilityHidden(true)
+            .shadow(color: color.opacity(0.25), radius: 1, y: 0.5)
+            .accessibilityHidden(true)
     }
 }
 
@@ -122,7 +125,6 @@ struct SettingsNote: View {
 /// Grouped card that lays its children out as rows separated by hairline dividers,
 /// matching the rounded grouped lists in the reference design.
 struct SettingsCard<Content: View>: View {
-    @Environment(\.colorScheme) private var colorScheme
     @ViewBuilder var content: Content
 
     var body: some View {
@@ -131,14 +133,14 @@ struct SettingsCard<Content: View>: View {
         }
         .background(
             RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
-                .fill(DS.Surface.card(colorScheme))
+                .fill(.background)
         )
         .clipShape(RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous))
         .overlay(
             RoundedRectangle(cornerRadius: DS.Radius.card, style: .continuous)
-                .strokeBorder(DS.Surface.border(colorScheme), lineWidth: DS.Stroke.border)
+                .strokeBorder(DS.borderColor, lineWidth: 1)
         )
-        .shadow(color: DS.Surface.shadow(colorScheme), radius: 1, y: 0.5)
+        .shadow(color: .black.opacity(0.10), radius: 7, y: 2)
     }
 }
 
@@ -147,7 +149,7 @@ struct SettingsDivider: View {
     var body: some View {
         Rectangle()
             .fill(DS.dividerColor)
-            .frame(height: DS.Stroke.divider)
+            .frame(height: 1)
             .accessibilityHidden(true)
     }
 }

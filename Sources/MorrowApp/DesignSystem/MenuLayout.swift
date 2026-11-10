@@ -4,13 +4,13 @@ import MorrowCore
 /// Shared menu geometry keeps every service equally compact.
 enum MenuLayout {
     static let width: CGFloat = 300
-    static let horizontalInset: CGFloat = 12
-    static let headerHeight: CGFloat = 36
-    static let footerHeight: CGFloat = 32
+    static let horizontalInset: CGFloat = 16
+    static let headerHeight: CGFloat = 44
+    static let footerHeight: CGFloat = 34
     static let rowHeight: CGFloat = 46
-    static let iconSize: CGFloat = 24
+    static let iconSize: CGFloat = 26
     static let actionSize: CGFloat = 24
-    static let rowSpacing: CGFloat = 8
+    static let rowSpacing: CGFloat = 12
     static let actionSpacing: CGFloat = 2
     static let separatorHeight: CGFloat = 0.5
     static let emptyHeight: CGFloat = 124
@@ -36,8 +36,8 @@ struct MenuServiceRow<Actions: View>: View {
         HStack(spacing: MenuLayout.rowSpacing) {
             IconTile(symbol: symbol, color: color, size: MenuLayout.iconSize)
             VStack(alignment: .leading, spacing: 2) {
-                Text(title).font(.system(size: 12, weight: .medium)).lineLimit(1)
-                Text(subtitle).font(.system(size: 10)).foregroundStyle(.secondary).lineLimit(1)
+                Text(title).font(.system(size: 13, weight: .medium)).lineLimit(1)
+                Text(subtitle).font(.system(size: 10)).foregroundStyle(.tertiary).lineLimit(1)
             }.frame(maxWidth: .infinity, alignment: .leading)
             ServiceStatusView(status: status, compact: true)
             HStack(spacing: MenuLayout.actionSpacing) { actions }
