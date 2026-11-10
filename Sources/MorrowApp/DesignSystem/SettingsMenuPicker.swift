@@ -15,13 +15,11 @@ struct SettingsMenuPicker<Value: Hashable>: View {
                 ForEach(options) { option in Text(option.title).tag(option.value) }
             }.pickerStyle(.inline)
         } label: {
-            HStack(spacing: DS.Spacing.sm) {
-                Text(options.first { $0.value == selection }?.title ?? label)
-                    .lineLimit(1).truncationMode(.middle).frame(maxWidth: 170)
-                Image(systemName: "chevron.down").font(.system(size: 9, weight: .semibold))
-            }.font(.system(size: 13, weight: .medium))
+            Text(options.first { $0.value == selection }?.title ?? label)
+                .lineLimit(1).truncationMode(.middle).frame(maxWidth: 170)
+                .font(.system(size: 13, weight: .medium))
         }
-        .menuStyle(.borderlessButton).menuIndicator(.hidden)
+        .menuStyle(.borderlessButton).menuIndicator(.visible)
         .fixedSize(horizontal: true, vertical: false)
         .padding(.horizontal, DS.Spacing.md).frame(height: ControlLayout.height)
         .background(DS.Surface.control(colorScheme, state: !enabled ? .disabled : hovering ? .hovered : .normal), in: RoundedRectangle(cornerRadius: ControlLayout.radius))
