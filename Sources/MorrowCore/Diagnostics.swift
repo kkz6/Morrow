@@ -132,7 +132,7 @@ public struct Diagnostics: Sendable {
             bytesRemaining -= data.count
             let lines = data.split(separator: 10, omittingEmptySubsequences: true)
             let events = lines.prefix(500).compactMap { try? JSONDecoder().decode(DiagnosticEvent.self, from: Data($0)) }
-            if !events.isEmpty { result.append(DiagnosticRequest(id: file.lastPathComponent, project: path, events: events)) }
+            if !events.isEmpty { result.append(DiagnosticRequest(id: directory(path).lastPathComponent + ":" + file.lastPathComponent, project: path, events: events)) }
         }
         return result.sorted { $0.time > $1.time }
     }

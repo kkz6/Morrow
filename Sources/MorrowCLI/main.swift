@@ -83,6 +83,8 @@ Morrow — databases and development runtimes.
   morrow site open|logs <domain>          Open a site or print its routing log
   morrow dumps on|off <folder>          Enable or disable local PHP capture
   morrow dumps list [--project <folder>] List captured requests and events
+  morrow dumps insights [--project <folder>] [--issues] [--json]
+                                         Summarize timing, errors, and query patterns
   morrow dumps clear [--project <folder>] --yes
   morrow mail messages <server>         Search captured email; --project, --search, --json
   morrow mail message <server> <id>      Read an email; --raw exports original MIME
@@ -137,6 +139,7 @@ Morrow — databases and development runtimes.
       --path <folder>                     Choose another project folder
   morrow project list [--json]           List saved folder versions
   morrow project show [folder]           Show effective inherited folder versions
+  morrow project doctor [folder] [--json] Check framework, dependencies, and requirements
   morrow project clear <runtime|all>     Remove folder overrides; preserve files
   morrow db list [--json]                 List instances and current status
   morrow db start|stop|restart <name>     Control a native process
@@ -423,12 +426,25 @@ func toolsMain(_ args: [String], manager: RuntimeManager) throws {
 }
 
 func projectMain(_ args: [String], manager: RuntimeManager) throws {
-    guard let action = args.first else { throw MorrowError.message("Usage: morrow project use|list|show|clear") }
+    guard let action = args.first else { throw MorrowError.message("Usage: morrow project use|list|show|clear|doctor") }
     let remaining = Array(args.dropFirst()), projects = ProjectRuntimeStore(store: manager.store)
     func engine(_ value: String) throws -> RuntimeEngine {
         guard let engine = RuntimeEngine.parse(value) else { throw MorrowError.message("Choose php, node, go, flutter, python, or ruby.") }; return engine
     }
     switch action {
+    case "doctor":
+        let options = try Options(remaining, allowedFlags: ["--json"])
+        guard options.positional.count <= 1 else { throw MorrowError.message("Usage: morrow project doctor [folder] [--json]") }
+        let path = try ProjectRuntimeStore.directory(options.positional.first ?? FileManager.default.currentDirectoryPath)
+        let site = try manager.store.load().web.sites.first { URL(fileURLWithPath: $0.path).resolvingSymlinksInPath().path == path }
+        let report = try ProjectInspection.inspect(path: path, store: manager.store, site: site)
+        if options.flags.contains("--json") { try printJSON(report) }
+        else {
+            print("\(report.profile.name) · \(report.path)")
+            for check in report.checks { print("[\(check.level.rawValue)] \(check.title): \(check.detail)") }
+            for requirement in report.requirements { print("[requirement] \(requirement.name) \(requirement.version) · \(requirement.source)") }
+            print("\(report.warningCount) items to review. Local metadata checks only; no project commands ran or files changed.")
+        }
     case "use":
         let options = try Options(remaining, allowedValues: ["--path"])
         try options.requireCount(2, usage: "morrow project use <runtime> <version> [--path <folder>]")
@@ -462,17 +478,34 @@ func projectMain(_ args: [String], manager: RuntimeManager) throws {
         try options.requireCount(1, usage: "morrow project clear <runtime|all> [--path <folder>]")
         try manager.clearProject(options.positional[0] == "all" ? nil : engine(options.positional[0]), directory: options.values["--path"] ?? FileManager.default.currentDirectoryPath)
         print("Folder override removed. Parent folder choices or defaults now apply; project files were preserved.")
-    default: throw MorrowError.message("Unknown project command. Use morrow project use|list|show|clear.")
+    default: throw MorrowError.message("Unknown project command. Use morrow project use|list|show|clear|doctor.")
     }
 }
 
 func dumpsMain(_ args: [String], manager: DatabaseManager) throws {
-    guard let action = args.first else { throw MorrowError.message("Use morrow dumps on|off|list|clear.") }
+    guard let action = args.first else { throw MorrowError.message("Use morrow dumps on|off|list|insights|clear.") }
     let diagnostics = Diagnostics(store: manager.store)
     if ["on", "off"].contains(action) {
         let options = try Options(Array(args.dropFirst())); try options.requireCount(1, usage: "morrow dumps \(action) <folder>")
         try diagnostics.configure(path: options.positional[0], enabled: action == "on", runner: manager.runner)
         print(action == "on" ? "Capture enabled for Morrow PHP requests and new CLI commands." : "Capture disabled; existing captures preserved.")
+    } else if action == "insights" {
+        let options = try Options(Array(args.dropFirst()), allowedValues: ["--project"], allowedFlags: ["--json", "--issues"])
+        try options.requireCount(0, usage: "morrow dumps insights [--project <folder>] [--issues] [--json]")
+        let project = try options.values["--project"].map { try ProjectRuntimeStore.directory($0) }
+        let reports = try diagnostics.requests(project: project).map(DiagnosticRequestReport.init).filter { !options.flags.contains("--issues") || $0.insights.needsAttention }
+        if options.flags.contains("--json") { try printJSON(reports) }
+        else {
+            if reports.isEmpty { print("No captured requests match.") }
+            for report in reports {
+                let metrics = report.insights
+                print("\(report.title) · \(report.project)")
+                print("  \(metrics.durationMilliseconds.map { String(format: "%.1f ms", $0) } ?? "Completion not captured") · \(metrics.queryCount) queries · \(String(format: "%.1f", metrics.queryMilliseconds)) ms in queries")
+                print("  \(metrics.slowQueryCount) slow queries (≥100 ms) · \(metrics.errorCount) errors\(metrics.status.map { " · HTTP \($0)" } ?? "")")
+                for query in metrics.repeatedQueries { print("  Repeated \(query.count)× [\(query.connection)] \(query.sql)") }
+                if !metrics.repeatedQueries.isEmpty { print("  Repetition is a hint to investigate, not proof of an N+1 bug.") }
+            }
+        }
     } else if ["list", "clear"].contains(action) {
         let options = try Options(Array(args.dropFirst()), allowedValues: ["--project"], allowedFlags: action == "clear" ? ["--yes"] : [])
         try options.requireCount(0, usage: "morrow dumps \(action) [--project <folder>]")
@@ -486,7 +519,7 @@ func dumpsMain(_ args: [String], manager: DatabaseManager) throws {
                 for event in request.events { print("  [\(event.kind)] \(event.title)"); try printJSON(event.value) }
             }
         }
-    } else { throw MorrowError.message("Use morrow dumps on|off|list|clear.") }
+    } else { throw MorrowError.message("Use morrow dumps on|off|list|insights|clear.") }
 }
 
 func mailMain(_ args: [String], manager: MailManager) async throws {

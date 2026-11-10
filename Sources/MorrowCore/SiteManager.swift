@@ -220,15 +220,16 @@ public struct SiteManager: Sendable {
         }
     }
     private func detected(_ path: URL, domain: String, web: WebWorkspace, directory: UUID? = nil) throws -> LocalSite {
-        let fm = FileManager.default
-        let laravel = fm.fileExists(atPath: path.appendingPathComponent("artisan").path)
-        let publicRoot = path.appendingPathComponent("public")
-        let root = (try? publicRoot.resourceValues(forKeys: [.isDirectoryKey]).isDirectory) == true ? publicRoot : path
-        let php = fm.fileExists(atPath: root.appendingPathComponent("index.php").path)
-        let serverApp = fm.fileExists(atPath: path.appendingPathComponent("package.json").path) || fm.fileExists(atPath: path.appendingPathComponent("go.mod").path)
-        let mode: SiteMode = php || laravel ? .php : serverApp ? .proxy : .files
-        let issue = laravel && root == path ? "Laravel's public directory is missing." : mode == .proxy ? "Link the development server port with morrow site link --port <port>." : nil
-        return LocalSite(domain: domain, path: path.path, documentRoot: root.path, mode: mode, https: web.defaultHTTPS, directoryID: directory, issue: issue)
+        let profile: ProjectProfile
+        do { profile = try ProjectProfile.detect(at: path.path) }
+        catch {
+            // A malformed manifest blocks only this route, not every parked
+            // project, and must not fall back to exposing a source directory.
+            return LocalSite(domain: domain, path: path.path, documentRoot: path.path, mode: .proxy, https: web.defaultHTTPS, directoryID: directory, issue: error.localizedDescription)
+        }
+        let missing = profile.requiresPublicDirectory && (try? URL(fileURLWithPath: profile.documentRoot).resourceValues(forKeys: [.isDirectoryKey]).isDirectory) != true
+        let issue = missing ? "\(profile.name)'s public directory is missing." : profile.mode == .proxy ? "Link the development server port with morrow site link --port <port>." : nil
+        return LocalSite(domain: domain, path: path.path, documentRoot: profile.documentRoot, mode: profile.mode, https: web.defaultHTTPS, directoryID: directory, issue: issue)
     }
     private func discovered(_ previous: WebWorkspace) throws -> WebWorkspace {
         var web = previous

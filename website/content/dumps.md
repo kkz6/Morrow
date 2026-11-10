@@ -21,7 +21,7 @@ Visit the project’s Morrow-hosted URL to capture web requests. Commands using 
 
 ## What appears
 
-Each request or command has its own timeline, with expandable values, source locations, and completion duration. Filter by project or event type and search request URLs, SQL, and event titles.
+Each request or command has its own timeline, with expandable values, source locations, and completion duration. Filter by project or event type and search request URLs, SQL, event titles, source paths, bindings, and nested captured values. The event-type filter also limits the request list to requests containing that kind of event.
 
 | Event | Support |
 | --- | --- |
@@ -35,6 +35,20 @@ Each request or command has its own timeline, with expandable values, source loc
 Ordinary captured `dump()` output stays out of the response. `dd()` still displays its value and terminates normally. If capture is disabled or cannot write, the regular dumper displays the value. Native `var_dump()` is not intercepted. The bridge uses your project’s existing autoloader; it does not install Symfony or Laravel.
 
 Laravel’s cached configuration skips automatic provider registration. Use uncached configuration in your local development project for query/log/view/job events. Morrow never clears an application’s configuration cache automatically. Earlier Laravel versions and frameworks that replace Symfony’s dump handler are not supported by this automatic integration. No OpenTelemetry extension is needed.
+
+## Request and query insights
+
+The selected request shows its captured duration, HTTP status when available, query count, total database time, and errors. Queries taking **100 ms or longer** get an amber duration. **Needs attention** narrows the request list to captured errors, HTTP 5xx responses, slow queries, or repeated query patterns.
+
+When a SQL shape occurs at least three times within the same request and connection, **Repeated query patterns** shows the count and combined duration. Literal strings and numbers are normalized for comparison; quoted identifiers and operators are preserved. This is a heuristic to help investigate possible N+1 work, not proof of a bug. Intentional loops and batch processing can also repeat queries.
+
+```sh
+morrow dumps insights --project /path/to/project
+morrow dumps insights --project /path/to/project --issues
+morrow dumps insights --project /path/to/project --json
+```
+
+The CLI and app use the same analysis. Incomplete captures say **Completion not captured** instead of guessing a duration. Summaries describe captured events only; retention and event limits still apply. Query time is a sum of captured query durations, not an exclusive portion of request time. This is not a profiler, a complete application audit, or long-term performance monitoring.
 
 ## Pause and clear
 

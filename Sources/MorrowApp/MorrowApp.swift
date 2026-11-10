@@ -130,6 +130,19 @@ private final class AppearanceTrackingView: NSView {
         guard let index = args.firstIndex(of: "--snapshot"), index + 1 < args.count else { NSApplication.shared.terminate(nil); return }
         let directory = URL(fileURLWithPath: args[index + 1])
         try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+        if args.contains("--snapshot-health"), let site = try? model.manager.store.load().web.sites.first {
+            let view = NSHostingView(rootView: ProjectHealthSheet(site: site).environment(model)
+                .tint(.morrowAccent).preferredColorScheme(model.colorScheme ?? .light)
+                .background(Color(nsColor: .windowBackgroundColor)))
+            let window = NSWindow(contentRect: NSRect(x: 0, y: 0, width: 600, height: 520), styleMask: [.borderless], backing: .buffered, defer: false)
+            window.appearance = NSAppearance(named: model.colorScheme == .dark ? .darkAqua : .aqua)
+            window.contentView = view; window.orderFront(nil)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                save(view: view, to: directory.appendingPathComponent("health.png"))
+                window.orderOut(nil); NSApplication.shared.terminate(nil)
+            }
+            return
+        }
         if args.contains("--snapshot-inbox"), let service = try? model.manager.store.load().mailServices.first {
             let view = NSHostingView(rootView: MailInboxSheet(service: service).environment(model)
                 .tint(.morrowAccent).preferredColorScheme(model.colorScheme ?? .light)

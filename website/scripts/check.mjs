@@ -39,6 +39,8 @@ for (const command of new Set(toolCommands)) if (!reference.includes(`morrow too
 const projectSwitch = cli.slice(cli.indexOf('func projectMain'), cli.indexOf('func mailMain'))
 const projectCommands = [...projectSwitch.matchAll(/^    case ([^:]+):/gm)].flatMap(match => [...match[1].matchAll(/"([a-z-]+)"/g)].map(item => item[1]))
 for (const command of new Set(projectCommands)) if (!reference.includes(`morrow project ${command}`)) failures.push(`CLI reference is missing: morrow project ${command}`)
+const dumpsCommands = ['on', 'off', 'list', 'insights', 'clear']
+for (const command of dumpsCommands) if (!reference.includes(`morrow dumps ${command}`)) failures.push(`CLI reference is missing: morrow dumps ${command}`)
 const mailSwitch = cli.slice(cli.indexOf('func mailMain'), cli.indexOf('func siteMain'))
 const mailCommands = [...mailSwitch.matchAll(/^    case ([^:]+):/gm)].flatMap(match => [...match[1].matchAll(/"([a-z-]+)"/g)].map(item => item[1]))
 for (const command of new Set(mailCommands)) if (!reference.includes(`morrow mail ${command}`)) failures.push(`CLI reference is missing: morrow mail ${command}`)
@@ -53,4 +55,4 @@ const syncCommands = [...syncSwitch.matchAll(/^    case ([^:]+):/gm)].flatMap(ma
 for (const command of new Set(syncCommands)) if (!reference.includes(`morrow sync ${command}`)) failures.push(`CLI reference is missing: morrow sync ${command}`)
 try { await access(new URL('../.output/public/index.html', import.meta.url)) } catch { failures.push('Missing homepage') }
 if (failures.length) { console.error(failures.join('\n')); process.exit(1) }
-console.log(`Checked ${docs.length} prerendered docs pages, local documentation links, and ${new Set(commands).size + new Set(toolCommands).size + new Set(projectCommands).size + new Set(syncCommands).size + new Set(mailCommands).size + new Set(siteCommands).size + new Set(storageCommands).size + new Set(binaryCommands).size + 2} CLI commands`)
+console.log(`Checked ${docs.length} prerendered docs pages, local documentation links, and ${new Set(commands).size + new Set(toolCommands).size + new Set(projectCommands).size + new Set(syncCommands).size + new Set(mailCommands).size + new Set(siteCommands).size + new Set(storageCommands).size + new Set(binaryCommands).size + dumpsCommands.length + 2} CLI commands`)

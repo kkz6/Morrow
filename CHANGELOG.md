@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added Project Health in Sites and `morrow project doctor`: framework detection, public-root and dependency checks, saved-runtime comparisons with numeric version files, private Laravel environment checks, and declared PHP/Node requirements. Inspection reads bounded metadata without executing project scripts or changing project files.
+- Improved new-site discovery for PHP framework document roots and Python, Ruby, and Rust app servers. Invalid manifests block only their own route; existing project settings remain intact.
+- Added request timing, query totals, slow-query markers, repeated-query hints, nested-value search, and an attention filter to Dumps. `morrow dumps insights` exposes the same analysis as text or JSON; repeated queries are hints to investigate, not confirmed N+1 errors.
 - Added a native mail inbox with project filters, search, HTML/text/header/raw previews, attachment and original-email exports, and individual message deletion. Supported Mailpit servers tag incoming mail by SMTP username on their next start; existing messages and running services are preserved.
 - Added opt-in per-folder PHP dump capture and a native request timeline for supported Laravel queries, logs, views, and queue jobs. App and CLI share private, bounded local captures; project files remain untouched and captured web requests use isolated PHP pools without exposing another network port.
 

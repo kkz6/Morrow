@@ -7,6 +7,7 @@ struct SitesPane: View {
     @State private var settings = false
     @State private var adding = false
     @State private var editing: LocalSite?
+    @State private var inspecting: LocalSite?
     @State private var query = ""
     @State private var php: [RuntimeInstallation] = []
     private var projects: [LocalSite] { model.web.sites.filter { query.isEmpty || $0.domain.localizedCaseInsensitiveContains(query) || $0.path.localizedCaseInsensitiveContains(query) } }
@@ -108,6 +109,7 @@ struct SitesPane: View {
         .feedbackSheet(isPresented: $settings) { HostingSettingsSheet().environment(model) }
         .feedbackSheet(isPresented: $adding) { LinkSiteSheet().environment(model) }
         .feedbackSheet(item: $editing) { SiteEditor(site: $0, php: php).environment(model) }
+        .feedbackSheet(item: $inspecting) { ProjectHealthSheet(site: $0).environment(model) }
         .task(id: model.inventory.runtimes.map(\.id)) { php = model.inventory.runtimes.filter { $0.engine == .php && $0.phpFPM != nil } }
     }
     private var hasPreviousResolver: Bool { SiteSystemSetup.setupIssue(suffixes: model.web.suffixes) != nil }
@@ -153,6 +155,7 @@ struct SitesPane: View {
                         .disabled(model.webStatus?.proxy != .running).help("Briefly restarts the local web server.")
                 }
                 Button("Project Settings…") { editing = site }
+                Button("Project Health…") { inspecting = site }
                 Button("Reveal Project") { NSWorkspace.shared.open(URL(fileURLWithPath: site.path)) }
                 if site.directoryID == nil { Button("Unlink", role: .destructive) { model.perform("Removing route…") { try SiteManager(store: $0.store, runner: $0.runner).unlink(site.id) } } }
             } label: { Image(systemName: "ellipsis").frame(width: 16) }.settingsMenuControl().disabled(model.busy)

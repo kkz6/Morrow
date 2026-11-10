@@ -145,6 +145,7 @@ The version in this example is illustrative. Use `tool versions` and `tool chann
 | `morrow project use <runtime> <version> [--path <folder>]` | Reuse/install and select a runtime for the current or specified folder and subfolders |
 | `morrow project list [--json]` | List saved folder choices |
 | `morrow project show [folder]` | Show inherited folder choices and global defaults |
+| `morrow project doctor [folder] [--json]` | Inspect framework metadata, setup files, saved runtime choices, and declared requirements without running project commands |
 | `morrow project clear <runtime\|all> [--path <folder>]` | Clear explicit folder choices; preserve installed binaries and project files |
 
 PHP folder selection also updates the project's PHP-FPM hosting. Folder choices pin the resolved exact version and do not change global defaults. A closer folder overrides its parent separately for each runtime. A missing selected executable is an error rather than a silent fallback. See [Folder Versions](/docs/project-versions).
@@ -249,11 +250,13 @@ morrow mail config <server> --project <inbox-name>
 morrow mail messages <server> [--project <name>] [--search <query>] [--offset <number>] [--json]
 morrow mail message <server> <message-id> [--raw]
 morrow mail delete-message <server> <message-id>
-morrow dumps on|off <folder>
+morrow dumps on <folder>
+morrow dumps off <folder>
 morrow dumps list [--project <folder>]
+morrow dumps insights [--project <folder>] [--issues] [--json]
 morrow dumps clear [--project <folder>] --yes
 ```
 
 Mail lists contain up to 50 messages. Raw exports are original MIME bytes. Deletion only accepts explicit message IDs; it never clears an unspecified mailbox. Project inbox names map to Mailpit’s SMTP username tags after the mail server starts with grouping enabled. `mail inbox` continues to open the browser inbox.
 
-Dumps use the same opt-in folder settings as the app. `list` prints request timelines and structured event values. `clear` requires `--yes` and only removes Morrow’s capture files. PHP script commands launched through `tool exec php` or the installed PHP shim use capture when their working directory is an enabled folder. Existing workers are not restarted. See [PHP dumps](/docs/dumps) for framework support and limits.
+Dumps use the same opt-in folder settings as the app. `list` prints request timelines and structured event values. `insights` summarizes captured duration, HTTP status, query totals, slow queries (100 ms or longer), errors, and patterns repeated at least three times within a request and connection. `--issues` filters that summary to requests needing attention; `--json` returns structured summaries. Repetition is an investigation hint, not a confirmed N+1 bug. `clear` requires `--yes` and only removes Morrow’s capture files. PHP script commands launched through `tool exec php` or the installed PHP shim use capture when their working directory is an enabled folder. Existing workers are not restarted. See [PHP dumps](/docs/dumps) for framework support and limits.

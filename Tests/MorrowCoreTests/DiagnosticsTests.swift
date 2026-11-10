@@ -76,6 +76,19 @@ final class DiagnosticsTests: XCTestCase {
         XCTAssertTrue(FileManager.default.fileExists(atPath: capture.directory(project).appendingPathComponent("prepend.php").path))
     }
 
+    func testSameCaptureFilenameInDifferentProjectsHasDistinctIdentity() throws {
+        let root = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString)
+        defer { try? FileManager.default.removeItem(at: root) }
+        let capture = Diagnostics(store: StateStore(root: root))
+        let projects = ["one", "two"].map { DiagnosticProject(path: root.appendingPathComponent($0).path, enabled: true) }
+        for project in projects {
+            try capture.installAgent(path: project.path)
+            let line = #"{"id":"one","kind":"dump","time":123,"title":"A dump","value":null,"file":null,"line":null}"#
+            try Data(line.utf8).write(to: capture.directory(project.path).appendingPathComponent("requests/same.jsonl"))
+        }
+        try JSONEncoder().encode(projects).write(to: capture.root.appendingPathComponent("projects.json"))
+        XCTAssertEqual(Set(try capture.requests().map(\.id)).count, 2)
+    }
     func testPHPBridgeCapturesStructuredValuesAndStopsAfterDisabling() throws {
         let php = ProcessInfo.processInfo.environment["MORROW_TEST_PHP"] ?? "/opt/homebrew/bin/php"
         guard FileManager.default.isExecutableFile(atPath: php) else { throw XCTSkip("Set MORROW_TEST_PHP to run the PHP bridge integration check.") }
