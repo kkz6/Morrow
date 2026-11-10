@@ -16,10 +16,21 @@ struct ServiceActionButton: View {
     var body: some View {
         Button(action: action) {
             Image(systemName: kind.symbol).font(.system(size: 12, weight: .medium))
+                .foregroundStyle(kind == .stop || kind == .remove ? Color.red : Color.primary)
         }
-        .buttonStyle(SettingsButtonStyle(height: compact ? MenuLayout.actionSize : 28, iconOnly: true))
-        .foregroundStyle(kind == .stop || kind == .remove ? Color.red : Color.secondary)
+        .modifier(ServiceActionStyle(compact: compact))
         .help(title).accessibilityLabel(title)
+    }
+}
+
+private struct ServiceActionStyle: ViewModifier {
+    let compact: Bool
+    @ViewBuilder func body(content: Content) -> some View {
+        if compact {
+            content.buttonStyle(MenuIconButtonStyle())
+        } else {
+            content.buttonStyle(SettingsButtonStyle(height: 28, iconOnly: true))
+        }
     }
 }
 

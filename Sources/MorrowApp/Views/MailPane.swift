@@ -49,12 +49,17 @@ struct MailPane: View {
                             } label: { Image(systemName: "ellipsis").frame(width: 16) }.settingsMenuControl().disabled(model.busy)
                         }.settingsCellPadding()
                         SettingsDivider()
-                        SettingRow(title: "SMTP", subtitle: LocalizedStringKey(service.smtpURL)) {
-                            Button("Copy Settings") { copy(service.appConfiguration) }.settingsButton(height: 28)
-                        }
-                        SettingsDivider()
-                        SettingsActionRow(title: "Open Inbox", symbol: "tray", detail: "New window") { model.showMailInbox(service) }
-                            .disabled(model.mailStatuses[service.id] != .running)
+                        HStack(spacing: DS.Spacing.sm) {
+                            Text("SMTP · 127.0.0.1:\(String(service.smtpPort))")
+                                .font(.system(size: 12)).foregroundStyle(.secondary)
+                                .textSelection(.enabled)
+                            Spacer(minLength: DS.Spacing.sm)
+                            ServiceActionButton(kind: .copy, title: "Copy SMTP settings") { copy(service.appConfiguration) }
+                            Button("Open Inbox", systemImage: "tray") { model.showMailInbox(service) }
+                                .settingsButton(height: 28)
+                                .help("Open the mail inbox in its own window")
+                                .disabled(model.mailStatuses[service.id] != .running)
+                        }.settingsCellPadding()
                     }
                 }
             }

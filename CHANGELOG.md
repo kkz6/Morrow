@@ -2,7 +2,7 @@
 
 ## Unreleased
 
-- Adopted native Liquid Glass buttons, action icons, and menus on macOS 26 and later, with standard macOS controls on earlier versions. Removed hand-drawn button bezels and selectors, used native segmented preferences and zoom controls, and tightened card and mail-list spacing.
+- Adopted neutral native Liquid Glass buttons and menus with plain system-symbol action icons on macOS 26 and later, with standard macOS controls on earlier versions. Removed hand-drawn button bezels and selectors, used native segmented preferences and zoom controls, and tightened card and mail-list spacing. Buttons do not inherit the app-wide accent fill; service status and stop icons retain their meaningful colors. Mail cards combine the SMTP address, copy icon, and compact Open Inbox action in one row. Menu-bar action symbols use native borderless controls on the panel’s existing material.
 
 - Replaced the fixed mail sheet with a resizable native inbox window, remembered window geometry, adjustable message-list width, larger email previews, visible format tabs, compact message details, attachment names/sizes, preview zoom, and an SMTP setup popover. Simplified Mail service cards and the inbox selector, placed unread indicators beside message times, and kept message polling scoped to open inbox windows.
 - Grouped Git worktrees beneath their main project in Sites, collapsed by default, with hosting counts and search that reveals matching worktrees. Standalone worktree groups remain accessible when the main checkout is not linked. Domains, HTTPS, ignore choices, and running services are unchanged.

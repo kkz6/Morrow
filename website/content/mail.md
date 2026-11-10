@@ -31,7 +31,7 @@ Use `--smtp-port`, `--http-port`, `--version`, and `--autostart` when needed. Au
 | TLS/STARTTLS | Disabled for this local testing service |
 | Inbox | The service's local HTTP URL; usually `http://127.0.0.1:8025/` |
 
-Copy the app settings from **Settings → Mail → Copy Settings**, or:
+Copy the app settings using the copy icon beside the SMTP address in **Settings → Mail**, or:
 
 ```sh
 morrow mail config local-mail
@@ -55,7 +55,7 @@ Mailpit captures messages for inspection rather than forwarding them to recipien
 
 ## Inbox and logs
 
-Choose **Open Inbox** in Settings or use the menu-bar inbox button to open Morrow’s separate, resizable mail window. It starts with a roomy reading area and remembers its window size and position. Drag the divider to adjust the message list, or use the native window controls to enlarge it. Opening the same server again brings its existing window forward; closing it stops inbox polling without stopping the mail server.
+Choose the compact **Open Inbox** button beside the SMTP address in Settings or use the menu-bar inbox button to open Morrow’s separate, resizable mail window. It starts with a roomy reading area and remembers its window size and position. Drag the divider to adjust the message list, or use the native window controls to enlarge it. Opening the same server again brings its existing window forward; closing it stops inbox polling without stopping the mail server.
 
 Compact message cards show sender, received time, subject, a short preview, project tag, and attachment count. The toolbar, inbox filter, and action buttons use the app’s shared native macOS controls. Unread dots appear on the right beside the time; read messages keep their sender aligned with the subject. Search messages or filter by project from the top toolbar. The reader offers visible **HTML**, **Text**, **Headers**, and **Raw** tabs, with a compact header and a **Details** popover for full addresses and message metadata. Attachment buttons show names and sizes and save the selected file. Use **…** for original `.eml` export and copying the message ID. The trash icon confirms deletion of the selected message only.
 

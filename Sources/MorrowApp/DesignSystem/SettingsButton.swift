@@ -52,11 +52,11 @@ private struct NativeActionStyle: ViewModifier {
 
     @ViewBuilder func body(content: Content) -> some View {
         if #available(macOS 26.0, *) {
-            content.buttonStyle(.glass)
-                .buttonBorderShape(iconOnly ? .circle : .capsule)
+            content.buttonStyle(.glass).tint(nil)
+                .buttonBorderShape(iconOnly ? .circle : .roundedRectangle)
                 .controlSize(height <= 24 ? .mini : height < 32 ? .small : .regular)
         } else {
-            content.buttonStyle(.bordered)
+            content.buttonStyle(.bordered).tint(nil)
                 .controlSize(height <= 24 ? .mini : height < 32 ? .small : .regular)
         }
     }
@@ -111,7 +111,9 @@ struct SettingsActionGroup<Content: View>: View {
 struct MenuIconButtonStyle: PrimitiveButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         Button(configuration)
-            .buttonStyle(SettingsButtonStyle(height: MenuLayout.actionSize, iconOnly: true))
+            .buttonStyle(.borderless).tint(nil)
+            .controlSize(.small)
+            .frame(width: MenuLayout.actionSize, height: MenuLayout.actionSize)
     }
 }
 

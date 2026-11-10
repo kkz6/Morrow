@@ -69,7 +69,7 @@ enum DS {
 
 // MARK: - Icon Tile
 
-/// System symbols and service logos on a native material surface.
+/// System symbols and service logos, without decorative icon backplates.
 struct IconTile: View {
     let symbol: String
     var color: Color = .accentColor
@@ -87,18 +87,7 @@ struct IconTile: View {
             }
         }
         .frame(width: size, height: size)
-        .modifier(NativeIconSurface())
         .accessibilityHidden(true)
-    }
-}
-
-private struct NativeIconSurface: ViewModifier {
-    @ViewBuilder func body(content: Content) -> some View {
-        if #available(macOS 26.0, *) {
-            content.glassEffect()
-        } else {
-            content.background(.regularMaterial, in: Circle())
-        }
     }
 }
 
