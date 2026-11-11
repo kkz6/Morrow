@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+## 0.2.6
+
 - Simplified the menu bar dropdown with plain icon actions, a subdued header, and the running count in the footer. The empty menu shows one database creation action.
 
 - Updated shared controls with neutral native Liquid Glass toolbar actions on macOS 26+, compact gray content buttons, native search fields, and quieter adaptive cards. Main actions now stay beside the page title while content scrolls. The sidebar, window size, service controls, and creation workflows are preserved; older systems and Reduce Transparency use standard controls.
