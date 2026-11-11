@@ -1,5 +1,22 @@
 import Foundation
 
+extension ComposerPHPRequirement {
+    public static func read(at path: String) throws -> Self? {
+        guard let manifest = try ProjectFiles(path: path).json("composer.json") else { return nil }
+        let constraints = try ["require", "require-dev"].compactMap { section -> String? in
+            guard let value = (manifest[section] as? [String: Any])?["php"] else { return nil }
+            guard let constraint = value as? String, !constraint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
+                throw MorrowError.message("composer.json has an invalid PHP requirement in \(section).")
+            }
+            return constraint
+        }
+        let config = manifest["config"] as? [String: Any]
+        let platform = (config?["platform"] as? [String: Any])?["php"] as? String
+        guard !constraints.isEmpty || platform != nil else { return nil }
+        return Self(constraints: constraints, platformVersion: platform)
+    }
+}
+
 /// Reads bounded project metadata only. Discovery never runs project commands,
 /// package scripts, PHP configuration, or Git hooks.
 public struct ProjectProfile: Codable, Sendable {

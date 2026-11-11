@@ -14,6 +14,14 @@ Supported runtimes are PHP, Node.js, Go, Flutter, Python, and Ruby. Installed ve
 
 Selecting a series stores the exact version actually installed. Updates to the global default do not move a folder's selection. Change its choice explicitly when you want to update it.
 
+## Use the PHP version detected from Composer
+
+Click **Detected PHP** on a site or open its **Folder Versions**. Morrow reads the root `composer.json` PHP requirements. If `config.platform.php` sets a target, suggestions stay in its release series and meet or exceed the target patch. Morrow suggests a matching installed PHP-FPM release first, then a published release for your Mac. Common numeric Composer constraints, including ranges such as `^8.2` and `>=8.2 <8.5`, are supported.
+
+Choose **Use PHP** to save the detected choice, or **Install PHP** to download and select it for this folder. You can leave the current choice in place, select a different version, or choose **Inherit Default** and save to remove a folder override. Changes to Composer metadata update the suggestion when you reopen Folder Versions. Your saved PHP selection changes only when you apply a choice.
+
+The suggestion checks declared PHP versions. Use Composer to verify installed extensions and the requirements of locked dependencies.
+
 ## Terminal commands
 
 ```sh

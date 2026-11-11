@@ -181,12 +181,29 @@ public struct RuntimeManager: Sendable {
         return try validate(selected)
     }
     @discardableResult public func useForProject(_ engine: RuntimeEngine, version: String, directory: String, cli: URL) throws -> RuntimeInstallation {
+        try saveProjectVersion(engine, request: version, directory: directory, cli: cli)
+    }
+    @discardableResult public func useComposerPHP(_ recommendation: ComposerPHPRecommendation, directory: String, cli: URL) throws -> RuntimeInstallation {
+        try saveProjectVersion(.php, request: recommendation.request, directory: directory, cli: cli, composerVersion: recommendation.version)
+    }
+    private func saveProjectVersion(_ engine: RuntimeEngine, request: String, directory: String, cli: URL, composerVersion: String? = nil) throws -> RuntimeInstallation {
         let path = try ProjectRuntimeStore.directory(directory)
         return try store.operation {
             guard FileManager.default.isExecutableFile(atPath: cli.path) else { throw MorrowError.message("Morrow's command launcher is missing.") }
+            if let composerVersion, try ComposerPHPRequirement.read(at: path)?.matches(composerVersion) != true {
+                throw MorrowError.message("The Composer PHP requirement has changed. Reopen Folder Versions to review it.")
+            }
             let projects = ProjectRuntimeStore(store: store)
             let before = try projects.load()
-            let item = try installUnlocked(engine, version: version)
+            let item = try installUnlocked(engine, version: request)
+            if let composerVersion {
+                guard item.version == composerVersion, item.phpFPM != nil else {
+                    throw MorrowError.message("PHP \(composerVersion) with PHP-FPM is unavailable. Refresh your runtime choices.")
+                }
+                guard try ComposerPHPRequirement.read(at: path)?.matches(item.version) == true else {
+                    throw MorrowError.message("The Composer PHP requirement has changed. Reopen Folder Versions to review it.")
+                }
+            }
             try writeShims(item, cli: cli.resolvingSymlinksInPath())
             var after = before
             if let index = after.firstIndex(where: { $0.path == path }) { after[index].runtimes[engine.rawValue] = item }

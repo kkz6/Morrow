@@ -85,6 +85,8 @@ New projects use framework metadata to choose a conventional document root: Lara
 
 Other PHP projects are detected by an `index.php` in the root or `public` directory. A Composer project is treated as PHP rather than a static site. Static sites use a detected `public` directory or their folder root.
 
+**Link Project** and discovered sites show **Detected PHP** when `composer.json` declares a PHP requirement. Click that label on the site to review and apply a matching release in [Folder Versions](/docs/project-versions#use-the-php-version-detected-from-composer). Refresh projects to pick up edits to the manifest in the Sites list.
+
 Node, Go, Python, Ruby, and Rust project markers select application-server mode and wait for a linked port. Nuxt, Next.js, SvelteKit, Astro, NestJS, Vite, and Django are recognized in the project health report. Morrow does not serve these source folders as static websites automatically or run their development commands. A malformed or oversized manifest blocks only that project's new route. Fix its metadata and review **Project Settings** before enabling the route.
 
 Static mode blocks PHP source and common private project files; Caddy also handles PHP through its FastCGI handler when PHP mode is selected. This is local development hosting, not a sandbox for untrusted project code.
@@ -98,7 +100,7 @@ morrow project doctor /path/to/project
 morrow project doctor /path/to/project --json
 ```
 
-The report reads local metadata only. It does not install packages, execute project code, change `.env`, run migrations, or restart services. Numeric `.nvmrc`, `.node-version`, `.php-version`, `.python-version`, and `.ruby-version` requests are compared with saved selections. Aliases, Composer ranges, package engine ranges, and extension requirements are displayed for review; this does not add automatic version-file selection or verify installed extensions. Folder choices still control Morrow's runtimes.
+The report reads local metadata only. It does not install packages, execute project code, change `.env`, run migrations, or restart services. Numeric `.nvmrc`, `.node-version`, `.php-version`, `.python-version`, and `.ruby-version` requests are compared with saved selections. The report displays aliases, Composer ranges, package engine ranges, and extension requirements for review. Folder Versions offers the explicit Composer PHP selection.
 
 Dependency checks confirm that `vendor/autoload.php`, `node_modules`, or a Yarn PnP loader exists; they do not prove dependency versions match a lockfile. PHP checks confirm the saved executable and PHP-FPM paths exist. Use the normal site status and HTTPS validation for live routing checks. Database connections and application behavior are outside this report.
 
