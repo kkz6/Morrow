@@ -95,4 +95,68 @@ final class ProjectInspectionTests: XCTestCase {
             XCTAssertThrowsError(try ProjectProfile.detect(at: root.path))
         }
     }
+
+    func testComposerPHPMatchesStableVersionsWithoutCrossingRangeBoundaries() {
+        for (constraint, accepted, rejected) in [
+            ("^8.2", "8.5.1", "9.0.0"),
+            ("~8.2.3", "8.2.10_1", "8.3.0"),
+            ("8.2.*", "8.2.10", "8.3.0"),
+            ("8.2 - 8.4", "8.4.99", "8.5.0"),
+            ("8.2.0 - 8.4.1", "8.4.1", "8.4.2"),
+            (">= 8.1, <8.2 || >=8.3 !=8.3.1", "8.3.2", "8.3.1"),
+            ("8.4.1", "8.4.1", "8.4.2")
+        ] {
+            let requirement = ComposerPHPRequirement(constraints: [constraint], platformVersion: nil)
+            XCTAssertTrue(requirement.matches(accepted), constraint)
+            XCTAssertFalse(requirement.matches(rejected), constraint)
+        }
+        let unsupported = ComposerPHPRequirement(constraints: ["^8.2 || dev-main"], platformVersion: nil)
+        XCTAssertFalse(unsupported.canRecommend)
+        XCTAssertFalse(unsupported.matches("8.4.0"))
+    }
+
+    func testComposerPHPSelectionIsExplicitAndRejectsAChangedRequirement() throws {
+        try fixture { root, store in
+            try write(#"{"require":{"php":"^8.2"},"require-dev":{"php":">=8.3"},"config":{"platform":{"php":"8.3.4"}}}"#, "composer.json", in: root)
+            try write("<?php", "index.php", in: root)
+            let prefix = root.deletingLastPathComponent().appendingPathComponent("php-runtime")
+            try write("", "bin/php", in: prefix)
+            try write("", "sbin/php-fpm", in: prefix)
+            let php = RuntimeInstallation(engine: .php, formula: "php", version: "8.3.17", prefix: prefix.path, executable: prefix.appendingPathComponent("bin/php").path, source: "external")
+            for file in [php.executable, prefix.appendingPathComponent("sbin/php-fpm").path] {
+                try FileManager.default.setAttributes([.posixPermissions: 0o755], ofItemAtPath: file)
+            }
+            try store.update { $0.tools = [php] }
+            let runner = ComposerPHPFixtureRunner(executable: php.executable)
+            let site = try SiteManager(store: store, runner: runner).link(path: root.path)
+            let choices = ProjectRuntimeStore(store: store)
+            XCTAssertNil(try choices.selection(.php, directory: root.path))
+            XCTAssertNil(site.phpID)
+
+            let requirement = try XCTUnwrap(ComposerPHPRequirement.read(at: root.path))
+            XCTAssertTrue(requirement.matches(php.version))
+            XCTAssertFalse(requirement.matches("8.2.17"))
+            XCTAssertFalse(requirement.matches("8.3.3"))
+            XCTAssertFalse(requirement.matches("8.4.17"))
+            let recommendation = try XCTUnwrap(requirement.recommendation(installed: [php], available: []))
+            let manager = RuntimeManager(store: store, runner: runner)
+            let cli = URL(fileURLWithPath: "/usr/bin/true")
+            try write(#"{"require":{"php":"^8.4"}}"#, "composer.json", in: root)
+            XCTAssertThrowsError(try manager.useComposerPHP(recommendation, directory: root.path, cli: cli))
+            XCTAssertNil(try choices.selection(.php, directory: root.path))
+
+            try write(#"{"require":{"php":"8.3.*"}}"#, "composer.json", in: root)
+            XCTAssertEqual(try manager.useComposerPHP(recommendation, directory: root.path, cli: cli).id, php.id)
+            XCTAssertEqual(try choices.selection(.php, directory: root.path)?.id, php.id)
+            XCTAssertEqual(try store.load().web.sites.first?.phpID, php.id)
+            XCTAssertNil(try store.load().toolDefaults["php"])
+        }
+    }
+}
+
+private struct ComposerPHPFixtureRunner: CommandRunning {
+    let executable: String
+    func run(_ path: String, _ arguments: [String], environment: [String: String]) throws -> CommandResult {
+        CommandResult(status: path == executable ? 0 : 1, output: path == executable ? "PHP 8.3.17" : "")
+    }
 }

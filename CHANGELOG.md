@@ -2,6 +2,8 @@
 
 ## Unreleased
 
+- Show the PHP requirement from Composer when linking or discovering a project. Folder Versions can explicitly select a matching PHP-FPM release for the project, using an installed version or a published download.
+
 ## 0.2.6
 
 - Simplified the menu bar dropdown with plain icon actions, a subdued header, and the running count in the footer. The empty menu shows one database creation action.

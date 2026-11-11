@@ -8,17 +8,26 @@ struct SitesPane: View {
     @State private var adding = false
     @State private var editing: LocalSite?
     @State private var inspecting: LocalSite?
+    @State private var choosingPHP: LocalSite?
     @State private var query = ""
     @State private var php: [RuntimeInstallation] = []
     @State private var groups: [SiteProjectGroup] = []
+    @State private var composerPHP: [String: ComposerPHPRequirement] = [:]
+    @State private var refreshCount = 0
     @State private var expandedGroups: Set<String> = []
+    private struct ProjectListInput: Equatable {
+        let sites: [LocalSite]
+        let refreshCount: Int
+    }
     private var searching: Bool { !query.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     private var projects: [SiteProjectGroup] { groups.compactMap { $0.matching(query) } }
     private var toolbar: some View {
         HStack(spacing: 8) {
             ToolbarIconButton(symbol: "folder", title: "Project directories") { directories = true }
             ToolbarIconButton(symbol: "arrow.clockwise", title: "Refresh projects") {
-                model.perform("Refreshing projects…") { try SiteManager(store: $0.store, runner: $0.runner).refreshProjects(force: true) }
+                model.perform("Refreshing projects…", operation: {
+                    try SiteManager(store: $0.store, runner: $0.runner).refreshProjects(force: true)
+                }, completion: { refreshCount += 1 })
             }
             ToolbarIconButton(symbol: "slider.horizontal.3", title: "Hosting settings") { settings = true }
             Menu {
@@ -118,14 +127,22 @@ struct SitesPane: View {
         .feedbackSheet(isPresented: $directories) { ProjectDirectoriesSheet().environment(model) }
         .feedbackSheet(isPresented: $settings) { HostingSettingsSheet().environment(model) }
         .feedbackSheet(isPresented: $adding) { LinkSiteSheet().environment(model) }
-        .feedbackSheet(item: $editing) { SiteEditor(site: $0, php: php).environment(model) }
+        .feedbackSheet(item: $editing) { SiteEditor(site: $0).environment(model) }
         .feedbackSheet(item: $inspecting) { ProjectHealthSheet(site: $0).environment(model) }
+        .feedbackSheet(item: $choosingPHP) { ProjectVersionEditor(path: $0.path, initialEngine: .php).environment(model) }
         .task(id: model.inventory.runtimes.map(\.id)) { php = model.inventory.runtimes.filter { $0.engine == .php && $0.phpFPM != nil } }
-        .task(id: model.web.sites) {
+        .task(id: ProjectListInput(sites: model.web.sites, refreshCount: refreshCount)) {
             let sites = model.web.sites
-            let result = await Task.detached(priority: .utility) { SiteProjectGroup.groups(for: sites) }.value
+            let result = await Task.detached(priority: .utility) {
+                var requirements: [String: ComposerPHPRequirement] = [:]
+                for path in Set(sites.map(\.path)) {
+                    requirements[path] = try? ComposerPHPRequirement.read(at: path)
+                }
+                return (SiteProjectGroup.groups(for: sites), requirements)
+            }.value
             guard !Task.isCancelled else { return }
-            groups = result
+            groups = result.0
+            composerPHP = result.1
         }
     }
     @ViewBuilder private func projectGroup(_ group: SiteProjectGroup) -> some View {
@@ -173,6 +190,16 @@ struct SitesPane: View {
                 }
                 Text(site.mode == .proxy ? "127.0.0.1:\(site.proxyPort.map(String.init) ?? "—")" : site.documentRoot).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
                 Text(status + (site.isIgnoredForHosting ? "" : validUntil)).font(.system(size: 11)).foregroundStyle(site.issue == nil || site.isIgnoredForHosting ? Color.secondary : Color.orange).lineLimit(2)
+                if let requirement = composerPHP[site.path] {
+                    Button { choosingPHP = site } label: {
+                        HStack(spacing: 4) {
+                            Text("Detected PHP \(requirement.description)").lineLimit(1)
+                            Image(systemName: "chevron.right").font(.system(size: 8, weight: .semibold))
+                        }.font(.system(size: 11)).foregroundStyle(.secondary)
+                    }.buttonStyle(.plain)
+                        .help("Choose a PHP version for \(site.domain) · \(requirement.description)")
+                        .disabled(model.busy)
+                }
             }
             Spacer()
             Toggle("HTTPS for \(site.domain)", isOn: Binding(get: { site.https }, set: { value in
@@ -305,6 +332,7 @@ private struct LinkSiteSheet: View {
     @State private var port = ""
     @State private var secure = false
     @State private var issue: String?
+    @State private var composerPHP: ComposerPHPRequirement?
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Link Project").font(.system(size: 18, weight: .semibold))
@@ -315,6 +343,7 @@ private struct LinkSiteSheet: View {
                         Button("Choose…") {
                             let panel = NSOpenPanel(); panel.canChooseDirectories = true; panel.canChooseFiles = false
                             guard panel.runModal() == .OK, let selected = panel.url else { return }
+                            composerPHP = nil
                             path = selected.path; domain = (try? SiteManager.domain(for: path, suffix: model.web.suffix)) ?? ""
                         }.settingsButton(height: 28)
                     }
@@ -325,6 +354,13 @@ private struct LinkSiteSheet: View {
                 SettingRow(title: "Application port", subtitle: "Leave empty for PHP or static hosting") { SettingsInput(placeholder: "3000", text: $port).frame(width: 100) }
                 SettingsDivider()
                 SettingRow(title: "HTTPS") { Toggle("HTTPS", isOn: $secure).settingsToggle() }
+                if let composerPHP {
+                    SettingsDivider()
+                    SettingRow(title: "Detected PHP", subtitle: "From composer.json · choose after linking") {
+                        Text(composerPHP.description).font(.system(size: 12)).foregroundStyle(.secondary)
+                            .lineLimit(2).help(composerPHP.description)
+                    }
+                }
             }.disabled(model.busy)
             Text("For npm scripts, run morrow site link --port 3000 from your project directory. Start your app on that local port; Morrow manages its hostname and TLS.").font(.system(size: 12)).foregroundStyle(.secondary)
             if let error = issue ?? model.error { ErrorCard(message: error) { issue = nil; model.error = nil } }
@@ -341,6 +377,13 @@ private struct LinkSiteSheet: View {
                 }.settingsButton().keyboardShortcut(.defaultAction).disabled(model.busy || path.isEmpty)
             }
         }.padding(20).frame(width: 490).onAppear { secure = model.web.defaultHTTPS }
+        .task(id: path) {
+            guard !path.isEmpty else { return }
+            let directory = path
+            let requirement = await Task.detached(priority: .utility) { try? ComposerPHPRequirement.read(at: directory) }.value
+            guard !Task.isCancelled else { return }
+            composerPHP = requirement
+        }
     }
 }
 
@@ -348,7 +391,6 @@ private struct SiteEditor: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
     let site: LocalSite
-    let php: [RuntimeInstallation]
     @State private var domain = ""
     @State private var root = ""
     @State private var mode = SiteMode.php

@@ -61,6 +61,7 @@ struct ProjectVersionEditor: View {
     @State private var engine: RuntimeEngine
     @State private var selection = ""
     @State private var customVersion = ""
+    @State private var composerPHP: ComposerPHPRequirement?
     init(path: String, initialEngine: RuntimeEngine = .php) {
         self.path = path; _engine = State(initialValue: initialEngine)
     }
@@ -85,6 +86,10 @@ struct ProjectVersionEditor: View {
             SettingsGroup {
                 SettingRow(title: "Application") {
                     SettingsSelect(label: "Project runtime", selection: $engine, options: RuntimeEngine.allCases.map { .init(value: $0, title: $0.title, symbol: $0.symbol) })
+                }
+                if engine == .php, let composerPHP {
+                    SettingsDivider()
+                    composerRow(composerPHP)
                 }
                 SettingsDivider()
                 SettingRow(title: "Version") {
@@ -113,7 +118,36 @@ struct ProjectVersionEditor: View {
             }
         }.padding(20).frame(width: 480)
         .task(id: engine) { selection = saved?.id ?? ""; model.loadRuntimeChannels(engine) }
+        .task(id: path) {
+            let folder = path
+            let requirement = await Task.detached(priority: .utility) { try? ComposerPHPRequirement.read(at: folder) }.value
+            guard !Task.isCancelled else { return }
+            composerPHP = requirement
+        }
         .onChange(of: saved?.id) { _, id in selection = id ?? "" }
+    }
+    private func composerRow(_ requirement: ComposerPHPRequirement) -> some View {
+        let recommendation = requirement.recommendation(installed: versions, available: model.inventory.channels[RuntimeEngine.php.rawValue] ?? [])
+        return SettingRow(title: "Detected PHP", subtitle: LocalizedStringKey(requirement.description)) {
+            if let saved, requirement.matches(saved.version), saved.phpFPM != nil,
+               FileManager.default.isExecutableFile(atPath: saved.executable) {
+                Text("Using PHP \(saved.version)").font(.system(size: 11)).foregroundStyle(.secondary)
+            } else if let recommendation {
+                Button(recommendation.installed ? "Use PHP \(recommendation.version)" : "Install PHP \(recommendation.version)") {
+                    let folder = path, cli = model.cliURL
+                    model.perform("Selecting PHP \(recommendation.version)…", success: "PHP \(recommendation.version) selected for this folder") { manager in
+                        try RuntimeManager(store: manager.store, runner: manager.runner).useComposerPHP(recommendation, directory: folder, cli: cli)
+                    }
+                }.settingsButton()
+                    .help(recommendation.installed ? "Use this PHP version for hosting and Terminal commands in this folder" : "Download this PHP version and use it for this folder")
+            } else if !requirement.canRecommend {
+                Text("Choose a version manually").font(.system(size: 11)).foregroundStyle(.secondary)
+            } else if model.runtimeChannelsLoading.contains(RuntimeEngine.php.rawValue) || model.inventoryLoading {
+                ProgressView().controlSize(.small).accessibilityLabel("Finding compatible PHP versions")
+            } else {
+                Text("No matching PHP-FPM version").font(.system(size: 11)).foregroundStyle(.secondary)
+            }
+        }
     }
     private func save() {
         let engine = engine, version = selection == "__custom__" ? customVersion.trimmingCharacters(in: .whitespacesAndNewlines) : selection, path = path, cli = model.cliURL
