@@ -113,24 +113,25 @@ public struct SiteManager: Sendable {
         }
     }
     public func update(_ proposed: LocalSite) throws {
-        try store.operation {
-            var web = try store.load().web
-            guard let index = web.sites.firstIndex(where: { $0.id == proposed.id }) else { throw MorrowError.message("This site was removed.") }
-            var site = proposed
-            site.domain = try Self.validateDomain(site.domain, web: web)
-            if site.mode == .php, let selected = try ProjectRuntimeStore(store: store).selection(.php, directory: site.path) {
-                guard Self.fpmExecutable(selected) != nil else { throw MorrowError.message("The folder's PHP \(selected.version) has no PHP-FPM executable.") }
-                site.phpID = selected.id
-                if !web.php.contains(where: { $0.id == selected.id }) { web.php.append(selected) }
-            }
-            guard !web.sites.contains(where: { $0.id != site.id && $0.domain == site.domain && $0.issue == nil }) else { throw MorrowError.message("That hostname belongs to another project.") }
-            let root = try folder(site.documentRoot)
-            guard root.path == site.path || root.path.hasPrefix(site.path + "/") else { throw MorrowError.message("The document root must stay inside the project folder.") }
-            if site.mode == .proxy { guard let port = site.proxyPort else { throw MorrowError.message("Enter the app's local port.") }; try validateProxyPort(port, web: web) }
-            if let id = site.phpID, !web.php.contains(where: { $0.id == id }) { throw MorrowError.message("Select a registered PHP-FPM runtime.") }
-            if site.domain != web.sites[index].domain { site.automaticDomain = false }
-            site.issue = nil; web.sites[index] = site; try saveAndApply(web)
+        try store.operation { try updateUnderOperationLock(proposed) }
+    }
+    func updateUnderOperationLock(_ proposed: LocalSite) throws {
+        var web = try store.load().web
+        guard let index = web.sites.firstIndex(where: { $0.id == proposed.id }) else { throw MorrowError.message("This site was removed.") }
+        var site = proposed
+        site.domain = try Self.validateDomain(site.domain, web: web)
+        if site.mode == .php, let selected = try ProjectRuntimeStore(store: store).selection(.php, directory: site.path) {
+            guard Self.fpmExecutable(selected) != nil else { throw MorrowError.message("The folder's PHP \(selected.version) has no PHP-FPM executable.") }
+            site.phpID = selected.id
+            if !web.php.contains(where: { $0.id == selected.id }) { web.php.append(selected) }
         }
+        guard !web.sites.contains(where: { $0.id != site.id && $0.domain == site.domain && $0.issue == nil }) else { throw MorrowError.message("That hostname belongs to another project.") }
+        let root = try folder(site.documentRoot)
+        guard root.path == site.path || root.path.hasPrefix(site.path + "/") else { throw MorrowError.message("The document root must stay inside the project folder.") }
+        if site.mode == .proxy { guard let port = site.proxyPort else { throw MorrowError.message("Enter the app's local port.") }; try validateProxyPort(port, web: web) }
+        if let id = site.phpID, !web.php.contains(where: { $0.id == id }) { throw MorrowError.message("Select a registered PHP-FPM runtime.") }
+        if site.domain != web.sites[index].domain { site.automaticDomain = false }
+        site.issue = nil; web.sites[index] = site; try saveAndApply(web)
     }
     public func configure(suffix: String? = nil, defaultHTTPS: Bool? = nil, http: Int? = nil, https: Int? = nil, dns: Int? = nil, autoStart: Bool? = nil) throws {
         try store.operation {
@@ -275,6 +276,15 @@ public struct SiteManager: Sendable {
     }
     private func saveAndApply(_ proposed: WebWorkspace) throws {
         var web = proposed
+        let apps = ProjectApps(store: store, runner: runner)
+        let proposedSites = Dictionary(web.sites.map { ($0.id, $0) }, uniquingKeysWith: { first, _ in first })
+        for site in try store.load().web.sites where site.mode == .proxy {
+            if let updated = proposedSites[site.id] {
+                if updated.mode != .proxy || updated.proxyPort != site.proxyPort { try apps.requireStopped(site) }
+            } else {
+                try apps.stopOwned(site.id)
+            }
+        }
         if web.defaultPHPID == nil && web.sites.contains(where: { $0.mode == .php && $0.issue == nil && !$0.isIgnoredForHosting }), let php = try availablePHP().first {
             if !web.php.contains(where: { $0.id == php.id }) { web.php.append(php) }
             web.defaultPHPID = php.id
@@ -474,7 +484,11 @@ public struct SiteManager: Sendable {
             } else { statuses[site.id] = .serving }
         }
         let expirations = httpsCertificates(web).reduce(into: [String: Date]()) { $0[$1.domain] = $1.validUntil }
-        return WebStatus(proxy: proxyStatus, dns: dnsStatus, systemConfigured: configured, setupMessage: message, sites: statuses, httpsTrusted: certificateTrusted(), certificateExpirations: expirations)
+        let apps = ProjectApps(store: store, runner: runner)
+        let applications = Dictionary(web.sites.compactMap { site in
+            apps.state(site).map { (site.id, $0) }
+        }, uniquingKeysWith: { first, _ in first })
+        return WebStatus(proxy: proxyStatus, dns: dnsStatus, systemConfigured: configured, setupMessage: message, sites: statuses, httpsTrusted: certificateTrusted(), certificateExpirations: expirations, applications: applications)
     }
     public func runtimeLogURL(_ runtime: RuntimeInstallation) -> URL? {
         guard runtime.engine == .php else { return nil }

@@ -10,7 +10,7 @@ Open **Settings → Runtimes → Folder Versions → Choose Folder**. Select the
 
 **Project Settings → Folder versions → Choose** opens the same editor for a hosted project. Choose **Inherit Default** to remove a runtime's explicit choice from this folder. Clearing all folder versions preserves the folder and installed software.
 
-Supported runtimes are PHP, Node.js, Go, Flutter, Python, and Ruby. Installed versions and available provider releases use the shared selector; **Other Version** accepts a release series such as PHP `8.4` or Node `24`. Morrow reuses a compatible installation or installs the requested release using its configured provider. PHP **8.0.30** is available from the hosted catalog for Apple silicon; selecting it for a folder installs it when needed and leaves the global PHP default unchanged. A package not installed or published in the catalog requires an appropriate published distribution. It is not silently replaced by another release.
+Supported runtimes are PHP, Node.js, Go, Flutter, Python, Ruby, and Rust. Installed versions and available provider releases use the shared selector; **Other Version** accepts a release series such as PHP `8.4` or Node `24`. Morrow reuses a compatible installation or installs the requested release using its configured provider. PHP **8.0.30** is available from the hosted catalog for Apple silicon; selecting it for a folder installs it when needed and leaves the global PHP default unchanged. A package not installed or published in the catalog requires an appropriate published distribution. It is not silently replaced by another release.
 
 Selecting a series stores the exact version actually installed. Updates to the global default do not move a folder's selection. Change its choice explicitly when you want to update it.
 
@@ -21,6 +21,10 @@ Click **Detected PHP** on a site or open its **Folder Versions**. Morrow reads t
 Choose **Use PHP** to save the detected choice, or **Install PHP** to download and select it for this folder. You can leave the current choice in place, select a different version, or choose **Inherit Default** and save to remove a folder override. Changes to Composer metadata update the suggestion when you reopen Folder Versions. Your saved PHP selection changes only when you apply a choice.
 
 The suggestion checks declared PHP versions. Use Composer to verify installed extensions and the requirements of locked dependencies.
+
+## Use the detected Rust toolchain
+
+For Rust, click **Detected Rust** in Sites or select Rust in **Folder Versions**. Morrow reads the project's `rust-toolchain.toml` or legacy `rust-toolchain` pin and the minimum declared by `Cargo.toml`. **Use Rust** selects a matching installed stable release, while **Install Rust** installs and selects the displayed release. **Inherit Default** removes the folder selection. Nightly, custom toolchains, and explicitly requested extra targets or components are shown for manual review. A change to the project files updates the recommendation when you reopen Folder Versions.
 
 ## Terminal commands
 

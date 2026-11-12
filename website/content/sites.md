@@ -87,7 +87,7 @@ Other PHP projects are detected by an `index.php` in the root or `public` direct
 
 **Link Project** and discovered sites show **Detected PHP** when `composer.json` declares a PHP requirement. Click that label on the site to review and apply a matching release in [Folder Versions](/docs/project-versions#use-the-php-version-detected-from-composer). Refresh projects to pick up edits to the manifest in the Sites list.
 
-Node, Go, Python, Ruby, and Rust project markers select application-server mode and wait for a linked port. Nuxt, Next.js, SvelteKit, Astro, NestJS, Vite, and Django are recognized in the project health report. Morrow does not serve these source folders as static websites automatically or run their development commands. A malformed or oversized manifest blocks only that project's new route. Fix its metadata and review **Project Settings** before enabling the route.
+Node, Go, Python, Ruby, and Rust project markers select application-server mode and wait for a linked port. Nuxt, Next.js, SvelteKit, Astro, NestJS, Vite, and Django are recognized in the project health report. Start development commands explicitly from Sites or Terminal. A malformed or oversized manifest blocks only that project's new route. Fix its metadata and review **Project Settings** before enabling the route.
 
 Static mode blocks PHP source and common private project files; Caddy also handles PHP through its FastCGI handler when PHP mode is selected. This is local development hosting, not a sandbox for untrusted project code.
 
@@ -115,7 +115,7 @@ cd "$HOME/Projects/dashboard"
 morrow site link --port 3000
 ```
 
-This creates `dashboard.test → 127.0.0.1:3000`. The command works for Node, Go, Python, Rust, Java, or any HTTP application. Keep starting the application with its own development command.
+This creates `dashboard.test → 127.0.0.1:3000`. The command works for Node, Go, Python, Rust, Java, or any HTTP application. Start the application yourself or save a supported runtime command in Sites.
 
 For a Nuxt project whose dev script already invokes Nuxt:
 
@@ -136,6 +136,23 @@ morrow site unlink dashboard.test
 ```
 
 A domain without dots is placed under the current development suffix. Explicit links persist after the application's process exits, showing **Waiting for app** until its port opens again. Morrow does not start or stop these external app processes. WebSockets pass through Caddy; frameworks such as Vite may require the exact hostname and secure HMR settings in their dev-server configuration.
+
+## Run a project app
+
+On a Rust site, click **Start** to review the suggested `cargo run` command and enter the app's port. On any app-port site, choose **… → App Command** to select a runtime, executable, arguments, and port. **Save & Start** runs the command in the project folder using its saved Folder Version or the Morrow runtime default. **Save** prepares the command for a later start.
+
+The command receives `HOST=127.0.0.1` and `PORT`. If your server expects different settings, pass its bind address and port as arguments. Morrow shows **Starting** while the process is live but the port is still closed, then **Running** when the local port responds. Use the stop square and the log icon for that app. Routing logs remain available in the project menu. Start the Sites web server to reach the app on its local domain.
+
+Commands and logs are stored locally. A running app stays up when the window closes. Start it again after logging back in. Morrow reports a failed process and keeps its output for inspection.
+
+```sh
+morrow site link --port 3000
+morrow site app configure my-app.test rust cargo -- run
+morrow site app start my-app.test
+morrow site app status my-app.test
+morrow site app logs my-app.test
+morrow site app stop my-app.test
+```
 
 ## Change the domain suffix
 

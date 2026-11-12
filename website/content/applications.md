@@ -6,9 +6,9 @@ order: 4.7
 ---
 ## Select a version
 
-Open **Settings → Runtimes**, choose an application and version, then click **Install** beside the version selector. For a detected installation the action becomes **Set Default**; a selected default shows a label instead of another button. Morrow verifies and reuses an existing binary, or installs a missing version and selects it in the same operation. Node.js and other missing runtimes use the configured verified catalog; Go also has a direct official archive provider. No package manager is used for installation or updates. See [Binary downloads](/docs/binary-downloads).
+Open **Settings → Runtimes**, choose an application and version, then click **Install** beside the version selector. For a detected installation the action becomes **Set Default**; a selected default shows a label instead of another button. Morrow verifies and reuses an existing binary, or installs a missing version and selects it in the same operation. Node.js and other missing runtimes use the configured verified catalog. Go and Rust also support official archives. No package manager is used for installation or updates. See [Binary downloads](/docs/binary-downloads).
 
-Supported runtimes in this preview are PHP, Go, Flutter, Node.js, Python, and Ruby. The provider catalog can be extended as more runtimes are added. PHP web hosting and app-port routing live in [Sites](/docs/sites). [Folder Versions](/docs/project-versions) selects a runtime per project. Automatic ownership of Node/Go development processes, portable project version files, and additional runtimes are future work.
+Supported runtimes are PHP, Go, Flutter, Node.js, Python, Ruby, and Rust. [Folder Versions](/docs/project-versions) selects a runtime per project. [Sites](/docs/sites#run-a-project-app) can launch a saved development command using that selection and route it through the project's local domain.
 
 Morrow reads its managed distribution receipts, nvm version directories, existing Homebrew formula kegs, PATH installations, and Herd's PHP binaries. Installed versions and downloaded channel lists are cached on disk. Navigation uses that cache; the refresh icon explicitly rescans installations and available versions. A missing or day-old installation inventory is refreshed when the app starts. Service readiness continues to use live process checks. Flutter discovery reads SDK version metadata without running Flutter's first-use bootstrap. If SDK metadata is absent, run `flutter --version` once using that installation and refresh the pane.
 
@@ -63,6 +63,19 @@ PHP 8.0 is a legacy release, with [upstream support ending in November 2023](htt
 Use the configuration icon on a runtime card to open its configuration. PHP exposes its loaded `php.ini` and additional `.ini` files in a shared editor, with an **Open in Editor** action. Saving preserves file permissions and refuses to overwrite a file changed elsewhere; restart affected services to apply settings. These PHP files may be shared with applications outside Morrow. A generated Morrow PHP-FPM pool, when present, is visible read-only; its managed settings belong in Sites. The reload icon rereads a file after an outside edit.
 
 An existing nvm default alias is visible read-only. It belongs to the external nvm installation; Morrow keeps its own default and folder selections. Runtimes without a shared configuration file show an explanation; their project-specific configuration stays in the project. PHP-FPM cards expose the hosting log when one exists.
+
+## Rust
+
+Choose **Rust** in Runtimes to reuse a stable Apple silicon toolchain from rustup or install a complete toolchain. Morrow's built-in download is the checksum-pinned official Rust **1.99.1** arm64 release. It includes Cargo, the compiler, the standard library, rustfmt, and Clippy. Additional versions can be provided through the binary catalog.
+
+Morrow installs into its own binary directory and discovers rustup's installed toolchains directly. Rust compilation can use Apple's linker and SDK from Xcode Command Line Tools.
+
+```sh
+morrow tool channels rust
+morrow tool install rust 1.99.1
+morrow project use rust 1.99.1
+morrow tool exec rust --command cargo -- --version
+```
 
 ## Run the selected runtime
 
