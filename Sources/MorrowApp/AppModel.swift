@@ -662,8 +662,8 @@ struct StatusBadge: View {
 }
 
 extension RuntimeEngine {
-    var symbol: String { "morrow." + rawValue }
+    var symbol: String { self == .rust ? "gearshape.2.fill" : "morrow." + rawValue }
     var color: Color {
-        switch self { case .php: return .indigo; case .go: return .cyan; case .flutter: return .blue; case .node: return .green; case .python: return .yellow; case .ruby: return .red }
+        switch self { case .php: return .indigo; case .go: return .cyan; case .flutter: return .blue; case .node: return .green; case .python: return .yellow; case .ruby: return .red; case .rust: return .orange }
     }
 }

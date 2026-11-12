@@ -54,7 +54,9 @@ public struct BackgroundRegistrations: Sendable {
             let state = try store.load(), launchd = LaunchdControl(runner: runner), fm = FileManager.default
             let sites = SiteManager(store: store, runner: runner)
             let webLabels = (["watch", "caddy", "dns"] + sites.phpComponents(state.web)).map { sites.label($0, web: state.web) }
-            let retained = Set(state.instances.map(\.label) + state.mailServices.map(\.label) + state.objectStorage.map(\.label) + webLabels)
+            let apps = ProjectApps(store: store, runner: runner)
+            let appLabels = state.web.sites.filter { (try? apps.command($0.id)) != nil }.map { apps.label($0.id) }
+            let retained = Set(state.instances.map(\.label) + state.mailServices.map(\.label) + state.objectStorage.map(\.label) + webLabels + appLabels)
             let archive = store.root.appendingPathComponent("archives/background-\(UUID().uuidString)")
             var removed = 0, updated = importedUpdates, active = 0
             for file in jobFiles() {

@@ -139,9 +139,9 @@ Read [Database updates](/docs/updates) for compatibility, shared dependency beha
 | `morrow tool exec <runtime> [--command <name>] [--path <folder>] -- <args>` | Run the folder-selected runtime or companion; otherwise use the global default |
 | `morrow tool shell` | Print the PATH setup for Morrow's runtime commands |
 
-Supported runtime names: `php`, `go`, `flutter`, `node`, `python`, `ruby`. Aliases: `nodejs`, `python3`.
+Supported runtime names: `php`, `go`, `flutter`, `node`, `python`, `ruby`, `rust`. Aliases: `nodejs`, `python3`. Rust accepts stable Apple silicon releases and provides `cargo`, `rustc`, and toolchain companions.
 
-For `install` and `use`, numeric release series, existing exact versions, and available formula names are accepted. PHP 8.0.30 is a hosted CLI/FPM package for both Mac architectures: `morrow tool install php 8.0` adds it without changing the current default; `morrow project use php 8.0 --path <folder>` assigns it to a folder. Node installs use complete hosted distributions and accept `lts` as well as numeric release series/exact versions. `lts` requires a published release marked LTS; existing nvm versions can be reused without changing nvm’s default alias. Go can also use official archives; other missing runtimes require a complete published distribution. `current` and `latest` choose the current release; they are installation selectors, not aliases for a saved default.
+For `install` and `use`, numeric release series, existing exact versions, and available formula names are accepted. PHP 8.0.30 is a hosted CLI/FPM package for both Mac architectures: `morrow tool install php 8.0` adds it without changing the current default; `morrow project use php 8.0 --path <folder>` assigns it to a folder. Node installs use complete hosted distributions and accept `lts` as well as numeric release series/exact versions. `lts` requires a published release marked LTS; existing nvm versions can be reused without changing nvm’s default alias. Go and Rust can also use official archives. Other missing runtimes require a complete published distribution. `current` and `latest` choose the current release; they are installation selectors, not aliases for a saved default.
 
 ```sh
 morrow tool install go
@@ -229,6 +229,11 @@ Configuration options: `--smtp-port <port>`, `--http-port <port>`, `--name <name
 | `morrow site renew-https [domain]` | Issue a fresh certificate for one site or all active HTTPS sites, briefly restarting the web server and keeping the trusted root |
 | `morrow site open <domain>` | Open the project URL |
 | `morrow site logs <domain>` | Print recent routing output |
+| `morrow site app configure <domain> <runtime> <command> [-- <args>]` | Save a development command for an app-port site |
+| `morrow site app start <domain>` | Start the saved command using the folder's selected runtime |
+| `morrow site app stop <domain>` | Stop the Morrow-managed project process |
+| `morrow site app status <domain>` | Show the process and port readiness status |
+| `morrow site app logs <domain>` | Print recent standard output and errors from the app |
 
 Configuration options: `--suffix <namespace>`, `--http-port <port>`, `--https-port <port>`, `--dns-port <port>`, `--https on|off`, `--autostart on|off`. Stop hosting before changing listener ports.
 

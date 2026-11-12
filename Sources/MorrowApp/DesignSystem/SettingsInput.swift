@@ -12,6 +12,7 @@ struct SettingsInput: View {
     @Binding var text: String
     var symbol: String? = nil
     var clearable = false
+    var axis: Axis = .horizontal
     @FocusState private var focused: Bool
     @Environment(\.isEnabled) private var enabled
     @Environment(\.colorScheme) private var colorScheme
@@ -26,7 +27,8 @@ struct SettingsInput: View {
     private var input: some View {
         HStack(spacing: 8) {
             if let symbol { Image(systemName: symbol).font(.system(size: 12)).foregroundStyle(.secondary).frame(width: 14) }
-            TextField("", text: $text, prompt: Text(placeholder)).labelsHidden()
+            TextField("", text: $text, prompt: Text(placeholder), axis: axis).labelsHidden()
+                .lineLimit(axis == .vertical ? 1...5 : 1...1)
                 .textFieldStyle(.plain).font(.system(size: 13)).multilineTextAlignment(.leading).focused($focused)
                 .accessibilityLabel(placeholder)
             if clearable && !text.isEmpty {
@@ -34,7 +36,8 @@ struct SettingsInput: View {
                     .buttonStyle(.plain).help("Clear search")
             }
         }
-        .padding(.horizontal, ControlLayout.inset).frame(height: ControlLayout.height)
+        .padding(.horizontal, ControlLayout.inset).padding(.vertical, axis == .vertical ? 6 : 0)
+        .frame(minHeight: ControlLayout.height, maxHeight: axis == .horizontal ? ControlLayout.height : nil)
         .background(DS.Surface.input(colorScheme).opacity(enabled ? 1 : 0.5), in: RoundedRectangle(cornerRadius: ControlLayout.radius))
         .overlay(RoundedRectangle(cornerRadius: ControlLayout.radius).strokeBorder(focused ? Color.morrowAccent.opacity(0.7) : DS.Surface.border(colorScheme, enabled: enabled), lineWidth: focused ? 1 : DS.Stroke.border))
     }

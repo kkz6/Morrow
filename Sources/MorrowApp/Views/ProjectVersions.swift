@@ -62,6 +62,7 @@ struct ProjectVersionEditor: View {
     @State private var selection = ""
     @State private var customVersion = ""
     @State private var composerPHP: ComposerPHPRequirement?
+    @State private var rust: RustProjectRequirement?
     init(path: String, initialEngine: RuntimeEngine = .php) {
         self.path = path; _engine = State(initialValue: initialEngine)
     }
@@ -90,6 +91,10 @@ struct ProjectVersionEditor: View {
                 if engine == .php, let composerPHP {
                     SettingsDivider()
                     composerRow(composerPHP)
+                }
+                if engine == .rust, let rust {
+                    SettingsDivider()
+                    rustRow(rust)
                 }
                 SettingsDivider()
                 SettingRow(title: "Version") {
@@ -120,11 +125,41 @@ struct ProjectVersionEditor: View {
         .task(id: engine) { selection = saved?.id ?? ""; model.loadRuntimeChannels(engine) }
         .task(id: path) {
             let folder = path
-            let requirement = await Task.detached(priority: .utility) { try? ComposerPHPRequirement.read(at: folder) }.value
+            let requirements = await Task.detached(priority: .utility) {
+                (try? ComposerPHPRequirement.read(at: folder), try? RustProjectRequirement.read(at: folder))
+            }.value
             guard !Task.isCancelled else { return }
-            composerPHP = requirement
+            composerPHP = requirements.0
+            rust = requirements.1
         }
         .onChange(of: saved?.id) { _, id in selection = id ?? "" }
+    }
+    private func rustRow(_ requirement: RustProjectRequirement) -> some View {
+        let installed = versions.first {
+            requirement.matches($0.version) && FileManager.default.isExecutableFile(atPath: $0.executable)
+                && $0.command("cargo") != nil
+        }
+        let available = model.inventory.channels[RuntimeEngine.rust.rawValue]?.first { requirement.matches($0.version) }
+        return SettingRow(title: "Detected Rust", subtitle: LocalizedStringKey(requirement.description)) {
+            if let saved, requirement.matches(saved.version), FileManager.default.isExecutableFile(atPath: saved.executable) {
+                Text("Using Rust \(saved.version)").font(.system(size: 11)).foregroundStyle(.secondary)
+            } else if let version = installed?.version ?? available?.version {
+                Button(installed != nil ? "Use Rust \(version)" : "Install Rust \(version)") {
+                    let folder = path, cli = model.cliURL
+                    model.perform("Selecting Rust \(version)…", success: "Rust \(version) selected for this folder") { manager in
+                        try RuntimeManager(store: manager.store, runner: manager.runner)
+                            .useDetectedRust(version, installed: installed, directory: folder, cli: cli)
+                    }
+                }.settingsButton()
+            } else if !requirement.canRecommend {
+                Text("Review toolchain requirements").font(.system(size: 11)).foregroundStyle(.secondary)
+                    .help("Suggestions support stable Apple silicon toolchains with standard components.")
+            } else if model.runtimeChannelsLoading.contains(RuntimeEngine.rust.rawValue) || model.inventoryLoading {
+                ProgressView().controlSize(.small).accessibilityLabel("Finding compatible Rust versions")
+            } else {
+                Text("No matching Rust toolchain").font(.system(size: 11)).foregroundStyle(.secondary)
+            }
+        }
     }
     private func composerRow(_ requirement: ComposerPHPRequirement) -> some View {
         let recommendation = requirement.recommendation(installed: versions, available: model.inventory.channels[RuntimeEngine.php.rawValue] ?? [])

@@ -122,6 +122,10 @@ public struct ProjectInspection: Codable, Sendable {
             }
             if let manager = package["packageManager"] as? String { requirements.append(.init(name: "Package manager", version: String(manager.prefix(160)), source: "package.json")) }
         }
+        if let rust = try RustProjectRequirement.read(at: path) {
+            if let channel = rust.channel { requirements.append(.init(name: "Rust toolchain", version: channel, source: rust.source)) }
+            if let minimum = rust.minimum { requirements.append(.init(name: "Minimum Rust", version: minimum, source: "Cargo.toml")) }
+        }
         for (file, runtime) in [(".nvmrc", RuntimeEngine.node), (".node-version", .node), (".php-version", .php), (".python-version", .python), (".ruby-version", .ruby)] {
             if let content = try files.text(file, limit: 8192), let version = content.split(separator: "\n").map({ $0.split(separator: "#", maxSplits: 1, omittingEmptySubsequences: false)[0].trimmingCharacters(in: .whitespaces) }).first(where: { !$0.isEmpty }) {
                 requirements.append(.init(name: runtime.title, version: String(version.prefix(160)), source: file))
@@ -166,7 +170,7 @@ public struct ProjectInspection: Codable, Sendable {
     }
 }
 
-private struct ProjectFiles {
+struct ProjectFiles {
     let root: URL
     init(path: String) { root = URL(fileURLWithPath: path).standardizedFileURL.resolvingSymlinksInPath() }
     func url(_ relative: String) -> URL { relative.isEmpty ? root : root.appendingPathComponent(relative) }

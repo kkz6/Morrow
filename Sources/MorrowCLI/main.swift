@@ -87,6 +87,8 @@ Morrow — databases and development runtimes.
   morrow site certificates               List local HTTPS certificate expiry dates
   morrow site renew-https [domain]        Renew one or all active HTTPS certificates
   morrow site open|logs <domain>          Open a site or print its routing log
+  morrow site app configure <domain> <runtime> <command> [-- <args>]
+  morrow site app start|stop|status|logs <domain>   Manage a project's app command
   morrow dumps on|off <folder>          Enable or disable local PHP capture
   morrow dumps list [--project <folder>] List captured requests and events
   morrow dumps insights [--project <folder>] [--issues] [--json]
@@ -435,7 +437,7 @@ func projectMain(_ args: [String], manager: RuntimeManager) throws {
     guard let action = args.first else { throw MorrowError.message("Usage: morrow project use|list|show|clear|doctor") }
     let remaining = Array(args.dropFirst()), projects = ProjectRuntimeStore(store: manager.store)
     func engine(_ value: String) throws -> RuntimeEngine {
-        guard let engine = RuntimeEngine.parse(value) else { throw MorrowError.message("Choose php, node, go, flutter, python, or ruby.") }; return engine
+        guard let engine = RuntimeEngine.parse(value) else { throw MorrowError.message("Choose php, node, go, flutter, python, ruby, or rust.") }; return engine
     }
     switch action {
     case "doctor":
@@ -638,6 +640,8 @@ func siteMain(_ args: [String], manager: SiteManager) throws {
         let port = try options.values["--port"].map { _ in try options.number("--port", default: 0) }
         let site = try manager.link(path: options.positional.first ?? FileManager.default.currentDirectoryPath, port: port, domain: options.values["--domain"], https: options.flags.contains("--https") ? true : nil)
         print("Linked \(site.domain) → \(port.map { "127.0.0.1:\($0)" } ?? site.documentRoot)\n\(manager.url(site).absoluteString)")
+    case "app":
+        try projectAppMain(remaining, sites: manager)
     case "list":
         let options = try Options(remaining, allowedFlags: ["--json"]); try options.requireCount(0, usage: "morrow site list [--json]")
         let web = try manager.store.load().web, status = try manager.status()
@@ -707,6 +711,46 @@ func siteMain(_ args: [String], manager: SiteManager) throws {
         try manager.configure(suffix: options.values["--suffix"], defaultHTTPS: toggle("--https"), http: port("--http-port"), https: port("--https-port"), dns: port("--dns-port"), autoStart: toggle("--autostart"))
         print("Hosting defaults saved. Changed suffixes or ports may need system setup again.")
     default: throw MorrowError.message("Unknown site command. Run morrow --help.")
+    }
+}
+
+func projectAppMain(_ args: [String], sites: SiteManager) throws {
+    guard args.count >= 2 else {
+        throw MorrowError.message("Usage: morrow site app configure|start|stop|status|logs <domain>")
+    }
+    let apps = ProjectApps(store: sites.store, runner: sites.runner)
+    let action = args[0], domain = args[1]
+    if action == "configure" {
+        guard args.count >= 4, let runtime = RuntimeEngine.parse(args[2]), args.count == 4 || args[4] == "--" else {
+            throw MorrowError.message("Usage: morrow site app configure <domain> <runtime> <command> [-- <args>]")
+        }
+        let site = try sites.resolve(domain)
+        let command = ProjectAppCommand(runtime: runtime, executable: args[3], arguments: Array(args.dropFirst(5)))
+        try apps.configure(site.id, command: command)
+        print("Saved app command for \(site.domain).")
+        return
+    }
+    guard args.count == 2, ["start", "stop", "status", "logs"].contains(action) else {
+        throw MorrowError.message("Usage: morrow site app start|stop|status|logs <domain>")
+    }
+    // A known site ID also lets its owner stop the job after a checkout vanishes.
+    if action == "stop", let id = UUID(uuidString: domain) {
+        try apps.stop(id)
+        print("Project app stopped.")
+        return
+    }
+    let site = try sites.resolve(domain)
+    switch action {
+    case "start":
+        try apps.start(site.id)
+        print(apps.state(site)?.status.title ?? "Starting")
+    case "stop":
+        try apps.stop(site.id)
+        print("Project app stopped.")
+    case "status":
+        print(apps.state(site)?.status.title ?? "No app command configured")
+    default:
+        print(try apps.logs(site.id))
     }
 }
 

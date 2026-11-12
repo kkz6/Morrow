@@ -8,11 +8,15 @@ struct SitesPane: View {
     @State private var adding = false
     @State private var editing: LocalSite?
     @State private var inspecting: LocalSite?
-    @State private var choosingPHP: LocalSite?
+    @State private var choosingRuntime: LocalSite?
+    @State private var runtimeChoice = RuntimeEngine.php
+    @State private var editingApp: LocalSite?
     @State private var query = ""
     @State private var php: [RuntimeInstallation] = []
     @State private var groups: [SiteProjectGroup] = []
     @State private var composerPHP: [String: ComposerPHPRequirement] = [:]
+    @State private var rustRequirements: [String: RustProjectRequirement] = [:]
+    @State private var rustProjects: Set<String> = []
     @State private var refreshCount = 0
     @State private var expandedGroups: Set<String> = []
     private struct ProjectListInput: Equatable {
@@ -127,22 +131,31 @@ struct SitesPane: View {
         .feedbackSheet(isPresented: $directories) { ProjectDirectoriesSheet().environment(model) }
         .feedbackSheet(isPresented: $settings) { HostingSettingsSheet().environment(model) }
         .feedbackSheet(isPresented: $adding) { LinkSiteSheet().environment(model) }
-        .feedbackSheet(item: $editing) { SiteEditor(site: $0).environment(model) }
+        .feedbackSheet(item: $editing) { SiteEditor(site: $0, rust: rustProjects.contains($0.path)).environment(model) }
         .feedbackSheet(item: $inspecting) { ProjectHealthSheet(site: $0).environment(model) }
-        .feedbackSheet(item: $choosingPHP) { ProjectVersionEditor(path: $0.path, initialEngine: .php).environment(model) }
+        .feedbackSheet(item: $choosingRuntime) { ProjectVersionEditor(path: $0.path, initialEngine: runtimeChoice).environment(model) }
+        .feedbackSheet(item: $editingApp) { ProjectAppEditor(site: $0, initialRuntime: rustProjects.contains($0.path) ? .rust : .node).environment(model) }
         .task(id: model.inventory.runtimes.map(\.id)) { php = model.inventory.runtimes.filter { $0.engine == .php && $0.phpFPM != nil } }
         .task(id: ProjectListInput(sites: model.web.sites, refreshCount: refreshCount)) {
             let sites = model.web.sites
             let result = await Task.detached(priority: .utility) {
                 var requirements: [String: ComposerPHPRequirement] = [:]
+                var rust: [String: RustProjectRequirement] = [:]
+                var rustFolders: Set<String> = []
                 for path in Set(sites.map(\.path)) {
                     requirements[path] = try? ComposerPHPRequirement.read(at: path)
+                    rust[path] = try? RustProjectRequirement.read(at: path)
+                    if FileManager.default.fileExists(atPath: URL(fileURLWithPath: path).appendingPathComponent("Cargo.toml").path) {
+                        rustFolders.insert(path)
+                    }
                 }
-                return (SiteProjectGroup.groups(for: sites), requirements)
+                return (SiteProjectGroup.groups(for: sites), requirements, rust, rustFolders)
             }.value
             guard !Task.isCancelled else { return }
             groups = result.0
             composerPHP = result.1
+            rustRequirements = result.2
+            rustProjects = result.3
         }
     }
     @ViewBuilder private func projectGroup(_ group: SiteProjectGroup) -> some View {
@@ -176,6 +189,7 @@ struct SitesPane: View {
         let status = site.worktreeExcluded ? SiteStatus.worktreeExcluded.rawValue : site.ignored ? "Ignored for .\(model.web.suffix) hosting" : site.issue ?? model.webStatus?.sites[site.id]?.rawValue ?? "Stopped"
         let expiry = model.webStatus?.certificateExpirations[site.domain]
         let validUntil = expiry.map { " · \($0 > Date() ? "Valid until" : "Expired") \($0.formatted(date: .abbreviated, time: .omitted))" } ?? ""
+        let app = model.webStatus?.applications[site.id]
         return HStack(spacing: 12) {
             IconTile(symbol: worktree || site.mode == .proxy ? "arrow.triangle.branch" : "globe", color: .blue, size: 30)
             VStack(alignment: .leading, spacing: 3) {
@@ -189,23 +203,36 @@ struct SitesPane: View {
                     }
                 }
                 Text(site.mode == .proxy ? "127.0.0.1:\(site.proxyPort.map(String.init) ?? "—")" : site.documentRoot).font(.system(size: 11)).foregroundStyle(.secondary).lineLimit(1).truncationMode(.middle)
-                Text(status + (site.isIgnoredForHosting ? "" : validUntil)).font(.system(size: 11)).foregroundStyle(site.issue == nil || site.isIgnoredForHosting ? Color.secondary : Color.orange).lineLimit(2)
+                Text(status + (site.isIgnoredForHosting ? "" : validUntil) + (app.map { " · App " + $0.status.title.lowercased() } ?? ""))
+                    .font(.system(size: 11)).foregroundStyle(site.issue == nil || site.isIgnoredForHosting ? Color.secondary : Color.orange).lineLimit(2)
                 if let requirement = composerPHP[site.path] {
-                    Button { choosingPHP = site } label: {
-                        HStack(spacing: 4) {
-                            Text("Detected PHP \(requirement.description)").lineLimit(1)
-                            Image(systemName: "chevron.right").font(.system(size: 8, weight: .semibold))
-                        }.font(.system(size: 11)).foregroundStyle(.secondary)
-                    }.buttonStyle(.plain)
-                        .help("Choose a PHP version for \(site.domain) · \(requirement.description)")
-                        .disabled(model.busy)
+                    runtimeLink(.php, requirement: requirement.description, site: site)
+                }
+                if let requirement = rustRequirements[site.path] {
+                    runtimeLink(.rust, requirement: requirement.description, site: site)
                 }
             }
             Spacer()
             Toggle("HTTPS for \(site.domain)", isOn: Binding(get: { site.https }, set: { value in
                 model.setSiteHTTPS(site, enabled: value)
             })).labelsHidden().toggleStyle(.switch).controlSize(.small).disabled(model.busy || site.issue != nil || site.worktreeExcluded)
-            ServiceActionButton(kind: .logs, title: "Open site routing logs") { model.showSiteLogs() }
+            if site.mode == .proxy && (app != nil || rustProjects.contains(site.path)) {
+                let stop = app?.canStop == true
+                ServiceActionButton(kind: stop ? .stop : .start, title: stop ? "Stop project app" : "Start project app") {
+                    if stop || app != nil && site.proxyPort != nil {
+                        model.perform(stop ? "Stopping project app…" : "Starting project app…") { manager in
+                            let apps = ProjectApps(store: manager.store, runner: manager.runner)
+                            if stop { try apps.stop(site.id) } else { try apps.start(site.id) }
+                        }
+                    } else { editingApp = site }
+                }.disabled(model.busy || (!stop && site.isIgnoredForHosting))
+            }
+            ServiceActionButton(kind: .logs, title: app == nil ? "Open site routing logs" : "Open project app logs") {
+                if let app {
+                    let url = ProjectApps(store: model.manager.store).logURL(site.id)
+                    model.presentLogs(.init(title: site.domain, subtitle: app.command.executable, url: url))
+                } else { model.showSiteLogs() }
+            }
             Menu {
                 if site.worktreeExcluded {
                     Button("Manage Worktree Hosting…") { directories = true }
@@ -220,11 +247,25 @@ struct SitesPane: View {
                         .disabled(model.webStatus?.proxy != .running).help("Briefly restarts the local web server.")
                 }
                 Button("Project Settings…") { editing = site }
+                if site.mode == .proxy {
+                    Button("App Command…") { editingApp = site }.disabled(app?.canStop == true)
+                    if app != nil { Button("Routing Logs") { model.showSiteLogs() } }
+                }
                 Button("Project Health…") { inspecting = site }
                 Button("Reveal Project") { NSWorkspace.shared.open(URL(fileURLWithPath: site.path)) }
                 if site.directoryID == nil { Button("Unlink", role: .destructive) { model.perform("Removing route…") { try SiteManager(store: $0.store, runner: $0.runner).unlink(site.id) } } }
             } label: { Image(systemName: "ellipsis").frame(width: 16) }.settingsMenuControl().disabled(model.busy)
         }.settingsCellPadding()
+    }
+    private func runtimeLink(_ engine: RuntimeEngine, requirement: String, site: LocalSite) -> some View {
+        Button { runtimeChoice = engine; choosingRuntime = site } label: {
+            HStack(spacing: 4) {
+                Text("Detected \(engine.title) \(requirement)").lineLimit(1)
+                Image(systemName: "chevron.right").font(.system(size: 8, weight: .semibold))
+            }.font(.system(size: 11)).foregroundStyle(.secondary)
+        }.buttonStyle(.plain)
+            .help("Choose a \(engine.title) version for \(site.domain) · \(requirement)")
+            .disabled(model.busy)
     }
     private func httpsIssue(_ site: LocalSite) -> String? {
         if site.worktreeExcluded { return "Git worktrees are excluded in Project Directories. HTTPS preferences are saved." }
@@ -333,6 +374,7 @@ private struct LinkSiteSheet: View {
     @State private var secure = false
     @State private var issue: String?
     @State private var composerPHP: ComposerPHPRequirement?
+    @State private var rust: RustProjectRequirement?
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Link Project").font(.system(size: 18, weight: .semibold))
@@ -344,6 +386,7 @@ private struct LinkSiteSheet: View {
                             let panel = NSOpenPanel(); panel.canChooseDirectories = true; panel.canChooseFiles = false
                             guard panel.runModal() == .OK, let selected = panel.url else { return }
                             composerPHP = nil
+                            rust = nil
                             path = selected.path; domain = (try? SiteManager.domain(for: path, suffix: model.web.suffix)) ?? ""
                         }.settingsButton(height: 28)
                     }
@@ -359,6 +402,12 @@ private struct LinkSiteSheet: View {
                     SettingRow(title: "Detected PHP", subtitle: "From composer.json · choose after linking") {
                         Text(composerPHP.description).font(.system(size: 12)).foregroundStyle(.secondary)
                             .lineLimit(2).help(composerPHP.description)
+                    }
+                }
+                if let rust {
+                    SettingsDivider()
+                    SettingRow(title: "Detected Rust", subtitle: LocalizedStringKey("From \(rust.source) · choose after linking")) {
+                        Text(rust.description).font(.system(size: 12)).foregroundStyle(.secondary).lineLimit(2)
                     }
                 }
             }.disabled(model.busy)
@@ -380,9 +429,12 @@ private struct LinkSiteSheet: View {
         .task(id: path) {
             guard !path.isEmpty else { return }
             let directory = path
-            let requirement = await Task.detached(priority: .utility) { try? ComposerPHPRequirement.read(at: directory) }.value
+            let requirements = await Task.detached(priority: .utility) {
+                (try? ComposerPHPRequirement.read(at: directory), try? RustProjectRequirement.read(at: directory))
+            }.value
             guard !Task.isCancelled else { return }
-            composerPHP = requirement
+            composerPHP = requirements.0
+            rust = requirements.1
         }
     }
 }
@@ -391,6 +443,7 @@ private struct SiteEditor: View {
     @Environment(AppModel.self) private var model
     @Environment(\.dismiss) private var dismiss
     let site: LocalSite
+    let rust: Bool
     @State private var domain = ""
     @State private var root = ""
     @State private var mode = SiteMode.php
@@ -445,7 +498,7 @@ private struct SiteEditor: View {
         }.padding(20).frame(width: 490).onAppear {
             domain = site.domain; root = site.documentRoot; mode = site.mode; port = site.proxyPort.map(String.init) ?? ""; secure = site.https
         }
-        .feedbackSheet(isPresented: $folderVersions) { ProjectVersionEditor(path: site.path, initialEngine: mode == .proxy ? .node : .php).environment(model) }
+        .feedbackSheet(isPresented: $folderVersions) { ProjectVersionEditor(path: site.path, initialEngine: rust ? .rust : mode == .proxy ? .node : .php).environment(model) }
     }
     private var folderSummary: String {
         let selected = RuntimeEngine.allCases.compactMap { engine in

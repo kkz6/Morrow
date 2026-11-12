@@ -96,6 +96,9 @@ public struct ManagedBinaryStore: Sendable {
         // Go publishes complete macOS archives and authoritative SHA-256 hashes.
         // No guessed database download URLs or Homebrew bottles are used.
         if package == "go", !values.contains(where: { $0.package == "go" && compatible($0) }) { values += try goReleases() }
+        if package == "rust", !values.contains(where: { $0.package == "rust" && $0.version == RustToolchains.standalone.version && compatible($0) }) {
+            values.append(RustToolchains.standalone)
+        }
         var seen = Set<String>()
         return values.filter { (package == nil || $0.package == package) && compatible($0) }
             .sorted {
@@ -216,7 +219,12 @@ public struct ManagedBinaryStore: Sendable {
             try fm.moveItem(at: download, to: binary)
             try fm.setAttributes([.posixPermissions: 0o755], ofItemAtPath: binary.path)
         } else { try extract(download, to: payload) }
-        let prefix = release.rootDirectory.isEmpty ? payload : payload.appendingPathComponent(release.rootDirectory)
+        var prefix = release.rootDirectory.isEmpty ? payload : payload.appendingPathComponent(release.rootDirectory)
+        if release == RustToolchains.standalone {
+            let assembled = staging.appendingPathComponent("rust-toolchain")
+            try RustToolchains.assemble(prefix, at: assembled)
+            prefix = assembled
+        }
         for path in release.executables {
             let binary = prefix.appendingPathComponent(path)
             guard binary.resolvingSymlinksInPath().path.hasPrefix(prefix.standardizedFileURL.path + "/"), fm.isExecutableFile(atPath: binary.path) else { throw MorrowError.message("The distribution is missing \(path).") }

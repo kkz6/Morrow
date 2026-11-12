@@ -1,10 +1,10 @@
 import Foundation
 
 public enum RuntimeEngine: String, Codable, CaseIterable, Identifiable, Sendable {
-    case php, go, flutter, node, python, ruby
+    case php, go, flutter, node, python, ruby, rust
     public var id: String { rawValue }
     public var title: String {
-        switch self { case .php: return "PHP"; case .go: return "Go"; case .flutter: return "Flutter"; case .node: return "Node.js"; case .python: return "Python"; case .ruby: return "Ruby" }
+        switch self { case .php: return "PHP"; case .go: return "Go"; case .flutter: return "Flutter"; case .node: return "Node.js"; case .python: return "Python"; case .ruby: return "Ruby"; case .rust: return "Rust" }
     }
     public var commands: [String] {
         switch self {
@@ -14,9 +14,12 @@ public enum RuntimeEngine: String, Codable, CaseIterable, Identifiable, Sendable
         case .node: return ["node", "npm", "npx", "corepack"]
         case .python: return ["python", "python3", "pip", "pip3"]
         case .ruby: return ["ruby", "gem", "irb", "bundle"]
+        case .rust: return ["rustc", "cargo", "rustdoc", "rustfmt", "cargo-fmt", "cargo-clippy", "clippy-driver"]
         }
     }
-    var binary: String { self == .python ? "python3" : rawValue }
+    var binary: String {
+        switch self { case .python: return "python3"; case .rust: return "rustc"; default: return rawValue }
+    }
     var formulaBase: String { self == .python ? "python" : rawValue }
     public var isCask: Bool { self == .flutter }
     public static func parse(_ value: String) -> Self? {
@@ -114,7 +117,12 @@ public struct RuntimeManager: Sendable {
         paths += ["/opt/homebrew/bin", "/usr/local/bin", FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/Herd/bin").path]
         let herd = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent("Library/Application Support/Herd/bin")
         let phpCandidates = ((try? fm.contentsOfDirectory(at: herd, includingPropertiesForKeys: nil)) ?? []).filter { $0.lastPathComponent.range(of: "^php[0-9]+$", options: .regularExpression) != nil }
-        for engine in RuntimeEngine.allCases {
+        // Rustup's PATH executables are proxies and can download a toolchain
+        // when probed. Inspect installed toolchain directories directly.
+        for prefix in RustToolchains.installed() {
+            if let item = try? probe(.rust, prefix: prefix.path, formula: prefix.lastPathComponent, source: "rustup") { result.append(item) }
+        }
+        for engine in RuntimeEngine.allCases where engine != .rust {
             let binaries = paths.filter { !$0.isEmpty && !URL(fileURLWithPath: $0).standardizedFileURL.path.hasPrefix(shimDirectory.standardizedFileURL.path) }
                 .map { URL(fileURLWithPath: $0).appendingPathComponent(engine.binary) } + (engine == .php ? phpCandidates : [])
             for candidate in binaries {
@@ -184,25 +192,36 @@ public struct RuntimeManager: Sendable {
         try saveProjectVersion(engine, request: version, directory: directory, cli: cli)
     }
     @discardableResult public func useComposerPHP(_ recommendation: ComposerPHPRecommendation, directory: String, cli: URL) throws -> RuntimeInstallation {
-        try saveProjectVersion(.php, request: recommendation.request, directory: directory, cli: cli, composerVersion: recommendation.version)
+        try saveProjectVersion(.php, request: recommendation.request, directory: directory, cli: cli, detectedVersion: recommendation.version)
     }
-    private func saveProjectVersion(_ engine: RuntimeEngine, request: String, directory: String, cli: URL, composerVersion: String? = nil) throws -> RuntimeInstallation {
+    @discardableResult public func useDetectedRust(_ version: String, installed: RuntimeInstallation?, directory: String, cli: URL) throws -> RuntimeInstallation {
+        guard installed == nil || (installed?.engine == .rust && installed?.version == version) else {
+            throw MorrowError.message("Choose the matching Rust toolchain.")
+        }
+        return try saveProjectVersion(.rust, request: installed?.id ?? "managed:rust@" + version,
+                                      directory: directory, cli: cli, detectedVersion: version)
+    }
+    private func saveProjectVersion(_ engine: RuntimeEngine, request: String, directory: String, cli: URL, detectedVersion: String? = nil) throws -> RuntimeInstallation {
         let path = try ProjectRuntimeStore.directory(directory)
+        func checkRequirement(_ version: String) throws {
+            let matches = try engine == .php
+                ? ComposerPHPRequirement.read(at: path)?.matches(version)
+                : RustProjectRequirement.read(at: path)?.matches(version)
+            guard matches == true else {
+                throw MorrowError.message("The detected \(engine.title) requirement no longer matches. Reopen Folder Versions to review it.")
+            }
+        }
         return try store.operation {
             guard FileManager.default.isExecutableFile(atPath: cli.path) else { throw MorrowError.message("Morrow's command launcher is missing.") }
-            if let composerVersion, try ComposerPHPRequirement.read(at: path)?.matches(composerVersion) != true {
-                throw MorrowError.message("The Composer PHP requirement has changed. Reopen Folder Versions to review it.")
-            }
+            if let detectedVersion { try checkRequirement(detectedVersion) }
             let projects = ProjectRuntimeStore(store: store)
             let before = try projects.load()
             let item = try installUnlocked(engine, version: request)
-            if let composerVersion {
-                guard item.version == composerVersion, item.phpFPM != nil else {
-                    throw MorrowError.message("PHP \(composerVersion) with PHP-FPM is unavailable. Refresh your runtime choices.")
+            if let detectedVersion {
+                guard item.version == detectedVersion, engine != .php || item.phpFPM != nil else {
+                    throw MorrowError.message("The selected \(engine.title) release is unavailable. Refresh your runtime choices.")
                 }
-                guard try ComposerPHPRequirement.read(at: path)?.matches(item.version) == true else {
-                    throw MorrowError.message("The Composer PHP requirement has changed. Reopen Folder Versions to review it.")
-                }
+                try checkRequirement(item.version)
             }
             try writeShims(item, cli: cli.resolvingSymlinksInPath())
             var after = before
@@ -295,16 +314,24 @@ public struct RuntimeManager: Sendable {
         }
         process.executableURL = URL(fileURLWithPath: executable); process.arguments = launchArguments
         process.currentDirectoryURL = URL(fileURLWithPath: folder, isDirectory: true)
-        var environment = ProcessInfo.processInfo.environment
-        environment.merge(item.environment) { _, configured in configured }
-        environment["PATH"] = shimDirectory.path + ":" + item.binDirectory + ":" + (environment["PATH"] ?? "/usr/bin:/bin")
-        if engine == .go {
+        process.environment = commandEnvironment(item, base: ProcessInfo.processInfo.environment)
+        process.standardInput = FileHandle.standardInput; process.standardOutput = FileHandle.standardOutput; process.standardError = FileHandle.standardError
+        try process.run(); process.waitUntilExit(); return process.terminationStatus
+    }
+    func commandEnvironment(_ item: RuntimeInstallation, base: [String: String]) -> [String: String] {
+        var environment = base.merging(item.environment) { _, configured in configured }
+        let inheritedPath = environment["PATH"] ?? "/usr/bin:/bin"
+        environment["PATH"] = shimDirectory.path + ":" + item.binDirectory + ":" + inheritedPath
+        if item.engine == .go {
             environment.removeValue(forKey: "GOROOT")
             if FileManager.default.fileExists(atPath: item.prefix + "/libexec/pkg") { environment["GOROOT"] = item.prefix + "/libexec" }
         }
-        process.environment = environment
-        process.standardInput = FileHandle.standardInput; process.standardOutput = FileHandle.standardOutput; process.standardError = FileHandle.standardError
-        try process.run(); process.waitUntilExit(); return process.terminationStatus
+        if item.engine == .rust {
+            environment["PATH"] = item.binDirectory + ":" + inheritedPath
+            environment["RUSTC"] = item.executable
+            environment["RUSTDOC"] = item.command("rustdoc")
+        }
+        return environment
     }
     private func matches(_ item: RuntimeInstallation, request: String) -> Bool {
         if request.hasPrefix("managed:") { return item.source == "managed" && ManagedBinaryStore.matches(item.version, request: request, package: item.engine.rawValue) }
@@ -344,7 +371,17 @@ public struct RuntimeManager: Sendable {
         let executable = binary ?? candidates.first { fm.isExecutableFile(atPath: $0) } ?? candidates[0]
         guard fm.isExecutableFile(atPath: executable) else { throw MorrowError.message("The \(engine.title) executable is missing.") }
         let version: String
-        if engine == .flutter {
+        if engine == .rust {
+            let output = try runner.run(executable, ["--version", "--verbose"], environment: [:]).checked()
+            let lines = output.components(separatedBy: .newlines)
+            guard lines.contains("host: aarch64-apple-darwin"),
+                  let release = lines.first(where: { $0.hasPrefix("release: ") }).map({ String($0.dropFirst(9)) }),
+                  SoftwareVersion(release)?.components.count == 3,
+                  fm.isExecutableFile(atPath: URL(fileURLWithPath: executable).deletingLastPathComponent().appendingPathComponent("cargo").path) else {
+                throw MorrowError.message("Choose a stable Apple silicon Rust toolchain that includes Cargo.")
+            }
+            version = release
+        } else if engine == .flutter {
             // Reading SDK metadata avoids bootstrapping Flutter during discovery.
             let root = URL(fileURLWithPath: executable).resolvingSymlinksInPath().deletingLastPathComponent().deletingLastPathComponent()
             if let data = try? Data(contentsOf: root.appendingPathComponent("bin/cache/flutter.version.json")),
@@ -361,7 +398,7 @@ public struct RuntimeManager: Sendable {
             case .node: pattern = "^v([0-9]+(?:\\.[0-9]+)+)"
             case .python: pattern = "Python ([0-9]+(?:\\.[0-9]+)+)"
             case .ruby: pattern = "ruby ([0-9]+(?:\\.[0-9]+)+)"
-            case .flutter: pattern = ""
+            case .flutter, .rust: pattern = ""
             }
             let regex = try NSRegularExpression(pattern: pattern)
             guard let match = regex.firstMatch(in: result, range: NSRange(result.startIndex..., in: result)), let range = Range(match.range(at: 1), in: result) else { throw MorrowError.message("The executable did not identify itself as \(engine.title).") }

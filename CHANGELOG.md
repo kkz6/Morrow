@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- Added Rust to Runtimes and Folder Versions. Morrow can reuse stable Apple silicon toolchains or install a verified official release, and offers an explicit choice from a project's Rust toolchain file or Cargo minimum version.
+- Added app commands with Start, Stop, status, and project logs for app-port sites. Rust projects suggest `cargo run`, and the same controls work with Morrow's other runtimes.
+
 - Show the PHP requirement from Composer when linking or discovering a project. Folder Versions can explicitly select a matching PHP-FPM release for the project, using an installed version or a published download.
 
 ## 0.2.6
